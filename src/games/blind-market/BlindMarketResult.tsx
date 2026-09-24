@@ -1,0 +1,194 @@
+import { useMemo } from 'react'
+import { ArrowRight } from 'lucide-react'
+import { CandleChart, type ChartMarker } from '@/components/charts/CandleChart'
+import {
+  AchievementNote,
+  CrowdStats,
+  DecisionTimeline,
+  MetricGrid,
+  PersonalBestNote,
+  ProfileProgressBlock,
+  ResultHeader,
+  type TimelineStep,
+} from '@/components/results/ResultBlocks'
+import { ShareChallengeButton } from '@/components/share/ShareChallengeButton'
+import { LinkButton } from '@/components/ui/Button'
+import { Disclaimer, Stat } from '@/components/ui/Card'
+import { blindMarketAchievement } from '@/lib/achievements'
+import { exposureLabel, formatMoney, formatPercent, plural, pnlColor } from '@/lib/formatting'
+import type { SharePayload } from '@/lib/sharing'
+import type { BlindMarketResult as BlindResult, BlindMarketScenario } from '@/types/game'
+import { infoLabels } from './InfoSelector'
+import { actionShortLabels } from './scoring'
+import type { SaveOutcome } from '@/store/gameStore'
+
+export function BlindMarketResult({
+  scenario,
+  result,
+  outcome,
+  nextHref,
+  nextLabel,
+}: {
+  scenario: BlindMarketScenario
+  result: BlindResult
+  outcome: SaveOutcome
+  nextHref: string
+  nextLabel: string
+}) {
+  const achievement = useMemo(() => blindMarketAchievement(result), [result])
+
+  const markers = useMemo<ChartMarker[]>(
+    () =>
+      result.decisions.map((decision, index) => ({
+        candleIndex: scenario.checkpoints[index] - 1,
+        position: decision.exposure >= 0 ? 'belowBar' : 'aboveBar',
+        shape:
+          decision.exposure > 0 ? 'arrowUp' : decision.exposure < 0 ? 'arrowDown' : 'circle',
+        color:
+          decision.exposure === 0 ? '#7b5cff' : decision.exposure > 0 ? '#2ebd85' : '#f0616d',
+        text: exposureLabel(decision.exposure),
+      })),
+    [result.decisions, scenario.checkpoints],
+  )
+
+  const timeline = useMemo<TimelineStep[]>(() => {
+    const steps: TimelineStep[] = []
+
+    result.decisions.forEach((decision, index) => {
+      steps.push({
+        marker: index === 0 ? 'Старт' : `Точка ${index + 1}`,
+        title:
+          index === 0
+            ? exposureLabel(decision.exposure)
+            : `${actionShortLabels[decision.action ?? 'hold']} · ${exposureLabel(decision.exposure)}`,
+        detail: `Уверенность ${decision.confidence}%`,
+      })
+
+      const segmentReturn = result.segmentReturns[index]
+      if (segmentReturn !== undefined) {
+        steps.push({
+          marker: 'Рынок',
+          title: formatPercent(segmentReturn),
+          tone: segmentReturn >= 0 ? 'up' : 'down',
+        })
+      }
+    })
+
+    steps.push({ marker: 'Финиш', title: formatPercent(result.pnlPercent) })
+    return steps
+  }, [result])
+
+  const sharePayload: SharePayload = {
+    t: 'blind-market',
+    s: scenario.id,
+    d: scenario.seed,
+    r: Number(result.pnlPercent.toFixed(2)),
+    a: result.decisions.map((decision, index) =>
+      index === 0
+        ? exposureLabel(decision.exposure)
+        : actionShortLabels[decision.action ?? 'hold'],
+    ),
+    e: result.decisions.map((decision) => decision.exposure),
+  }
+
+  const changes = result.directionChanges
+
+  return (
+    <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-10 px-5 py-14 sm:px-8 sm:py-20">
+      <ResultHeader eyebrow="Испытание 01 · Слепой рынок" headline="Испытание завершено">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className={`tnum text-3xl font-light ${pnlColor(result.pnlPercent)}`}>
+            Результат: {formatPercent(result.pnlPercent)}
+          </p>
+          <ProfileProgressBlock />
+        </div>
+      </ResultHeader>
+
+      <MetricGrid>
+        <Stat
+          label="Результат"
+          value={formatPercent(result.pnlPercent)}
+          valueClassName={pnlColor(result.pnlPercent)}
+          hint={formatMoney(result.pnl)}
+        />
+        <Stat
+          label="Максимальная просадка"
+          value={formatPercent(-result.maxDrawdown)}
+          valueClassName="text-chalk-200"
+        />
+        <Stat
+          label="Смена направления"
+          value={`${changes} ${plural(changes, ['раз', 'раза', 'раз'])}`}
+        />
+        <Stat
+          label="Средняя уверенность"
+          value={`${Math.round(result.averageConfidence)}%`}
+        />
+        <Stat
+          label="Открытая информация"
+          value={result.selectedInformation.length}
+          hint={result.selectedInformation.map((key) => infoLabels[key]).join(' · ')}
+        />
+        <Stat
+          label="Очки испытания"
+          value={outcome.points.toLocaleString('ru-RU')}
+        />
+      </MetricGrid>
+
+      <PersonalBestNote
+        isPersonalBest={outcome.isPersonalBest}
+        pointsToBest={outcome.pointsToBest}
+        points={outcome.points}
+        hasPrevious={outcome.previousBest !== null}
+      />
+
+      <AchievementNote achievement={achievement} />
+
+      <section className="rounded-xl border border-ink-700 bg-ink-900 p-3 sm:p-5">
+        <CandleChart
+          candles={scenario.candles}
+          visibleCount={scenario.candles.length}
+          markers={markers}
+          height={340}
+        />
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+        <div className="rounded-xl border border-ink-700 bg-ink-900 p-6">
+          <h3 className="mb-6 text-lg font-normal tracking-tight text-chalk-50">
+            Как развивалась сессия
+          </h3>
+          <DecisionTimeline steps={timeline} />
+        </div>
+
+        <div className="flex flex-col gap-6">
+          <CrowdStats title="На второй точке:" items={scenario.crowd} />
+
+          <div className="flex flex-col gap-3 rounded-xl border border-ink-700 bg-ink-900 p-6">
+            <h3 className="text-lg font-normal tracking-tight text-chalk-50">
+              {scenario.reveal.title}
+            </h3>
+            <p className="text-sm leading-relaxed text-chalk-400">
+              {scenario.reveal.description}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-6 border-t border-ink-800 pt-10">
+        <ShareChallengeButton payload={sharePayload} />
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <Disclaimer>
+            Результат описывает только эту игровую сессию и не является оценкой
+            профессиональной квалификации.
+          </Disclaimer>
+          <LinkButton to={nextHref} variant="primary" size="lg">
+            {nextLabel}
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </LinkButton>
+        </div>
+      </div>
+    </div>
+  )
+}
