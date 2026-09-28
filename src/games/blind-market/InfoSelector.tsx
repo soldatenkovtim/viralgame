@@ -1,8 +1,8 @@
 import { Lock } from 'lucide-react'
 import type { BlindInfoKey, BlindMarketScenario } from '@/types/game'
 
+/** Объём не выбирается отдельно: он всегда виден гистограммой под свечами. */
 export const INFO_KEYS: BlindInfoKey[] = [
-  'volume',
   'volatility',
   'correlation',
   'marketContext',
@@ -84,16 +84,16 @@ export function InfoStrip({
   if (!selected.length) return null
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="flex flex-wrap gap-2">
       {selected.map((key) => (
         <div
           key={key}
-          className="flex flex-col gap-1.5 rounded-lg border border-ink-700 bg-ink-900 px-4 py-3"
+          className="flex items-baseline gap-2 rounded-md border border-ink-700 bg-ink-900 px-3 py-1.5"
         >
-          <span className="text-[11px] tracking-[0.12em] text-chalk-500 uppercase">
+          <span className="text-[11px] tracking-[0.1em] text-chalk-500 uppercase">
             {infoLabels[key]}
           </span>
-          <span className="tnum text-sm text-chalk-50">{scenario.info[key]}</span>
+          <span className="tnum text-xs text-chalk-200">{scenario.info[key]}</span>
         </div>
       ))}
     </div>

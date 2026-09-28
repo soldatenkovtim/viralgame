@@ -40,7 +40,9 @@ export function ProgressDots({ current }: { current?: ChallengeType }) {
       })}
 
       <span className="ml-4 hidden text-xs text-chalk-500 sm:block">
-        {current ? challengeTitles[current] : `${completed.length} / 3 испытаний`}
+        {current
+          ? challengeTitles[current]
+          : `${completed.length} / ${CHALLENGE_ORDER.length} испытаний`}
       </span>
     </div>
   )

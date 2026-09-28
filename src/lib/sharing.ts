@@ -17,6 +17,10 @@ export interface SharePayload {
   a: string[]
   /** экспозиция отправителя после каждого решения */
   e?: number[]
+  /** кросс-арбитраж: [сделок, ложных, среднее время мс, найдено, пропущено] */
+  m?: number[]
+  /** кросс-арбитраж: вклад каждого рынка в капитал, % */
+  p?: number[]
   /** ник отправителя, если он его вводил */
   n?: string
 }
@@ -70,6 +74,7 @@ export const challengeShareTitles: Record<ChallengeType, string> = {
   'blind-market': 'Слепой рынок',
   'market-maker': 'Маркет-мейкер',
   'black-swan': 'Рыночный шок',
+  'cross-arbitrage': 'Кросс-арбитраж',
 }
 
 export function buildTelegramUrl(url: string, text: string): string {

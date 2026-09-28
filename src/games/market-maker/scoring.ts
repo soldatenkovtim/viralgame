@@ -1,15 +1,53 @@
+import { MM_SOFT_INVENTORY_LIMIT } from '@/data/marketMakerScenarios'
 import { clamp, mapRange } from '@/lib/random'
 import type { MarketMakerResult } from '@/types/game'
 
 type MarketMakerMetrics = Omit<MarketMakerResult, 'score'>
 
+export interface MarketMakerScoreParts {
+  pnl: number
+  inventoryControl: number
+  spreadCapture: number
+  adverseSelection: number
+}
+
+/** Штраф к PnL в score за каждую секунду над мягким лимитом inventory. */
+const RISK_CHARGE_PER_SECOND = 40
+
+export function marketMakerScoreParts(result: MarketMakerMetrics): MarketMakerScoreParts {
+  // PnL в score учитывается с поправкой на риск, чтобы удачно пересиженная
+  // крупная позиция не обгоняла аккуратную работу со спредом.
+  const riskAdjustedPnl = result.pnl - result.secondsAboveSoftLimit * RISK_CHARGE_PER_SECOND
+  const pnl = mapRange(riskAdjustedPnl, -2500, 1600, 0, 100)
+
+  // Крупный inventory и долгое время над лимитом снижают оценку,
+  // даже если рынок случайно пошёл в сторону позиции.
+  const inventoryControl =
+    mapRange(result.maxInventory, 10, 32, 100, 0) * 0.55 +
+    mapRange(result.secondsAboveSoftLimit, 0, 25, 100, 0) * 0.3 +
+    mapRange(Math.abs(result.finalInventory), 0, MM_SOFT_INVENTORY_LIMIT, 100, 20) * 0.15
+
+  const spreadCapture = mapRange(result.spreadPnl, 0, 2400, 0, 100)
+
+  // Adverse selection меряем относительно заработанного спреда:
+  // сколько собранного потока забрали информированные контрагенты.
+  const adverseShare = result.adverseSelectionLoss / Math.max(result.spreadPnl, 400)
+  const adverseSelection = mapRange(adverseShare, 0.25, 1.4, 100, 0)
+
+  return { pnl, inventoryControl, spreadCapture, adverseSelection }
+}
+
 /** Игровой score испытания, 0–100. */
 export function marketMakerScore(result: MarketMakerMetrics): number {
-  const pnlScore = mapRange(result.pnl, -600, 900, 0, 100)
-  const inventoryScore = mapRange(result.maxInventory, 3, 26, 100, 10)
-  const adverseScore = mapRange(result.adverseSelectionLoss, 0, 500, 100, 10)
-
-  return clamp(pnlScore * 0.55 + inventoryScore * 0.25 + adverseScore * 0.2, 0, 100)
+  const parts = marketMakerScoreParts(result)
+  return clamp(
+    parts.pnl * 0.5 +
+      parts.inventoryControl * 0.25 +
+      parts.spreadCapture * 0.15 +
+      parts.adverseSelection * 0.1,
+    0,
+    100,
+  )
 }
 
 export interface MarketMakerTraits {
@@ -19,28 +57,22 @@ export interface MarketMakerTraits {
 }
 
 export function marketMakerTraits(result: MarketMakerResult): MarketMakerTraits {
-  // Ценообразование: сколько спреда удалось забрать и во что это превратилось.
-  const edgePerTrade = result.tradeCount > 0 ? result.grossEdge / result.tradeCount : 0
-  const pricing =
-    mapRange(result.pnl, -600, 900, 8, 100) * 0.55 +
-    mapRange(edgePerTrade, -0.4, 1.2, 15, 100) * 0.3 +
-    mapRange(result.tradeCount, 2, 30, 30, 95) * 0.15
+  const parts = marketMakerScoreParts(result)
 
-  // Контроль риска: размер инвентаря, остаток на конце и осмысленность хеджа.
-  const hedgeSanity = hedgeSanityScore(result)
-  const riskControl =
-    mapRange(result.maxInventory, 3, 26, 100, 12) * 0.5 +
-    mapRange(Math.abs(result.finalInventory), 0, 14, 100, 20) * 0.25 +
-    hedgeSanity * 0.25
+  const pricing = parts.pnl * 0.45 + parts.spreadCapture * 0.35 + parts.adverseSelection * 0.2
 
-  // Адаптивность: реагировал ли игрок на изменение характера потока.
-  const spreadResponse = result.spreadSecondHalf - result.spreadFirstHalf
-  const toxicFlow = result.botType === 'informed'
-  const responseScore = toxicFlow
-    ? mapRange(spreadResponse, -0.3, 0.6, 22, 100)
-    : mapRange(-Math.abs(spreadResponse), -0.6, 0, 40, 92)
-  const activityScore = mapRange(result.spreadChanges + result.quoteMoves, 0, 22, 25, 95)
-  const adaptability = responseScore * 0.6 + activityScore * 0.4
+  const riskControl = parts.inventoryControl * 0.75 + hedgeSanityScore(result) * 0.25
+
+  // Адаптивность: защищался ли игрок ценой, когда поток становился направленным,
+  // и насколько котировка поспевала за рынком.
+  const toxicPhases = result.phases.filter((phase) => phase.regime !== 'noise')
+  const lag = toxicPhases.length
+    ? toxicPhases.reduce((sum, phase) => sum + phase.averageQuoteLag, 0) / toxicPhases.length
+    : 0.4
+  const responseScore = mapRange(result.spreadDirectional - result.spreadNoise, -0.3, 0.5, 20, 100)
+  const lagScore = mapRange(lag, 0.15, 1.2, 100, 15)
+  const activityScore = mapRange(result.spreadChanges + result.quoteMoves, 0, 30, 20, 95)
+  const adaptability = responseScore * 0.4 + lagScore * 0.35 + activityScore * 0.25
 
   return {
     pricing: clamp(pricing, 0, 100),
@@ -51,50 +83,103 @@ export function marketMakerTraits(result: MarketMakerResult): MarketMakerTraits 
 
 /**
  * Хедж оценивается по уместности, а не по количеству:
- * большой инвентарь без единого хеджа и хедж на пустом месте — обе крайности.
+ * большой inventory без хеджа и хедж на пустом месте — обе крайности.
  */
 function hedgeSanityScore(result: MarketMakerMetrics): number {
-  if (result.maxInventory >= 12) {
-    return mapRange(result.hedgeCount, 0, 3, 30, 100)
+  if (result.maxInventory >= MM_SOFT_INVENTORY_LIMIT) {
+    return mapRange(result.hedgeCount, 0, 2, 30, 100)
   }
-  if (result.hedgeCount === 0) return 78
-  return mapRange(result.hedgeCount, 1, 6, 88, 45)
+  if (result.hedgeCount === 0) return 80
+  return mapRange(result.hedgeCount, 1, 6, 85, 40)
 }
 
 /**
- * Нарратив раунда. Описывает поведение в сессии и никогда не оценивает игрока.
+ * 1–2 нейтральных наблюдения о раунде. Описывают поведение и никогда
+ * не оценивают игрока.
  */
-export function marketMakerNarrative(result: MarketMakerResult): string {
-  const widened = result.spreadSecondHalf - result.spreadFirstHalf > 0.12
-  const narrowed = result.spreadFirstHalf - result.spreadSecondHalf > 0.12
-  const heavyInventory = result.maxInventory >= 12
-  const hedged = result.hedgeCount > 0
+export function marketMakerInsights(result: MarketMakerResult): string[] {
+  const candidates: { priority: number; text: string }[] = []
 
-  if (result.botType === 'informed') {
-    if (widened && hedged) {
-      return 'Ты быстро увеличил спред и сократил инвентарь после того, как характер потока изменился.'
-    }
-    if (widened) {
-      return 'Ты расширил спред в ответ на поток, но инвентарь при этом продолжал накапливаться.'
-    }
-    return 'Ты долго сохранял узкий спред даже после того, как поток стал токсичным.'
-  }
+  const directional = result.phases.filter((phase) => phase.regime !== 'noise')
+  const directionalSpread = result.spreadDirectional
+  const keptNarrow =
+    directional.length > 0 &&
+    directionalSpread <= result.spreadNoise + 0.05 &&
+    directionalSpread < 0.75
+  const widened = directional.length > 0 && directionalSpread - result.spreadNoise >= 0.2
 
-  if (result.botType === 'momentum') {
-    if (heavyInventory && !hedged) {
-      return 'Инвентарь накапливался против направления рынка, и ты держал его до конца раунда.'
-    }
-    if (hedged) {
-      return 'Ты сбрасывал инвентарь по ходу движения, вместо того чтобы пережидать его в позиции.'
-    }
-    return 'Ты двигал котировку вслед за потоком и удерживал позицию в умеренных границах.'
+  if (keptNarrow) {
+    candidates.push({
+      priority: 5,
+      text: 'Ты долго сохранял узкий спред после того, как поток стал направленным.',
+    })
+  } else if (widened) {
+    candidates.push({
+      priority: 4,
+      text: 'Когда поток стал направленным, ты расширил спред и стал реже отдавать котировку.',
+    })
   }
 
-  if (narrowed) {
-    return 'Ты сужал спред, чтобы собрать больше сделок в спокойном потоке.'
+  const lagging = directional.some((phase) => phase.averageQuoteLag > 0.6)
+  if (lagging) {
+    candidates.push({
+      priority: 3,
+      text: 'Во время направленного движения середина твоей котировки заметно отставала от справедливой цены.',
+    })
   }
-  if (result.tradeCount < 10) {
-    return 'Ты держал осторожную котировку и торговал редко, отдавая часть потока.'
+
+  if (result.inventoryResponseSeconds !== null) {
+    if (result.inventoryResponseSeconds <= 3) {
+      candidates.push({
+        priority: 4,
+        text: 'После роста inventory ты быстро сместил котировки и сократил позиционный риск.',
+      })
+    } else if (result.inventoryResponseSeconds >= 8) {
+      candidates.push({
+        priority: 4,
+        text: 'Крупный inventory оставался на балансе заметное время, прежде чем котировки сместились против позиции.',
+      })
+    }
   }
-  return 'Ты работал широким потоком сделок и удерживал инвентарь вблизи нуля.'
+
+  const spreadDominates = result.spreadPnl > 0 && result.spreadPnl >= Math.abs(result.inventoryPnl) * 2
+  const inventoryDominates = Math.abs(result.inventoryPnl) > Math.max(result.spreadPnl, 0)
+  if (spreadDominates) {
+    candidates.push({
+      priority: 2,
+      text: 'Большая часть твоего PnL пришла от spread capture, а не от движения inventory.',
+    })
+  } else if (inventoryDominates) {
+    candidates.push({
+      priority: 3,
+      text:
+        result.inventoryPnl < 0
+          ? 'Переоценка inventory забрала больше, чем принёс заработок на спреде.'
+          : 'Результат раунда определило движение inventory сильнее, чем заработок на спреде.',
+    })
+  }
+
+  if (result.hedgeCount >= 4) {
+    candidates.push({
+      priority: 3,
+      text: 'Ты часто хеджировал позицию, снижая риск ценой дополнительных издержек.',
+    })
+  } else if (result.hedgeCount === 0 && result.maxInventory > MM_SOFT_INVENTORY_LIMIT) {
+    candidates.push({
+      priority: 3,
+      text: 'Ты не использовал хедж, и позиционный риск всё время оставался на твоём балансе.',
+    })
+  }
+
+  if (!candidates.length) {
+    candidates.push({
+      priority: 1,
+      text: 'Ты держал котировку рядом с рынком и удерживал inventory в умеренных границах.',
+    })
+  }
+
+  return candidates
+    .sort((a, b) => b.priority - a.priority)
+    .slice(0, 2)
+    .map((candidate) => candidate.text)
 }

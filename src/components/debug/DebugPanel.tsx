@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Bug, X } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { blackSwanScenarios } from '@/data/blackSwanScenarios'
+import { marketShockScenarios } from '@/games/market-shock/scenarios'
 import { blindMarketScenarios } from '@/data/blindMarketScenarios'
+import { crossArbitrageSessions } from '@/data/crossArbitrageScenarios'
 import { marketMakerScenarios } from '@/data/marketMakerScenarios'
 import { useDebugParams } from '@/hooks/useDebug'
 import { seedCompletedSeries } from '@/lib/debugSeed'
@@ -99,11 +100,11 @@ export function DebugPanel() {
         ))}
       </Group>
 
-      <Group title="Тип бота · маркет-мейкер">
+      <Group title="Смена потока · маркет-мейкер">
         {marketMakerScenarios.map((scenario) => (
           <Row
             key={scenario.id}
-            label={scenario.botType}
+            label={scenario.title}
             active={debug.scenario === scenario.id}
             onClick={() => goTo('/challenge/market-maker', scenario.id)}
           />
@@ -111,12 +112,23 @@ export function DebugPanel() {
       </Group>
 
       <Group title="Сценарии · рыночный шок">
-        {blackSwanScenarios.map((scenario) => (
+        {marketShockScenarios.map((scenario) => (
           <Row
             key={scenario.id}
             label={scenario.id}
             active={debug.scenario === scenario.id}
             onClick={() => goTo('/challenge/black-swan', scenario.id)}
+          />
+        ))}
+      </Group>
+
+      <Group title="Наборы рынков · кросс-арбитраж">
+        {crossArbitrageSessions.map((session) => (
+          <Row
+            key={session.id}
+            label={session.id}
+            active={debug.scenario === session.id}
+            onClick={() => goTo('/challenge/cross-arbitrage', session.id)}
           />
         ))}
       </Group>

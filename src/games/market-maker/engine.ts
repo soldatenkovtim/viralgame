@@ -1,17 +1,42 @@
 import {
+  MM_HARD_INVENTORY_LIMIT,
+  MM_HARD_LIMIT_HAIRCUT,
   MM_HEDGE_COST_PER_UNIT,
+  MM_HEDGE_TICKET_FEE,
   MM_INITIAL_SPREAD,
+  MM_LOT_SIZE,
   MM_MARKOUT_TICKS,
   MM_MAX_SPREAD,
   MM_MIN_SPREAD,
   MM_QUOTE_STEP,
+  MM_SOFT_INVENTORY_LIMIT,
   MM_TICK_MS,
 } from '@/data/marketMakerScenarios'
-import { clamp, createRandom, type SeededRandom } from '@/lib/random'
-import type { MarketMakerResult, MarketMakerScenario, MMTrade } from '@/types/game'
-import { decideBotOrder } from './bots'
+import { createRandom, type SeededRandom } from '@/lib/random'
+import type {
+  MarketMakerResult,
+  MarketMakerScenario,
+  MMPhaseStats,
+  MMTickPoint,
+  MMTrade,
+} from '@/types/game'
+import { decideFlowOrder, INFORMED_LOOKAHEAD } from './bots'
+import { buildMarketPaths, phaseAt, ticksFor, tickToSeconds } from './market'
 import { marketMakerScore } from './scoring'
 
+/** С какого размера inventory считается, что игроку пора реагировать. */
+const RESPONSE_TRIGGER = 10
+/** Вес последней сделки в перекосе потока. */
+const IMBALANCE_WEIGHT = 0.25
+
+export interface QuotePoint {
+  tick: number
+  marketPrice: number
+  bid: number
+  ask: number
+}
+
+/** Всё, что игрок видит во время раунда. Справедливой цены здесь нет. */
 export interface MarketMakerSnapshot {
   tick: number
   totalTicks: number
@@ -19,12 +44,24 @@ export interface MarketMakerSnapshot {
   bid: number
   ask: number
   spread: number
+  marketPrice: number
   inventory: number
   pnl: number
+  hedgeCostPreview: number
   trades: MMTrade[]
-  quoteHistory: { tick: number; bid: number; ask: number }[]
+  history: QuotePoint[]
   hedgeCount: number
   finished: boolean
+}
+
+interface PhaseAccumulator {
+  fills: number
+  spreadSum: number
+  lagSum: number
+  ticks: number
+  adverseLoss: number
+  pnlStart: number | null
+  pnlEnd: number
 }
 
 export class MarketMakerEngine {
@@ -32,46 +69,66 @@ export class MarketMakerEngine {
   readonly totalTicks: number
 
   private readonly fairValuePath: number[]
-  private readonly botRandom: SeededRandom
+  private readonly marketPath: number[]
+  private readonly flowRandom: SeededRandom
 
   private tickIndex = 0
   private center: number
   private spread = MM_INITIAL_SPREAD
   private inventory = 0
-  private cash = 0
-  private hedgeCostTotal = 0
+
+  /** Все денежные величины — в деньгах, уже умноженные на размер лота. */
+  private spreadPnl = 0
+  private inventoryMtm = 0
+  private hedgeCosts = 0
 
   private trades: MMTrade[] = []
-  private quoteHistory: { tick: number; bid: number; ask: number }[] = []
+  private history: QuotePoint[] = []
+  private timeline: MMTickPoint[] = []
 
   private maxInventory = 0
   private hedgeCount = 0
+  private hedgedUnits = 0
   private spreadChanges = 0
   private quoteMoves = 0
   private spreadSamples: number[] = []
+  private ticksAboveSoft = 0
+
+  /** Экспоненциально сглаженный перекос сторон последних сделок, от −1 до 1. */
+  private flowImbalance = 0
+
+  private responseStart: number | null = null
+  private responseDelays: number[] = []
+
+  private readonly phaseStats: PhaseAccumulator[]
 
   constructor(scenario: MarketMakerScenario) {
     this.scenario = scenario
-    this.totalTicks = Math.round((scenario.durationSeconds * 1000) / MM_TICK_MS)
+    this.totalTicks = ticksFor(scenario.durationSeconds)
     this.center = scenario.initialFairValue
 
-    // Путь справедливой цены считается целиком заранее: это делает раунд
-    // детерминированным и позволяет информированному боту «знать будущее».
-    this.fairValuePath = buildFairValuePath(
-      scenario.seed,
-      scenario.initialFairValue,
-      scenario.volatility,
-      this.totalTicks + MM_MARKOUT_TICKS + 8,
+    const paths = buildMarketPaths(
+      scenario,
+      this.totalTicks + Math.max(MM_MARKOUT_TICKS, INFORMED_LOOKAHEAD) + 2,
     )
+    this.fairValuePath = paths.fairValue
+    this.marketPath = paths.marketPrice
 
-    // Отдельный поток случайности для бота, чтобы действия игрока
-    // не сдвигали траекторию справедливой цены.
-    this.botRandom = createRandom(scenario.seed ^ 0x5bf03635)
-    this.quoteHistory.push({ tick: 0, bid: this.bid, ask: this.ask })
-  }
+    // Отдельный поток случайности для контрагентов: действия игрока
+    // не сдвигают траекторию цены.
+    this.flowRandom = createRandom(scenario.seed ^ 0x5bf03635)
 
-  get fairValue(): number {
-    return this.fairValuePath[Math.min(this.tickIndex, this.fairValuePath.length - 1)]
+    this.phaseStats = scenario.flowPhases.map(() => ({
+      fills: 0,
+      spreadSum: 0,
+      lagSum: 0,
+      ticks: 0,
+      adverseLoss: 0,
+      pnlStart: null,
+      pnlEnd: 0,
+    }))
+
+    this.recordPoint()
   }
 
   get bid(): number {
@@ -82,8 +139,18 @@ export class MarketMakerEngine {
     return round2(this.center + this.spread / 2)
   }
 
+  get marketPrice(): number {
+    return this.marketPath[this.tickIndex]
+  }
+
+  /** Переоценка inventory с дисконтом за объём сверх жёсткого лимита. */
+  get inventoryPnl(): number {
+    const excess = Math.max(0, Math.abs(this.inventory) - MM_HARD_INVENTORY_LIMIT)
+    return this.inventoryMtm - excess * MM_HARD_LIMIT_HAIRCUT * MM_LOT_SIZE
+  }
+
   get pnl(): number {
-    return this.cash + this.inventory * this.fairValue - this.hedgeCostTotal
+    return this.spreadPnl + this.inventoryPnl - this.hedgeCosts
   }
 
   get finished(): boolean {
@@ -92,16 +159,19 @@ export class MarketMakerEngine {
 
   /* ---------------------------- управление ---------------------------- */
 
+  /** Сдвигает bid и ask одновременно. Рынок от этого не двигается. */
   moveQuotes(direction: 1 | -1): void {
     if (this.finished) return
     this.center = round2(this.center + direction * MM_QUOTE_STEP)
     this.quoteMoves += 1
+    // Сдвиг против позиции — реакция на inventory: лонг сдвигает ниже, шорт — выше.
+    if (Math.sign(this.inventory) === -direction) this.closeResponse()
   }
 
   narrowSpread(): void {
     if (this.finished) return
     const next = round2(this.spread - MM_QUOTE_STEP)
-    if (next < MM_MIN_SPREAD) return
+    if (next < MM_MIN_SPREAD - 1e-9) return
     this.spread = next
     this.spreadChanges += 1
   }
@@ -109,20 +179,27 @@ export class MarketMakerEngine {
   widenSpread(): void {
     if (this.finished) return
     const next = round2(this.spread + MM_QUOTE_STEP)
-    if (next > MM_MAX_SPREAD) return
+    if (next > MM_MAX_SPREAD + 1e-9) return
     this.spread = next
     this.spreadChanges += 1
   }
 
-  /** Закрывает весь инвентарь по справедливой цене с небольшой комиссией. */
+  /** Закрывает весь inventory по рыночной цене. Возвращает закрытый объём. */
   hedge(): number {
     if (this.finished || this.inventory === 0) return 0
     const closed = this.inventory
-    this.cash += closed * this.fairValue
-    this.hedgeCostTotal += Math.abs(closed) * MM_HEDGE_COST_PER_UNIT
+    // Inventory уже переоценён по рынку, поэтому хедж добавляет только издержки.
+    this.hedgeCosts += this.hedgeCostFor(closed)
+    this.hedgedUnits += Math.abs(closed)
     this.inventory = 0
     this.hedgeCount += 1
+    this.closeResponse()
     return closed
+  }
+
+  hedgeCostFor(units: number): number {
+    if (units === 0) return 0
+    return Math.abs(units) * MM_HEDGE_COST_PER_UNIT * MM_LOT_SIZE + MM_HEDGE_TICKET_FEE
   }
 
   /* ------------------------------- цикл ------------------------------- */
@@ -130,48 +207,90 @@ export class MarketMakerEngine {
   tick(): MarketMakerSnapshot {
     if (this.finished) return this.snapshot()
 
+    const pnlBefore = this.pnl
     this.tickIndex += 1
+    const tick = this.tickIndex
+    const market = this.marketPath[tick]
+    const fairValue = this.fairValuePath[tick]
+    const phaseIndex = this.flowPhaseIndex(tick)
+    const regime = this.scenario.flowPhases[phaseIndex].regime
+    const phase = this.phaseStats[phaseIndex]
+    if (phase.pnlStart === null) phase.pnlStart = pnlBefore
+
+    this.inventoryMtm += this.inventory * (market - this.marketPath[tick - 1]) * MM_LOT_SIZE
     this.spreadSamples.push(this.spread)
 
     const bid = this.bid
     const ask = this.ask
-
-    const order = decideBotOrder(this.scenario.botType, {
-      random: this.botRandom,
-      tick: this.tickIndex,
-      fairValuePath: this.fairValuePath,
+    const order = decideFlowOrder(regime, {
+      random: this.flowRandom,
+      tick,
+      fairValue: this.fairValuePath,
+      marketPrice: this.marketPath,
       bid,
       ask,
+      intensity: this.scenario.flowPhases[phaseIndex].intensity ?? 1,
+      imbalance: this.flowImbalance,
     })
 
     if (order) {
+      this.flowImbalance =
+        this.flowImbalance * (1 - IMBALANCE_WEIGHT) +
+        (order.side === 'buy' ? 1 : -1) * IMBALANCE_WEIGHT
+
       const price = order.side === 'buy' ? ask : bid
-      const fairValueAtTrade = this.fairValue
-      const fairValueLater =
-        this.fairValuePath[
-          Math.min(this.tickIndex + MM_MARKOUT_TICKS, this.fairValuePath.length - 1)
-        ]
-
-      // Бот покупает по ask → маркет-мейкер продаёт, и наоборот.
+      // Контрагент покупает по ask → маркет-мейкер продаёт, и наоборот.
       const userDirection = order.side === 'buy' ? -1 : 1
+      const before = this.inventory
       this.inventory += userDirection * order.size
-      this.cash -= userDirection * order.size * price
 
-      const markout = userDirection * (fairValueLater - price) * order.size
+      // Спред считается от рыночной цены в момент сделки;
+      // дальнейшее движение позиции попадает в переоценку inventory.
+      this.spreadPnl += userDirection * (market - price) * order.size * MM_LOT_SIZE
+
+      // Markout от рыночной цены, а не от цены сделки: заработанный спред
+      // учтён отдельно и не маскирует информированного контрагента.
+      const fairValueLater = this.fairValuePath[tick + MM_MARKOUT_TICKS]
+      const markout = userDirection * (fairValueLater - market) * order.size * MM_LOT_SIZE
 
       this.trades.push({
-        tick: this.tickIndex,
+        tick,
         botSide: order.side,
         size: order.size,
         price,
-        fairValueAtTrade,
+        marketPriceAtTrade: market,
+        fairValueAtTrade: fairValue,
+        inventoryAfter: this.inventory,
+        increasedRisk: Math.abs(this.inventory) > Math.abs(before),
         markout,
+        regime,
       })
 
+      phase.fills += 1
+      phase.adverseLoss += Math.max(0, -markout)
       this.maxInventory = Math.max(this.maxInventory, Math.abs(this.inventory))
+
+      if (Math.abs(before) < RESPONSE_TRIGGER && Math.abs(this.inventory) >= RESPONSE_TRIGGER) {
+        this.responseStart ??= tick
+      } else if (Math.abs(this.inventory) < RESPONSE_TRIGGER) {
+        // Позиция рассосалась сама — это не реакция игрока.
+        this.responseStart = null
+      }
     }
 
-    this.quoteHistory.push({ tick: this.tickIndex, bid, ask })
+    if (Math.abs(this.inventory) > MM_SOFT_INVENTORY_LIMIT) this.ticksAboveSoft += 1
+
+    phase.ticks += 1
+    phase.spreadSum += this.spread
+    phase.lagSum += Math.abs(this.center - fairValue)
+    phase.pnlEnd = this.pnl
+
+    this.recordPoint()
+
+    if (this.finished && this.responseStart !== null) {
+      this.responseDelays.push(tickToSeconds(this.totalTicks - this.responseStart))
+      this.responseStart = null
+    }
 
     return this.snapshot()
   }
@@ -185,10 +304,12 @@ export class MarketMakerEngine {
       bid: this.bid,
       ask: this.ask,
       spread: round2(this.spread),
+      marketPrice: this.marketPrice,
       inventory: this.inventory,
       pnl: this.pnl,
-      trades: this.trades,
-      quoteHistory: this.quoteHistory,
+      hedgeCostPreview: this.hedgeCostFor(this.inventory),
+      trades: this.trades.slice(),
+      history: this.history.slice(),
       hedgeCount: this.hedgeCount,
       finished: this.finished,
     }
@@ -196,67 +317,90 @@ export class MarketMakerEngine {
 
   buildResult(): MarketMakerResult {
     const half = Math.ceil(this.spreadSamples.length / 2) || 1
-    const firstHalf = this.spreadSamples.slice(0, half)
-    const secondHalf = this.spreadSamples.slice(half)
-
-    const adverseSelectionLoss = this.trades.reduce(
-      (sum, trade) => sum + Math.max(0, -trade.markout),
-      0,
-    )
-
-    const grossEdge = this.trades.reduce((sum, trade) => {
-      const edgePerUnit =
-        trade.botSide === 'buy'
-          ? trade.price - trade.fairValueAtTrade
-          : trade.fairValueAtTrade - trade.price
-      return sum + edgePerUnit * trade.size
-    }, 0)
-
     const averageSpread = mean(this.spreadSamples, MM_INITIAL_SPREAD)
+
+    const phases: MMPhaseStats[] = this.scenario.flowPhases.map((config, index) => {
+      const stats = this.phaseStats[index]
+      return {
+        regime: config.regime,
+        from: config.from,
+        to: config.to,
+        fills: stats.fills,
+        averageSpread: stats.ticks ? stats.spreadSum / stats.ticks : averageSpread,
+        adverseSelectionLoss: stats.adverseLoss,
+        pnlChange: stats.pnlEnd - (stats.pnlStart ?? stats.pnlEnd),
+        averageQuoteLag: stats.ticks ? stats.lagSum / stats.ticks : 0,
+      }
+    })
 
     const result: Omit<MarketMakerResult, 'score'> = {
       scenarioId: this.scenario.id,
       seed: this.scenario.seed,
-      botType: this.scenario.botType,
       pnl: this.pnl,
+      spreadPnl: this.spreadPnl,
+      inventoryPnl: this.inventoryPnl,
+      hedgeCosts: this.hedgeCosts,
       maxInventory: this.maxInventory,
       tradeCount: this.trades.length,
       averageSpread,
-      adverseSelectionLoss,
-      grossEdge,
+      adverseSelectionLoss: this.trades.reduce((sum, trade) => sum + Math.max(0, -trade.markout), 0),
       hedgeCount: this.hedgeCount,
+      hedgedUnits: this.hedgedUnits,
       finalInventory: this.inventory,
       spreadChanges: this.spreadChanges,
       quoteMoves: this.quoteMoves,
-      spreadFirstHalf: mean(firstHalf, averageSpread),
-      spreadSecondHalf: mean(secondHalf, averageSpread),
+      secondsAboveSoftLimit: tickToSeconds(this.ticksAboveSoft),
+      inventoryResponseSeconds: this.responseDelays.length ? mean(this.responseDelays, 0) : null,
+      spreadFirstHalf: mean(this.spreadSamples.slice(0, half), averageSpread),
+      spreadSecondHalf: mean(this.spreadSamples.slice(half), averageSpread),
+      spreadNoise: weightedSpread(phases, (regime) => regime === 'noise', averageSpread),
+      spreadDirectional: weightedSpread(phases, (regime) => regime !== 'noise', averageSpread),
+      phases,
+      timeline: this.timeline,
+      trades: this.trades,
     }
 
     return { ...result, score: marketMakerScore(result) }
   }
-}
 
-/** Seeded random walk справедливой цены. */
-export function buildFairValuePath(
-  seed: number,
-  initialValue: number,
-  volatility: number,
-  length: number,
-): number[] {
-  const random = createRandom(seed)
-  const path: number[] = [initialValue]
-  let value = initialValue
-
-  // Медленно меняющийся дрейф даёт «режимы» рынка вместо чистого шума.
-  let drift = 0
-
-  for (let i = 1; i < length; i += 1) {
-    drift = clamp(drift * 0.93 + random.normal(0, volatility * 0.32), -volatility * 2, volatility * 2)
-    value = round2(value + drift + random.normal(0, volatility))
-    path.push(value)
+  private flowPhaseIndex(tick: number): number {
+    const phase = phaseAt(this.scenario.flowPhases, tick)
+    return this.scenario.flowPhases.indexOf(phase)
   }
 
-  return path
+  private closeResponse(): void {
+    if (this.responseStart === null) return
+    this.responseDelays.push(tickToSeconds(this.tickIndex - this.responseStart))
+    this.responseStart = null
+  }
+
+  private recordPoint(): void {
+    const tick = this.tickIndex
+    const point = { tick, marketPrice: this.marketPath[tick], bid: this.bid, ask: this.ask }
+    this.history.push(point)
+    this.timeline.push({
+      ...point,
+      fairValue: this.fairValuePath[tick],
+      inventory: this.inventory,
+      pnl: this.pnl,
+    })
+  }
+}
+
+function weightedSpread(
+  phases: MMPhaseStats[],
+  match: (regime: MMPhaseStats['regime']) => boolean,
+  fallback: number,
+): number {
+  let weight = 0
+  let sum = 0
+  for (const phase of phases) {
+    if (!match(phase.regime)) continue
+    const span = phase.to - phase.from
+    weight += span
+    sum += phase.averageSpread * span
+  }
+  return weight ? sum / weight : fallback
 }
 
 function mean(values: number[], fallback: number): number {

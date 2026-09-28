@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react'
-import { ArrowRight, RotateCcw } from 'lucide-react'
+import { ArrowRight, Check, RotateCcw } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { CompanyCta } from '@/components/layout/CompanyCta'
 import { TraitBars } from '@/components/results/TraitBars'
@@ -18,6 +18,7 @@ export function ProfilePage() {
   const blindMarketResult = useGameStore((state) => state.blindMarketResult)
   const marketMakerResult = useGameStore((state) => state.marketMakerResult)
   const blackSwanResult = useGameStore((state) => state.blackSwanResult)
+  const crossArbitrageResult = useGameStore((state) => state.crossArbitrageResult)
   const personalBests = useGameStore((state) => state.personalBests)
   const playerName = useGameStore((state) => state.playerName)
   const overallScore = useGameStore((state) => state.overallScore)
@@ -33,8 +34,16 @@ export function ProfilePage() {
       blindMarket: blindMarketResult,
       marketMaker: marketMakerResult,
       blackSwan: blackSwanResult,
+      crossArbitrage: crossArbitrageResult,
     })
-  }, [storedProfile, complete, blindMarketResult, marketMakerResult, blackSwanResult])
+  }, [
+    storedProfile,
+    complete,
+    blindMarketResult,
+    marketMakerResult,
+    blackSwanResult,
+    crossArbitrageResult,
+  ])
 
   useEffect(() => {
     trackEvent('profile_viewed', {
@@ -73,8 +82,10 @@ export function ProfilePage() {
         </p>
 
         <div className="tnum flex flex-wrap items-center gap-x-8 gap-y-3 pt-2 text-sm text-chalk-400">
-          <span>3 / 3 испытаний завершено</span>
-          <span className="text-chalk-500">Профиль собран</span>
+          <span>
+            {CHALLENGE_ORDER.length} / {CHALLENGE_ORDER.length} испытаний завершено
+          </span>
+          <span className="text-chalk-500">Профиль собран: 100%</span>
           <span>Игровой score: {formatNumber(overallScore())}</span>
         </div>
       </header>
@@ -102,13 +113,14 @@ export function ProfilePage() {
         <TraitBars profile={profile} />
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {CHALLENGE_ORDER.map((challenge) => (
           <div
             key={challenge}
             className="flex flex-col gap-2 rounded-xl border border-ink-700 bg-ink-900 px-6 py-5"
           >
-            <span className="text-[11px] tracking-[0.14em] text-chalk-500 uppercase">
+            <span className="flex items-center gap-2 text-[11px] tracking-[0.14em] text-chalk-500 uppercase">
+              <Check className="h-3.5 w-3.5 text-violet-soft" aria-hidden />
               {challengeTitles[challenge]}
             </span>
             <span className="tnum text-2xl font-light text-chalk-50">
@@ -154,7 +166,7 @@ function IncompleteProfile({ completedCount }: { completedCount: number }) {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-5 py-24 sm:px-8 sm:py-32">
       <SectionLabel>Профиль трейдера</SectionLabel>
       <h1 className="text-4xl font-light tracking-[-0.025em] text-chalk-50 sm:text-5xl">
-        Профиль собирается из трёх испытаний
+        Профиль собирается из четырёх испытаний
       </h1>
       <p className="text-base leading-relaxed text-chalk-400">
         Сейчас пройдено {completedCount} из {CHALLENGE_ORDER.length}. Каждое

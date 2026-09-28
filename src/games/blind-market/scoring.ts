@@ -5,9 +5,10 @@ import type {
   BlindFollowUpAction,
   BlindMarketResult,
   BlindMarketScenario,
+  BlindStopHit,
 } from '@/types/game'
 
-export const POSITION_SIZES = [0.25, 0.5, 0.75, 1] as const
+export const POSITION_SIZES = [0.25, 0.5, 1] as const
 export type PositionSize = (typeof POSITION_SIZES)[number]
 
 /**
@@ -74,9 +75,70 @@ export interface BlindComputation {
   maxDrawdown: number
   equityCurve: number[]
   segmentReturns: number[]
+  stopHits: BlindStopHit[]
   directionChanges: number
   averageConfidence: number
   score: number
+}
+
+export interface BlindSimulation {
+  pnl: number
+  equityCurve: number[]
+  stopHits: BlindStopHit[]
+  /** Экспозиция на последней просчитанной свече — с учётом сработавших стопов. */
+  exposure: number
+}
+
+/**
+ * Проходит свечи от первой точки решения до `upToIndex` включительно.
+ * Стоп проверяется по high/low свечи; при гэпе через стоп исполнение
+ * идёт по цене открытия — это честнее, чем идеальное исполнение по стопу.
+ */
+export function simulateBlind(
+  scenario: BlindMarketScenario,
+  decisions: BlindDecision[],
+  upToIndex = scenario.candles.length - 1,
+): BlindSimulation {
+  const { candles, checkpoints } = scenario
+  const boundaries = [...checkpoints, candles.length]
+  const equityCurve: number[] = [CAPITAL]
+  const stopHits: BlindStopHit[] = []
+  let pnl = 0
+  let exposure = 0
+
+  for (let segment = 0; segment < boundaries.length - 1; segment += 1) {
+    const decision = decisions[segment]
+    if (!decision) break
+
+    exposure = decision.exposure
+    const stop = decision.stopPrice
+    const from = boundaries[segment]
+    const to = Math.min(boundaries[segment + 1], upToIndex + 1)
+
+    for (let i = from; i < to; i += 1) {
+      const previous = candles[i - 1].close
+      const candle = candles[i]
+
+      if (exposure !== 0 && stop !== undefined) {
+        const hit = exposure > 0 ? candle.low <= stop : candle.high >= stop
+        if (hit) {
+          const fill = exposure > 0 ? Math.min(candle.open, stop) : Math.max(candle.open, stop)
+          pnl += exposure * ((fill - previous) / previous) * CAPITAL
+          equityCurve.push(CAPITAL + pnl)
+          stopHits.push({ segment, candleIndex: i, price: fill })
+          exposure = 0
+          continue
+        }
+      }
+
+      pnl += exposure * ((candle.close - previous) / previous) * CAPITAL
+      equityCurve.push(CAPITAL + pnl)
+    }
+
+    if (to < boundaries[segment + 1]) break
+  }
+
+  return { pnl, equityCurve, stopHits, exposure }
 }
 
 /**
@@ -88,29 +150,16 @@ export function computeBlindMarket(
   decisions: BlindDecision[],
 ): BlindComputation {
   const { candles, checkpoints } = scenario
-  const equityCurve: number[] = [CAPITAL]
-  const segmentReturns: number[] = []
-  let pnl = 0
-
   const boundaries = [...checkpoints, candles.length]
+  const segmentReturns: number[] = []
 
   for (let segment = 0; segment < boundaries.length - 1; segment += 1) {
-    const exposure = decisions[segment]?.exposure ?? 0
-    const from = boundaries[segment]
-    const to = boundaries[segment + 1]
-
-    const startPrice = candles[from - 1].close
-    const endPrice = candles[to - 1].close
+    const startPrice = candles[boundaries[segment] - 1].close
+    const endPrice = candles[boundaries[segment + 1] - 1].close
     segmentReturns.push(((endPrice - startPrice) / startPrice) * 100)
-
-    for (let i = from; i < to; i += 1) {
-      const previous = candles[i - 1].close
-      const current = candles[i].close
-      pnl += exposure * ((current - previous) / previous) * CAPITAL
-      equityCurve.push(CAPITAL + pnl)
-    }
   }
 
+  const { pnl, equityCurve, stopHits } = simulateBlind(scenario, decisions)
   const pnlPercent = (pnl / CAPITAL) * 100
   const maxDrawdown = computeMaxDrawdown(equityCurve)
 
@@ -131,6 +180,7 @@ export function computeBlindMarket(
     maxDrawdown,
     equityCurve,
     segmentReturns,
+    stopHits,
     directionChanges,
     averageConfidence,
     score: blindScore(pnlPercent, maxDrawdown),
@@ -146,27 +196,115 @@ export function computeRunningPnl(
   decisions: BlindDecision[],
   upToIndex: number,
 ): number {
+  return simulateBlind(scenario, decisions, upToIndex).pnl
+}
+
+export type TradeEventKind = 'open' | 'increase' | 'reduce' | 'close' | 'flip' | 'stop' | 'exit'
+
+export interface TradeEvent {
+  kind: TradeEventKind
+  candleIndex: number
+  price: number
+  /** Экспозиция после события. */
+  exposure: number
+}
+
+/** Участок с неизменной позицией — из них строятся линии входа и стопа в replay. */
+export interface TradeLeg {
+  fromIndex: number
+  toIndex: number
+  exposure: number
+  entryPrice: number
+  stopPrice: number | null
+}
+
+export interface TradeTimeline {
+  events: TradeEvent[]
+  legs: TradeLeg[]
+  stopHits: BlindStopHit[]
+  exposure: number
+  /** Средняя цена входа текущей позиции. */
+  entryPrice: number | null
+  pnl: number
+}
+
+/**
+ * Восстанавливает историю позиции: входы, изменения, стопы и выход.
+ * Средняя цена входа пересчитывается при увеличении и сбрасывается при перевороте.
+ */
+export function buildTradeTimeline(
+  scenario: BlindMarketScenario,
+  decisions: BlindDecision[],
+  upToIndex = scenario.candles.length - 1,
+  closeAtEnd = false,
+): TradeTimeline {
   const { candles, checkpoints } = scenario
   const boundaries = [...checkpoints, candles.length]
-  let pnl = 0
+  const simulation = simulateBlind(scenario, decisions, upToIndex)
+  const events: TradeEvent[] = []
+  const legs: TradeLeg[] = []
 
-  for (let segment = 0; segment < boundaries.length - 1; segment += 1) {
-    const exposure = decisions[segment]?.exposure
-    if (exposure === undefined) break
+  let exposure = 0
+  let entryPrice: number | null = null
 
-    const from = boundaries[segment]
-    const to = Math.min(boundaries[segment + 1], upToIndex + 1)
+  decisions.forEach((decision, segment) => {
+    const decisionIndex = checkpoints[segment] - 1
+    if (decisionIndex > upToIndex) return
 
-    for (let i = from; i < to; i += 1) {
-      const previous = candles[i - 1].close
-      const current = candles[i].close
-      pnl += exposure * ((current - previous) / previous) * CAPITAL
+    const price = candles[decisionIndex].close
+    const next = decision.exposure
+
+    if (exposure === 0 && next !== 0) {
+      events.push({ kind: 'open', candleIndex: decisionIndex, price, exposure: next })
+      entryPrice = price
+    } else if (exposure !== 0 && next === 0) {
+      events.push({ kind: 'close', candleIndex: decisionIndex, price, exposure: 0 })
+      entryPrice = null
+    } else if (exposure !== 0 && Math.sign(next) !== Math.sign(exposure)) {
+      events.push({ kind: 'flip', candleIndex: decisionIndex, price, exposure: next })
+      entryPrice = price
+    } else if (Math.abs(next) > Math.abs(exposure)) {
+      events.push({ kind: 'increase', candleIndex: decisionIndex, price, exposure: next })
+      const added = Math.abs(next) - Math.abs(exposure)
+      entryPrice = ((entryPrice ?? price) * Math.abs(exposure) + price * added) / Math.abs(next)
+    } else if (Math.abs(next) < Math.abs(exposure)) {
+      events.push({ kind: 'reduce', candleIndex: decisionIndex, price, exposure: next })
+    }
+    exposure = next
+
+    const segmentEnd = Math.min(boundaries[segment + 1] - 1, upToIndex)
+    const hit = simulation.stopHits.find((item) => item.segment === segment)
+
+    if (exposure !== 0 && entryPrice !== null) {
+      legs.push({
+        fromIndex: decisionIndex,
+        toIndex: hit ? hit.candleIndex : segmentEnd,
+        exposure,
+        entryPrice,
+        stopPrice: decision.stopPrice ?? null,
+      })
     }
 
-    if (to < boundaries[segment + 1]) break
+    if (hit) {
+      events.push({ kind: 'stop', candleIndex: hit.candleIndex, price: hit.price, exposure: 0 })
+      exposure = 0
+      entryPrice = null
+    }
+  })
+
+  const lastIndex = candles.length - 1
+  if (closeAtEnd && exposure !== 0 && upToIndex >= lastIndex && decisions.length === checkpoints.length) {
+    events.push({ kind: 'exit', candleIndex: lastIndex, price: candles[lastIndex].close, exposure: 0 })
   }
 
-  return pnl
+  return {
+    events,
+    legs,
+    stopHits: simulation.stopHits,
+    exposure,
+    entryPrice,
+    pnl: simulation.pnl,
+  }
 }
 
 /** Просадка в процентах от локального пика (положительное число). */

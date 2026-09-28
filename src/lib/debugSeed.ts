@@ -1,15 +1,15 @@
-import { getBlackSwanScenario } from '@/data/blackSwanScenarios'
 import { getBlindScenario } from '@/data/blindMarketScenarios'
+import { getCrossArbitrageSession, sessionScenarios } from '@/data/crossArbitrageScenarios'
 import { getMarketMakerScenario } from '@/data/marketMakerScenarios'
-import { computeBlackSwan } from '@/games/black-swan/scoring'
 import { computeBlindMarket } from '@/games/blind-market/scoring'
+import { bestTrade } from '@/games/cross-arbitrage/engine'
+import { buildCrossArbitrageResult, evaluateRound } from '@/games/cross-arbitrage/scoring'
 import { MarketMakerEngine } from '@/games/market-maker/engine'
+import { decisionsFromActions } from '@/games/market-shock/engine'
+import { getMarketShockScenario } from '@/games/market-shock/scenarios'
+import { buildMarketShockResult } from '@/games/market-shock/scoring'
 import { useGameStore } from '@/store/gameStore'
-import type {
-  BlackSwanDecision,
-  BlindDecision,
-  BlindInfoKey,
-} from '@/types/game'
+import type { BlindDecision, BlindInfoKey } from '@/types/game'
 
 /**
  * Собирает правдоподобную завершённую сессию для debug-режима.
@@ -25,8 +25,40 @@ export function seedCompletedSeries(): void {
   const maker = buildMarketMakerDemo()
   store.saveResult({ challengeType: 'market-maker', result: maker })
 
-  const swan = buildBlackSwanDemo()
+  const swan = buildMarketShockDemo()
   store.saveResult({ challengeType: 'black-swan', result: swan })
+
+  const arbitrage = buildCrossArbitrageDemo()
+  store.saveResult({ challengeType: 'cross-arbitrage', result: arbitrage })
+}
+
+/** Находит лучшие маршруты, но один раз попадает в ловушку комиссий. */
+function buildCrossArbitrageDemo() {
+  const session = getCrossArbitrageSession('arb_session_01')
+  const rounds = sessionScenarios(session).map((scenario, index) => {
+    const best = bestTrade(scenario.quotes)
+    const decisionTimeMs = 4200 + index * 900
+    if (scenario.kind === 'false') {
+      return evaluateRound(scenario, {
+        buyVenue: best.buyVenue,
+        sellVenue: best.sellVenue,
+        positionSize: 0.5,
+        decisionTimeMs,
+        timedOut: false,
+      })
+    }
+    if (best.capitalReturn <= 0) {
+      return evaluateRound(scenario, { positionSize: 0, decisionTimeMs, timedOut: false })
+    }
+    return evaluateRound(scenario, {
+      buyVenue: best.buyVenue,
+      sellVenue: best.sellVenue,
+      positionSize: 0.75,
+      decisionTimeMs,
+      timedOut: false,
+    })
+  })
+  return buildCrossArbitrageResult(session, rounds)
 }
 
 function buildBlindDemo() {
@@ -84,60 +116,28 @@ function buildBlindDemo() {
 }
 
 function buildMarketMakerDemo() {
-  const scenario = getMarketMakerScenario('mm_informed')
+  const scenario = getMarketMakerScenario('mm_informed_rally')
   const engine = new MarketMakerEngine(scenario)
 
   for (let tick = 0; tick < engine.totalTicks; tick += 1) {
     engine.tick()
     const state = engine.snapshot()
-    if (Math.abs(state.inventory) >= 8) engine.hedge()
-    if (tick > 20 && state.spread < 1.2) engine.widenSpread()
+    const mid = (state.bid + state.ask) / 2
+    const target = state.marketPrice - state.inventory * 0.03
+    if (target - mid > 0.06) engine.moveQuotes(1)
+    if (mid - target > 0.06) engine.moveQuotes(-1)
+    if (Math.abs(state.inventory) >= 15) engine.hedge()
   }
 
   return engine.buildResult()
 }
 
-function buildBlackSwanDemo() {
-  const scenario = getBlackSwanScenario('swan_energy')
-  const decisions: BlackSwanDecision[] = [
-    {
-      phaseIndex: 0,
-      action: 'hold',
-      exposureBefore: scenario.initialPosition,
-      exposureAfter: scenario.initialPosition,
-      timeMs: 6400,
-      timedOut: false,
-    },
-    {
-      phaseIndex: 1,
-      action: 'hedge',
-      exposureBefore: scenario.initialPosition,
-      exposureAfter: scenario.initialPosition * 0.35,
-      timeMs: 4800,
-      timedOut: false,
-    },
-    {
-      phaseIndex: 2,
-      action: 'increase',
-      exposureBefore: scenario.initialPosition * 0.35,
-      exposureAfter: Math.min(1, scenario.initialPosition * 0.35 * 1.4),
-      timeMs: 3900,
-      timedOut: false,
-    },
-  ]
-
-  const computation = computeBlackSwan(scenario, decisions)
-
-  return {
-    scenarioId: scenario.id,
-    seed: scenario.seed,
-    pnl: computation.pnl,
-    pnlPercent: computation.pnlPercent,
-    maxDrawdown: computation.maxDrawdown,
-    maxExposure: computation.maxExposure,
-    positionChanges: computation.positionChanges,
-    decisions,
-    timeToDecision: decisions.map((decision) => decision.timeMs),
-    score: computation.score,
-  }
+/** Держит первый сигнал, хеджирует на шоке и немного добирает на развитии. */
+function buildMarketShockDemo() {
+  const scenario = getMarketShockScenario('shock_trend_collapse')
+  const decisions = decisionsFromActions(scenario, ['hold', 'hedge', 'increase'], 5200)
+  const entry = scenario.candles[scenario.initialVisibleIndex - 1].close
+  return buildMarketShockResult(scenario, decisions, [
+    { id: 'demo-level-1', price: Math.round(entry * 0.985 * 100) / 100 },
+  ])
 }

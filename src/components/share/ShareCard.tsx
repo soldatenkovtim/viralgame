@@ -3,6 +3,7 @@ import { Check, Download, Link2, Send } from 'lucide-react'
 import { toPng } from 'html-to-image'
 import { Button } from '@/components/ui/Button'
 import { trackEvent } from '@/lib/analytics'
+import { TOTAL_CHALLENGES } from '@/lib/constants'
 import { traitLabels, type TraitKey } from '@/lib/profile'
 import {
   buildProfileShareUrl,
@@ -263,7 +264,9 @@ function CardArtwork({
           paddingTop: 28,
         }}
       >
-        <span style={{ fontSize: 22, color: '#8b8b99' }}>3 / 3 испытаний</span>
+        <span style={{ fontSize: 22, color: '#8b8b99' }}>
+          {TOTAL_CHALLENGES} / {TOTAL_CHALLENGES} испытаний
+        </span>
         <span style={{ fontSize: 26, color: '#f2f2f5' }}>
           Какой профиль получится у тебя?
         </span>

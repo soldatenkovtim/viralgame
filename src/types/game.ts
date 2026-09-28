@@ -1,4 +1,10 @@
-export type ChallengeType = 'blind-market' | 'market-maker' | 'black-swan'
+import type { TimeframeId } from '@/games/blind-market/timeframes'
+
+export type ChallengeType =
+  | 'blind-market'
+  | 'market-maker'
+  | 'black-swan'
+  | 'cross-arbitrage'
 
 export interface Candle {
   time: number
@@ -6,6 +12,10 @@ export interface Candle {
   high: number
   low: number
   close: number
+}
+
+export interface OhlcvCandle extends Candle {
+  volume: number
 }
 
 export interface ChallengeResult {
@@ -21,6 +31,7 @@ export interface TradingProfile {
   pricing: number
   adaptability: number
   discipline: number
+  opportunity: number
   archetype: string
   description: string
 }
@@ -57,8 +68,40 @@ export interface BlindDecision {
   exposure: number
   confidence: number
   priceAtDecision: number
+  /** Стоп, действующий на отрезке после решения. */
+  stopPrice?: number
   /** Миллисекунды на обдумывание. */
   timeMs: number
+}
+
+/** Точка на графике: время в секундах (может быть дробным внутри свечи) и цена. */
+export interface ChartPoint {
+  time: number
+  price: number
+}
+
+export interface ChartLevel {
+  id: string
+  price: number
+}
+
+export interface ChartTrendLine {
+  id: string
+  a: ChartPoint
+  b: ChartPoint
+}
+
+/** Пользовательская разметка — живёт весь сценарий и попадает в итоговый replay. */
+export interface ChartAnnotations {
+  levels: ChartLevel[]
+  trendLine: ChartTrendLine | null
+}
+
+export interface BlindStopHit {
+  /** Отрезок между точками решений, на котором сработал стоп. */
+  segment: number
+  candleIndex: number
+  price: number
 }
 
 export interface BlindMarketResult {
@@ -74,15 +117,24 @@ export interface BlindMarketResult {
   timeToDecision: number[]
   segmentReturns: number[]
   score: number
+  stopHits?: BlindStopHit[]
+  annotations?: ChartAnnotations
 }
 
 export interface BlindMarketScenario {
   id: string
   title: string
   seed: number
-  candles: Candle[]
+  /** Базовые 15-минутные свечи; все таймфреймы агрегируются из них. */
+  candles: OhlcvCandle[]
   /** Индексы свечей, на которых рынок останавливается для решения. */
   checkpoints: number[]
+  /** Акция, по мотивам которой построен сценарий, — раскрывается только в конце. */
+  asset: {
+    name: string
+    ticker: string
+    exchange: string
+  }
   reveal: {
     title: string
     description: string
@@ -102,92 +154,310 @@ export interface BlindMarketScenario {
 /* Market Maker                                                        */
 /* ------------------------------------------------------------------ */
 
-export type BotType = 'noise' | 'informed' | 'momentum'
+/** Режим потока заявок. Игрок узнаёт его только в replay. */
+export type FlowRegime = 'noise' | 'informed' | 'momentum'
+
+/** Режим движения скрытой справедливой цены. */
+export type FairValueRegime = 'calm' | 'drift-up' | 'drift-down' | 'volatile'
+
+export interface MMFlowPhase {
+  regime: FlowRegime
+  /** Границы фазы в секундах от начала раунда. */
+  from: number
+  to: number
+  /** Множитель частоты заявок, 1 — базовая интенсивность режима. */
+  intensity?: number
+}
+
+export interface MMFairValuePhase {
+  regime: FairValueRegime
+  from: number
+  to: number
+  /** Множитель дрейфа и шума режима, 1 — базовая сила. */
+  strength?: number
+}
 
 export interface MarketMakerScenario {
   id: string
   seed: number
-  botType: BotType
-  volatility: number
+  /** Короткое описание для debug-панели. */
+  title: string
   initialFairValue: number
   durationSeconds: number
+  flowPhases: MMFlowPhase[]
+  fairValuePhases: MMFairValuePhase[]
 }
 
 export interface MMTrade {
   tick: number
-  /** Сторона бота. Пользователь всегда на противоположной. */
+  /** Сторона контрагента. Маркет-мейкер всегда на противоположной. */
   botSide: 'buy' | 'sell'
   size: number
   price: number
+  marketPriceAtTrade: number
   fairValueAtTrade: number
-  /** Markout относительно fair value через несколько тиков. */
+  inventoryAfter: number
+  /** Сделка увеличила абсолютный размер inventory. */
+  increasedRisk: boolean
+  /** Движение fair value через несколько тиков против рынка в момент сделки, в деньгах. */
   markout: number
+  regime: FlowRegime
+}
+
+export interface MMTickPoint {
+  tick: number
+  fairValue: number
+  marketPrice: number
+  bid: number
+  ask: number
+  inventory: number
+  pnl: number
+}
+
+export interface MMPhaseStats {
+  regime: FlowRegime
+  from: number
+  to: number
+  fills: number
+  averageSpread: number
+  adverseSelectionLoss: number
+  pnlChange: number
+  /** Средний модуль отклонения середины котировки от fair value. */
+  averageQuoteLag: number
 }
 
 export interface MarketMakerResult {
   scenarioId: string
   seed: number
-  botType: BotType
   pnl: number
+  spreadPnl: number
+  inventoryPnl: number
+  hedgeCosts: number
   maxInventory: number
   tradeCount: number
   averageSpread: number
   adverseSelectionLoss: number
-  /** Сумма заработанного спреда до учёта adverse selection. */
-  grossEdge: number
   hedgeCount: number
+  hedgedUnits: number
   finalInventory: number
   spreadChanges: number
   quoteMoves: number
-  /** Средний спред в первой и второй половине раунда — для нарратива. */
+  secondsAboveSoftLimit: number
+  /** Средняя задержка реакции на крупный inventory, секунды; null — поводов не было. */
+  inventoryResponseSeconds: number | null
+  /** Средний спред в первой и второй половине раунда. */
   spreadFirstHalf: number
   spreadSecondHalf: number
+  /** Средний спред в фазах шумового и направленного потока. */
+  spreadNoise: number
+  spreadDirectional: number
+  phases: MMPhaseStats[]
+  /** Полный путь раунда для replay. В старых сохранениях отсутствует. */
+  timeline?: MMTickPoint[]
+  trades?: MMTrade[]
   score: number
 }
 
 /* ------------------------------------------------------------------ */
-/* Black Swan                                                          */
+/* Market Shock (id испытания — 'black-swan')                          */
 /* ------------------------------------------------------------------ */
 
-export type BlackSwanAction = 'close' | 'hedge' | 'hold' | 'increase'
+export type ShockAction = 'close' | 'hedge' | 'hold' | 'increase'
 
-export interface BlackSwanPhaseConfig {
-  priceChange: number
+export type ShockPattern =
+  | 'trend-collapse'
+  | 'v-reversal'
+  | 'false-breakdown'
+  | 'liquidity-crisis'
+  | 'second-leg'
+
+/** Структура рынка до шока. */
+export type ShockPreStructure = 'uptrend' | 'range' | 'downtrend' | 'recovery' | 'compression'
+
+export type PositionDirection = 'long' | 'short'
+
+export interface MarketShockPhase {
+  /** Изменение среднего диапазона свечей относительно истории, %. */
   volatilityChange: number
   liquidityChange: number
-  description: string
+  volumeMultiplier: number
+  /** Сдвиг цены за фазу, %. */
+  priceChange: number
+  marketDescription: string
+  availableActions: ShockAction[]
 }
 
-export interface BlackSwanScenario {
+export interface MarketShockContext {
+  volatility: string
+  liquidity: string
+  volumeMultiplier: number
+}
+
+/** Смоделированное распределение решений других игроков в фазе, %. */
+export type ShockCrowd = Record<ShockAction, number>
+
+export interface MarketShockScenario {
   id: string
-  titleAfterReveal: string
-  revealDescription: string
   seed: number
-  initialPosition: number
-  initialPnl: number
-  contextVolatility: string
-  phases: BlackSwanPhaseConfig[]
+  pattern: ShockPattern
+  preStructure: ShockPreStructure
+  assetHiddenName: string
+  revealAsset: string
+  revealPeriod: string
+  revealEvent: string
+  revealDescription: string
+  /** Сценарий построен генератором, а не по историческим котировкам. */
+  synthetic: boolean
+  primaryTimeframe: TimeframeId
+  contextTimeframe: TimeframeId
+  /** Базовая серия в разрешении основного таймфрейма. */
+  candles: OhlcvCandle[]
+  /** Сколько свечей видно на этапе контекста. */
+  initialVisibleIndex: number
+  /** Сколько свечей видно в момент решения каждой фазы. */
+  phaseCheckpoints: [number, number, number]
+  initialPosition: {
+    direction: PositionDirection
+    exposure: number
+    entryPrice: number
+  }
+  context: MarketShockContext
+  phases: [MarketShockPhase, MarketShockPhase, MarketShockPhase]
+  crowd: [ShockCrowd, ShockCrowd, ShockCrowd]
 }
 
-export interface BlackSwanDecision {
-  phaseIndex: number
-  action: BlackSwanAction
-  exposureBefore: number
-  exposureAfter: number
-  timeMs: number
+export interface ShockDecision {
+  /** 1, 2 или 3. */
+  phase: number
+  action: ShockAction
+  /** Экспозиция со знаком: long > 0, short < 0. */
+  positionBefore: number
+  positionAfter: number
+  price: number
+  /** PnL в % капитала в момент решения. */
+  pnlBefore: number
+  /** PnL в % капитала к следующей контрольной точке. */
+  pnlAfter?: number
+  decisionTimeMs: number
+  timestamp: number
   timedOut: boolean
 }
 
-export interface BlackSwanResult {
+export interface UserPriceLevel {
+  id: string
+  price: number
+}
+
+export interface MarketShockResult {
   scenarioId: string
   seed: number
+  pattern: ShockPattern
   pnl: number
   pnlPercent: number
+  /** Максимальная просадка капитала от пика, %. */
   maxDrawdown: number
   maxExposure: number
+  minExposure: number
   positionChanges: number
-  decisions: BlackSwanDecision[]
-  timeToDecision: number[]
+  averageDecisionMs: number
+  decisions: ShockDecision[]
+  levels: UserPriceLevel[]
+  /** Индексы свечей для точек replay. */
+  maxDrawdownIndex: number
+  maxPnlIndex: number
+  maxPnlPercent: number
+  score: number
+}
+
+/* ------------------------------------------------------------------ */
+/* Cross Arbitrage                                                     */
+/* ------------------------------------------------------------------ */
+
+export interface ArbitrageVenueQuote {
+  venueId: string
+  venueName: string
+  /** По этой цене площадка купит у игрока. */
+  bid: number
+  /** По этой цене игрок может купить. */
+  ask: number
+  /** Доля от цены сделки: 0.001 = 0,10%. */
+  feeRate: number
+  /** Сколько единиц можно исполнить по котировке. Нет поля — ликвидность не ограничена. */
+  availableLiquidity?: number
+}
+
+/**
+ * A — очевидный арбитраж, B — ложный (gross > 0, net ≤ 0),
+ * C — нет возможности, D — несколько вариантов, один заметно лучше.
+ */
+export type CrossArbitrageKind = 'obvious' | 'false' | 'none' | 'multiple'
+
+export interface CrossArbitrageScenario {
+  id: string
+  asset: string
+  kind: CrossArbitrageKind
+  seed: number
+  quotes: ArbitrageVenueQuote[]
+  durationSeconds: number
+  /** Лучшая пара площадок постепенно сходится по seed. */
+  dynamic?: boolean
+  revealText?: string
+}
+
+/** Один полный challenge — пять рынков подряд. */
+export interface CrossArbitrageSession {
+  id: string
+  seed: number
+  scenarioIds: string[]
+}
+
+export interface ArbitrageRoundResult {
+  scenarioId: string
+  buyVenue?: string
+  sellVenue?: string
+  choseNoTrade: boolean
+  timedOut: boolean
+  /** Доли единицы, по котировкам в момент решения. */
+  grossReturn: number
+  /** Чистый edge на единицу только после комиссий. */
+  netBeforeLiquidity: number
+  /** Чистый edge на единицу после комиссий и ликвидности. */
+  netReturn: number
+  /** Вклад рынка в капитал: netReturn × positionSize. */
+  capitalReturn: number
+  /** Лучший достижимый вклад в капитал по исходным котировкам. */
+  optimalNetReturn: number
+  optimalBuyVenue?: string
+  optimalSellVenue?: string
+  /** 0 при «Сделки нет», иначе 0.25 … 1. */
+  positionSize: number
+  decisionTimeMs: number
+  /** Шаг котировок, по которому исполнилась сделка; 0 — исходные. */
+  quoteStep: number
+  /** Часть объёма исполнилась хуже из-за ограниченной ликвидности. */
+  liquidityHit: boolean
+  /** Сколько миллисекунд оставалось до схождения котировок; только для dynamic. */
+  msBeforeClose?: number
+  profitable: boolean
+  optimalChoice: boolean
+  roundScore: number
+}
+
+export interface CrossArbitrageResult {
+  scenarioId: string
+  seed: number
+  rounds: ArbitrageRoundResult[]
+  /** Суммарный результат в % капитала. */
+  totalReturnPercent: number
+  opportunities: number
+  found: number
+  falseTrades: number
+  missed: number
+  correctPasses: number
+  tradeCount: number
+  averageDecisionMs: number
+  /** Лучший чистый edge на единицу среди прибыльных сделок, %. */
+  bestEdgePercent: number
   score: number
 }
 

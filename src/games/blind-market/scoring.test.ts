@@ -6,11 +6,13 @@ import {
   applyAction,
   blindScore,
   blindTraits,
+  buildTradeTimeline,
   computeBlindMarket,
   computeHitRate,
   computeMaxDrawdown,
   computeRunningPnl,
   getFollowUpActions,
+  simulateBlind,
 } from './scoring'
 
 const scenario: BlindMarketScenario = blindMarketScenarios[0]
@@ -175,6 +177,66 @@ describe('computeRunningPnl', () => {
 
   it('до первой сделки результат нулевой', () => {
     expect(computeRunningPnl(scenario, [], scenario.checkpoints[0])).toBe(0)
+  })
+})
+
+describe('стоп', () => {
+  const entryIndex = scenario.checkpoints[0] - 1
+  const entryPrice = scenario.candles[entryIndex].close
+  const segmentEnd = scenario.checkpoints[1]
+  const segmentLow = Math.min(
+    ...scenario.candles.slice(entryIndex + 1, segmentEnd).map((candle) => candle.low),
+  )
+
+  it('закрывает позицию на свече, где цена дошла до стопа', () => {
+    const stop = (entryPrice + segmentLow) / 2
+    const withStop = { ...decision(1, 0), stopPrice: stop }
+    const simulation = simulateBlind(scenario, [withStop], segmentEnd - 1)
+
+    expect(simulation.stopHits).toHaveLength(1)
+    const hit = simulation.stopHits[0]
+    expect(scenario.candles[hit.candleIndex].low).toBeLessThanOrEqual(stop)
+    expect(hit.price).toBeLessThanOrEqual(stop)
+    expect(simulation.exposure).toBe(0)
+  })
+
+  it('стоп за пределами движения не влияет на результат', () => {
+    const plain = computeBlindMarket(scenario, [decision(1, 0), decision(1, 1), decision(1, 2)])
+    const farStop = [decision(1, 0), decision(1, 1), decision(1, 2)].map((item) => ({
+      ...item,
+      stopPrice: 0.01,
+    }))
+
+    expect(computeBlindMarket(scenario, farStop).pnl).toBeCloseTo(plain.pnl, 6)
+  })
+
+  it('после срабатывания стопа PnL на отрезке больше не меняется', () => {
+    const stop = (entryPrice + segmentLow) / 2
+    const withStop = { ...decision(1, 0), stopPrice: stop }
+    const hit = simulateBlind(scenario, [withStop], segmentEnd - 1).stopHits[0]
+
+    const atHit = computeRunningPnl(scenario, [withStop], hit.candleIndex)
+    const atEnd = computeRunningPnl(scenario, [withStop], segmentEnd - 1)
+    expect(atEnd).toBeCloseTo(atHit, 9)
+  })
+})
+
+describe('buildTradeTimeline', () => {
+  it('пересчитывает среднюю цену входа при увеличении позиции', () => {
+    const decisions = [decision(0.5, 0), decision(1, 1)]
+    const timeline = buildTradeTimeline(scenario, decisions, scenario.checkpoints[1] - 1)
+    const p0 = scenario.candles[scenario.checkpoints[0] - 1].close
+    const p1 = scenario.candles[scenario.checkpoints[1] - 1].close
+
+    expect(timeline.events.map((event) => event.kind)).toEqual(['open', 'increase'])
+    expect(timeline.entryPrice).toBeCloseTo((p0 + p1) / 2, 9)
+  })
+
+  it('добавляет выход на последней свече, если позиция осталась открытой', () => {
+    const decisions = [decision(0.5, 0), decision(0.5, 1), decision(-0.5, 2)]
+    const timeline = buildTradeTimeline(scenario, decisions, scenario.candles.length - 1, true)
+
+    expect(timeline.events.map((event) => event.kind)).toEqual(['open', 'flip', 'exit'])
   })
 })
 

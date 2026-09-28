@@ -1,9 +1,10 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
-import { BlackSwanPage } from '@/pages/BlackSwanPage'
+import { MarketShockPage } from '@/pages/MarketShockPage'
 import { BlindMarketPage } from '@/pages/BlindMarketPage'
 import { CareersPage } from '@/pages/CareersPage'
 import { CompanyPage, TeamPage } from '@/pages/CompanyPage'
+import { CrossArbitragePage } from '@/pages/CrossArbitragePage'
 import { HomePage } from '@/pages/HomePage'
 import { LeaderboardPage } from '@/pages/LeaderboardPage'
 import { MarketMakerPage } from '@/pages/MarketMakerPage'
@@ -21,7 +22,12 @@ export function AppRouter() {
 
           <Route path="/challenge/blind-market" element={<BlindMarketPage />} />
           <Route path="/challenge/market-maker" element={<MarketMakerPage />} />
-          <Route path="/challenge/black-swan" element={<BlackSwanPage />} />
+          <Route path="/challenge/black-swan" element={<MarketShockPage />} />
+          <Route path="/challenge/cross-arbitrage" element={<CrossArbitragePage />} />
+          <Route
+            path="/challenge/cross-arbitrage/shared"
+            element={<SharedChallengePage />}
+          />
           <Route path="/challenge/:id/shared" element={<SharedChallengePage />} />
 
           <Route path="/profile" element={<ProfilePage />} />

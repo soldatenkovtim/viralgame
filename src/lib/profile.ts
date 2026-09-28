@@ -1,13 +1,18 @@
-import { getBlackSwanScenario } from '@/data/blackSwanScenarios'
 import { blindTraits } from '@/games/blind-market/scoring'
-import { blackSwanTraits } from '@/games/black-swan/scoring'
+import { getMarketShockScenario } from '@/games/market-shock/scenarios'
+import { marketShockTraits } from '@/games/market-shock/scoring'
+import {
+  crossArbitrageSentence,
+  crossArbitrageTraits,
+} from '@/games/cross-arbitrage/scoring'
 import { marketMakerTraits } from '@/games/market-maker/scoring'
-import { LEADERBOARD_MAX_SCORE, TRAIT_MAX, TRAIT_MIN } from '@/lib/constants'
+import { LEADERBOARD_MAX_SCORE, TOTAL_CHALLENGES, TRAIT_MAX, TRAIT_MIN } from '@/lib/constants'
 import { clamp } from '@/lib/random'
 import type {
-  BlackSwanResult,
   BlindMarketResult,
+  CrossArbitrageResult,
   MarketMakerResult,
+  MarketShockResult,
   TradingProfile,
 } from '@/types/game'
 
@@ -17,6 +22,7 @@ export type TraitKey =
   | 'pricing'
   | 'adaptability'
   | 'discipline'
+  | 'opportunity'
 
 export const traitLabels: Record<TraitKey, string> = {
   marketSense: 'Рыночное чутьё',
@@ -24,6 +30,7 @@ export const traitLabels: Record<TraitKey, string> = {
   pricing: 'Ценообразование',
   adaptability: 'Адаптивность',
   discipline: 'Дисциплина',
+  opportunity: 'Поиск возможностей',
 }
 
 export const traitOrder: TraitKey[] = [
@@ -32,12 +39,14 @@ export const traitOrder: TraitKey[] = [
   'pricing',
   'adaptability',
   'discipline',
+  'opportunity',
 ]
 
 export interface ProfileInput {
   blindMarket?: BlindMarketResult
   marketMaker?: MarketMakerResult
-  blackSwan?: BlackSwanResult
+  blackSwan?: MarketShockResult
+  crossArbitrage?: CrossArbitrageResult
 }
 
 /**
@@ -48,6 +57,7 @@ const CONTRIBUTION_WEIGHTS = {
   blindMarket: { marketSense: 0.45, adaptability: 0.3, discipline: 0.25 },
   marketMaker: { pricing: 0.45, riskControl: 0.35, adaptability: 0.2 },
   blackSwan: { riskControl: 0.4, adaptability: 0.35, discipline: 0.25 },
+  crossArbitrage: { opportunity: 0.5, discipline: 0.3, adaptability: 0.2 },
 } as const
 
 export function buildTradingProfile(input: ProfileInput): TradingProfile {
@@ -57,6 +67,7 @@ export function buildTradingProfile(input: ProfileInput): TradingProfile {
     pricing: { sum: 0, weight: 0 },
     adaptability: { sum: 0, weight: 0 },
     discipline: { sum: 0, weight: 0 },
+    opportunity: { sum: 0, weight: 0 },
   }
 
   const add = (trait: TraitKey, value: number, weight: number) => {
@@ -81,12 +92,20 @@ export function buildTradingProfile(input: ProfileInput): TradingProfile {
   }
 
   if (input.blackSwan) {
-    const scenario = getBlackSwanScenario(input.blackSwan.scenarioId)
-    const traits = blackSwanTraits(input.blackSwan, scenario)
+    const scenario = getMarketShockScenario(input.blackSwan.scenarioId)
+    const traits = marketShockTraits(input.blackSwan, scenario)
     const w = CONTRIBUTION_WEIGHTS.blackSwan
     add('riskControl', traits.riskControl, w.riskControl)
     add('adaptability', traits.adaptability, w.adaptability)
     add('discipline', traits.discipline, w.discipline)
+  }
+
+  if (input.crossArbitrage) {
+    const traits = crossArbitrageTraits(input.crossArbitrage)
+    const w = CONTRIBUTION_WEIGHTS.crossArbitrage
+    add('opportunity', traits.opportunity, w.opportunity)
+    add('discipline', traits.discipline, w.discipline)
+    add('adaptability', traits.adaptability, w.adaptability)
   }
 
   const values = {} as Record<TraitKey, number>
@@ -161,6 +180,26 @@ const PAIR_ARCHETYPES: Record<string, Archetype> = {
     name: 'Кризисный управляющий',
     tagline: 'Лучше всего работаешь, когда рынок ломается.',
   },
+  'marketSense+opportunity': {
+    name: 'Охотник за расхождениями',
+    tagline: 'Замечаешь, где рынок ошибается, раньше остальных.',
+  },
+  'discipline+opportunity': {
+    name: 'Арбитражёр',
+    tagline: 'Берёшь только тот edge, который остаётся после издержек.',
+  },
+  'adaptability+opportunity': {
+    name: 'Быстрый арбитражёр',
+    tagline: 'Успеваешь собрать сделку, пока окно ещё открыто.',
+  },
+  'opportunity+pricing': {
+    name: 'Точный исполнитель',
+    tagline: 'Видишь цену сделки вместе со всеми издержками.',
+  },
+  'opportunity+riskControl': {
+    name: 'Осторожный арбитражёр',
+    tagline: 'Берёшь расхождение, только когда риск уже посчитан.',
+  },
 }
 
 export const OPPORTUNIST: Archetype = {
@@ -225,7 +264,7 @@ export const allArchetypeNames: string[] = [
  */
 export function buildDescription(input: ProfileInput): string {
   const sentences: string[] = []
-  const { blindMarket, marketMaker, blackSwan } = input
+  const { blindMarket, marketMaker, blackSwan, crossArbitrage } = input
 
   if (blindMarket) {
     const changes = blindMarket.directionChanges
@@ -251,20 +290,20 @@ export function buildDescription(input: ProfileInput): string {
 
   if (blackSwan) {
     const heldThroughShock = blackSwan.decisions.some(
-      (decision) => decision.phaseIndex === 1 && decision.action === 'hold',
+      (decision) => decision.phase === 2 && decision.action === 'hold',
     )
     const cutEarly = blackSwan.decisions.some(
       (decision) =>
-        decision.phaseIndex === 0 &&
+        decision.phase === 1 &&
         (decision.action === 'close' || decision.action === 'hedge'),
     )
     if (cutEarly) {
       sentences.push(
-        'В рыночном шоке ты снизил риск до основной части движения, пожертвовав частью потенциального результата.',
+        'В рыночном шоке ты снизил риск ещё на раннем сигнале — до основной части движения.',
       )
     } else if (heldThroughShock) {
       sentences.push(
-        'В рыночном шоке ты чаще большинства участников сохранял экспозицию во время резкого движения.',
+        'В рыночном шоке ты сохранял экспозицию и после резкого движения цены.',
       )
     } else {
       sentences.push(
@@ -274,7 +313,7 @@ export function buildDescription(input: ProfileInput): string {
   }
 
   if (marketMaker) {
-    const widened = marketMaker.spreadSecondHalf - marketMaker.spreadFirstHalf > 0.12
+    const widened = marketMaker.spreadDirectional - marketMaker.spreadNoise > 0.12
     if (marketMaker.hedgeCount > 0 && !widened) {
       sentences.push(
         'В маркет-мейкинге ты предпочитал контролировать инвентарь раньше, чем расширять спред.',
@@ -288,6 +327,10 @@ export function buildDescription(input: ProfileInput): string {
         'В маркет-мейкинге ты держал стабильную котировку и собирал поток, не меняя параметры резко.',
       )
     }
+  }
+
+  if (crossArbitrage) {
+    sentences.push(crossArbitrageSentence(crossArbitrage))
   }
 
   if (!sentences.length) {
@@ -305,16 +348,41 @@ export function buildDescription(input: ProfileInput): string {
  * Score для рейтинга — чисто игровая величина, 0–10 000.
  * Он намеренно не совпадает с Trading Profile.
  */
-export function computeOverallScore(input: ProfileInput): number {
-  const blind = input.blindMarket?.score ?? 0
-  const maker = input.marketMaker?.score ?? 0
-  const swan = input.blackSwan?.score ?? 0
+export const OVERALL_SCORE_WEIGHTS = {
+  blindMarket: 0.25,
+  marketMaker: 0.25,
+  blackSwan: 0.25,
+  crossArbitrage: 0.25,
+} as const
 
-  const normalized = blind * 0.35 + maker * 0.35 + swan * 0.3
+/** Взвешенная сумма score испытаний (каждый 0–100) → 0–100. */
+export function weightedChallengeScore(scores: {
+  blindMarket: number
+  marketMaker: number
+  blackSwan: number
+  crossArbitrage: number
+}): number {
+  const w = OVERALL_SCORE_WEIGHTS
+  return (
+    scores.blindMarket * w.blindMarket +
+    scores.marketMaker * w.marketMaker +
+    scores.blackSwan * w.blackSwan +
+    scores.crossArbitrage * w.crossArbitrage
+  )
+}
+
+export function computeOverallScore(input: ProfileInput): number {
+  const normalized = weightedChallengeScore({
+    blindMarket: input.blindMarket?.score ?? 0,
+    marketMaker: input.marketMaker?.score ?? 0,
+    blackSwan: input.blackSwan?.score ?? 0,
+    crossArbitrage: input.crossArbitrage?.score ?? 0,
+  })
   return Math.round(clamp(normalized, 0, 100) * (LEADERBOARD_MAX_SCORE / 100))
 }
 
-/** Доля собранного профиля: 0 / 33 / 66 / 100. */
+/** Доля собранного профиля: 0 / 25 / 50 / 75 / 100. */
 export function profileCompletion(completedCount: number): number {
-  return [0, 33, 66, 100][clamp(completedCount, 0, 3)] ?? 0
+  const count = clamp(completedCount, 0, TOTAL_CHALLENGES)
+  return Math.round((count / TOTAL_CHALLENGES) * 100)
 }

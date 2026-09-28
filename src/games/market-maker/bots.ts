@@ -1,89 +1,136 @@
 import type { SeededRandom } from '@/lib/random'
-import type { BotType } from '@/types/game'
+import type { FlowRegime } from '@/types/game'
 
 export interface BotOrder {
   side: 'buy' | 'sell'
   size: number
 }
 
-export interface BotContext {
+export interface FlowContext {
   random: SeededRandom
   tick: number
-  /** Полный путь справедливой цены, посчитанный заранее из seed. */
-  fairValuePath: number[]
+  fairValue: number[]
+  marketPrice: number[]
   bid: number
   ask: number
+  /** Множитель интенсивности текущей фазы. */
+  intensity: number
+  /** Недавний перекос потока: +1 — только покупки, −1 — только продажи. */
+  imbalance: number
 }
 
-/** На сколько тиков вперёд смотрит информированный поток. */
-const INFORMED_LOOKAHEAD = 5
-/** Минимальное преимущество, ради которого информированный бот торгует. */
-const INFORMED_EDGE = 0.03
-/** Сколько последних тиков анализирует моментум-бот. */
-const MOMENTUM_WINDOW = 4
+/** На сколько тиков вперёд видит справедливую цену информированный поток. */
+export const INFORMED_LOOKAHEAD = 10
+/** За сколько тиков моментум-поток оценивает движение рынка. */
+const MOMENTUM_WINDOW = 6
+const MOMENTUM_THRESHOLD = 0.08
+
+interface RegimeProfile {
+  /** Вероятность появления заявки на тике. */
+  intensity: number
+  /** Масштаб чувствительности к цене: чем больше, тем терпимее к широкому спреду. */
+  priceTolerance: number
+  /** Вероятности размеров 1, 2, 3, 4, 5. */
+  sizeWeights: readonly number[]
+  /** Насколько сильно поток разворачивается после серии в одну сторону (0–0,5). */
+  meanReversion: number
+}
+
+const PROFILES: Record<FlowRegime, RegimeProfile> = {
+  noise: {
+    intensity: 0.42,
+    priceTolerance: 0.3,
+    sizeWeights: [0.5, 0.32, 0.15, 0.03, 0],
+    meanReversion: 0.3,
+  },
+  momentum: {
+    intensity: 0.36,
+    priceTolerance: 0.38,
+    sizeWeights: [0.35, 0.33, 0.22, 0.07, 0.03],
+    meanReversion: 0.22,
+  },
+  informed: {
+    intensity: 0.34,
+    priceTolerance: 0.45,
+    sizeWeights: [0.25, 0.32, 0.28, 0.1, 0.05],
+    meanReversion: 0,
+  },
+}
 
 /**
- * Решение бота на текущем тике. Модель намеренно грубая:
- * задача — дать игроку почувствовать разницу в характере потока,
- * а не воспроизвести реальный HFT.
+ * Насколько котировка привлекательна для контрагента.
+ * Чем дальше цена исполнения от его ориентира, тем реже сделка.
  */
-export function decideBotOrder(botType: BotType, context: BotContext): BotOrder | null {
-  switch (botType) {
-    case 'noise':
-      return decideNoise(context)
-    case 'informed':
-      return decideInformed(context)
-    case 'momentum':
-      return decideMomentum(context)
-  }
+export function spreadAttractiveness(distance: number, tolerance: number): number {
+  if (distance <= 0) return 1
+  return Math.exp(-distance / tolerance)
 }
 
-function decideNoise({ random }: BotContext): BotOrder | null {
-  if (!random.chance(0.35)) return null
-  return {
-    side: random.chance(0.5) ? 'buy' : 'sell',
-    size: random.int(1, 4),
-  }
+/**
+ * Заявка контрагента на текущем тике.
+ *
+ * Каждый тик тратит одинаковое число случайных чисел, поэтому поток
+ * воспроизводится по seed независимо от действий игрока.
+ */
+export function decideFlowOrder(regime: FlowRegime, context: FlowContext): BotOrder | null {
+  const { random } = context
+  const arrival = random.next()
+  const sideRoll = random.next()
+  const fillRoll = random.next()
+  const sizeRoll = random.next()
+
+  const profile = PROFILES[regime]
+  if (arrival >= profile.intensity * context.intensity) return null
+
+  const { side, reference } = sideAndReference(regime, profile, context, sideRoll)
+  const distance = side === 'buy' ? context.ask - reference : reference - context.bid
+  if (fillRoll >= spreadAttractiveness(distance, profile.priceTolerance)) return null
+
+  return { side, size: pickSize(profile.sizeWeights, sizeRoll) }
 }
 
-function decideInformed(context: BotContext): BotOrder | null {
-  const { random, tick, fairValuePath, bid, ask } = context
-  const future = fairValuePath[Math.min(tick + INFORMED_LOOKAHEAD, fairValuePath.length - 1)]
-
-  // Покупает, когда ask заметно ниже будущей справедливой цены.
-  if (future - ask > INFORMED_EDGE && random.chance(0.7)) {
-    return { side: 'buy', size: random.int(2, 5) }
+function pickSize(weights: readonly number[], roll: number): number {
+  let cumulative = 0
+  for (let index = 0; index < weights.length; index += 1) {
+    cumulative += weights[index]
+    if (roll < cumulative) return index + 1
   }
-
-  // Продаёт, когда bid заметно выше будущей справедливой цены.
-  if (bid - future > INFORMED_EDGE && random.chance(0.7)) {
-    return { side: 'sell', size: random.int(2, 5) }
-  }
-
-  // Изредка торгует «просто так», чтобы поток не читался с первой сделки.
-  if (random.chance(0.08)) {
-    return { side: random.chance(0.5) ? 'buy' : 'sell', size: random.int(1, 2) }
-  }
-
-  return null
+  return 1
 }
 
-function decideMomentum(context: BotContext): BotOrder | null {
-  const { random, tick, fairValuePath } = context
-  const from = Math.max(0, tick - MOMENTUM_WINDOW)
-  const drift = fairValuePath[tick] - fairValuePath[from]
+/** Вероятность покупки с поправкой на недавний перекос потока. */
+function revertedBuyShare(baseBuyShare: number, profile: RegimeProfile, imbalance: number): number {
+  return Math.min(0.95, Math.max(0.05, baseBuyShare - profile.meanReversion * imbalance))
+}
 
-  if (Math.abs(drift) < 0.04) {
-    if (random.chance(0.1)) {
-      return { side: random.chance(0.5) ? 'buy' : 'sell', size: random.int(1, 2) }
+function sideAndReference(
+  regime: FlowRegime,
+  profile: RegimeProfile,
+  { tick, fairValue, marketPrice, imbalance }: FlowContext,
+  roll: number,
+): { side: 'buy' | 'sell'; reference: number } {
+  const market = marketPrice[tick]
+
+  if (regime === 'informed') {
+    const future = fairValue[Math.min(tick + INFORMED_LOOKAHEAD, fairValue.length - 1)]
+    const expected = future - fairValue[tick]
+    const bias = Math.abs(expected) > 0.05 ? 0.88 : 0.5
+    const buyShare = expected >= 0 ? bias : 1 - bias
+    // Ориентир информированного потока — будущая справедливая цена.
+    return { side: roll < buyShare ? 'buy' : 'sell', reference: future }
+  }
+
+  if (regime === 'momentum') {
+    const move = market - marketPrice[Math.max(0, tick - MOMENTUM_WINDOW)]
+    if (Math.abs(move) < MOMENTUM_THRESHOLD) {
+      const buyShare = revertedBuyShare(0.5, profile, imbalance)
+      return { side: roll < buyShare ? 'buy' : 'sell', reference: market }
     }
-    return null
+    const buyShare = revertedBuyShare(move > 0 ? 0.78 : 0.22, profile, imbalance)
+    // Моментум готов переплатить в сторону движения.
+    return { side: roll < buyShare ? 'buy' : 'sell', reference: market + move * 0.6 }
   }
 
-  if (!random.chance(0.55)) return null
-
-  return {
-    side: drift > 0 ? 'buy' : 'sell',
-    size: random.int(2, 4),
-  }
+  const buyShare = revertedBuyShare(0.5, profile, imbalance)
+  return { side: roll < buyShare ? 'buy' : 'sell', reference: market }
 }
