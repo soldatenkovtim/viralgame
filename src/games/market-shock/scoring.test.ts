@@ -183,3 +183,36 @@ describe('marketShockInsights', () => {
     expect(marketShockInsights(result, scenario)[0]).toMatch(/пробоя отмеченного уровня/)
   })
 })
+
+
+describe('полный выход завершает управление позицией', () => {
+  it.each([1, 2, 3])('фиксирует выход в фазе %i для всех сценариев', (phase) => {
+    for (const source of marketShockScenarios) {
+      const actions: ShockAction[] = Array.from({ length: phase - 1 }, () => 'hedge')
+      actions.push('close', 'increase', 'hold')
+      const decisions = decisionsFromActions(source, actions)
+      expect(decisions).toHaveLength(phase)
+      const exit = decisions.at(-1)!
+      const exitIndex = source.phaseCheckpoints[phase - 1] - 1
+      expect(exit.price).toBe(source.candles[exitIndex].close)
+      expect(exit.positionAfter).toBe(0)
+      const result = buildMarketShockResult(source, decisions, [])
+      expect(result.pnlPercent).toBeCloseTo(exit.pnlBefore, 10)
+      expect(result.decisions.at(-1)!.pnlAfter).toBeCloseTo(exit.pnlBefore, 10)
+      const after = simulateShock(source, decisions).points.filter((point) => point.index > exitIndex)
+      expect(after.length).toBeGreaterThan(0)
+      for (const point of after) {
+        expect(point.exposure).toBe(0)
+        expect(point.pnlPercent).toBeCloseTo(exit.pnlBefore, 10)
+      }
+      expect(marketShockInsights(result, source).join(' ')).toContain('прошёл без позиции')
+    }
+  })
+
+  it('игнорирует попытку повторного входа после закрытия в расчёте', () => {
+    const decisions = decisionsFromActions(scenario, ['close'])
+    const closed = simulateShock(scenario, decisions)
+    const invalid = { ...decisions[0], phase: 2, action: 'increase' as const, positionBefore: 0, positionAfter: 1 }
+    expect(simulateShock(scenario, [...decisions, invalid]).pnl).toBe(closed.pnl)
+  })
+})

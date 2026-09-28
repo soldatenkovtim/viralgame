@@ -9,6 +9,7 @@ import type {
   CrossArbitrageSession,
 } from '@/types/game'
 import {
+  ARB_POSITION_SIZES,
   bestTrade,
   buildQuotePath,
   evaluateTrade,
@@ -16,8 +17,8 @@ import {
   windowCloseMs,
 } from './engine'
 
-/** Скорость может сдвинуть score рынка не больше чем на 10%. */
-export const ARB_SPEED_BONUS_MAX = 10
+/** Доля скорости в score — 15%. */
+export const ARB_SPEED_BONUS_MAX = 15
 
 export interface ArbitrageDecision {
   buyVenue?: string
@@ -40,7 +41,7 @@ export function evaluateRound(
   const closeMs = windowCloseMs(scenario, path)
 
   const choseNoTrade =
-    !decision.buyVenue || !decision.sellVenue || decision.positionSize <= 0
+    decision.timedOut || decision.buyVenue === decision.sellVenue || !decision.buyVenue || !decision.sellVenue || decision.positionSize <= 0
   const outcome = choseNoTrade
     ? null
     : evaluateTrade(
@@ -50,6 +51,12 @@ export function evaluateRound(
         decision.positionSize,
       )
 
+  const routeBest = outcome ? Math.max(...ARB_POSITION_SIZES.map((size) =>
+    evaluateTrade(path[quoteStep], outcome.buyVenue, outcome.sellVenue, size).capitalReturn,
+  )) : 0
+  const sizingScore = outcome && routeBest > 0
+    ? clamp(outcome.capitalReturn / routeBest, 0, 1) * 100
+    : !outcome && optimal.capitalReturn <= 0 ? 100 : 0
   const capitalReturn = outcome?.capitalReturn ?? 0
   const optimalNetReturn = optimal.capitalReturn
   const hasOpportunity = optimalNetReturn > 0
@@ -57,7 +64,7 @@ export function evaluateRound(
   const optimalChoice = hasOpportunity
     ? !choseNoTrade &&
       decision.buyVenue === optimal.buyVenue &&
-      decision.sellVenue === optimal.sellVenue
+      decision.sellVenue === optimal.sellVenue && decision.positionSize === optimal.positionSize
     : choseNoTrade
 
   return {
@@ -71,17 +78,23 @@ export function evaluateRound(
     capitalReturn,
     optimalNetReturn,
     ...(hasOpportunity
-      ? { optimalBuyVenue: optimal.buyVenue, optimalSellVenue: optimal.sellVenue }
+      ? { optimalBuyVenue: optimal.buyVenue, optimalSellVenue: optimal.sellVenue, optimalPositionSize: optimal.positionSize }
       : {}),
     positionSize: outcome?.positionSize ?? 0,
     decisionTimeMs: decision.decisionTimeMs,
     quoteStep,
     liquidityHit: outcome?.liquidityHit ?? false,
+    ...(outcome ? {
+      avgBuyPrice: outcome.avgBuyPrice, avgSellPrice: outcome.avgSellPrice,
+      feeReturn: outcome.feeReturn, slippageReturn: outcome.slippageReturn,
+    } : {}),
+    sizingScore,
     ...(closeMs !== null ? { msBeforeClose: closeMs - decision.decisionTimeMs } : {}),
     profitable: capitalReturn > 0,
     optimalChoice,
     roundScore: arbitrageRoundScore({
       optimalNetReturn,
+      sizingScore,
       capitalReturn,
       choseNoTrade,
       decisionTimeMs: decision.decisionTimeMs,
@@ -91,9 +104,8 @@ export function evaluateRound(
 }
 
 /**
- * Без возможности — 100 за «Сделки нет», 0 за сделку.
- * С возможностью — доля собранного оптимального результата.
- * Бонус за скорость масштабируется результатом, поэтому быстрый промах ничего не даёт.
+ * Захват edge (40%), отсутствие ложных сделок (25%), размер (20%), скорость (15%).
+ * Пропуск возможности сохраняет компоненту отсутствия ложной сделки.
  */
 export function arbitrageRoundScore({
   optimalNetReturn,
@@ -101,22 +113,24 @@ export function arbitrageRoundScore({
   choseNoTrade,
   decisionTimeMs,
   timedOut,
+  sizingScore,
 }: {
+  sizingScore?: number
   optimalNetReturn: number
   capitalReturn: number
   choseNoTrade: boolean
   decisionTimeMs: number
   timedOut: boolean
 }): number {
-  const base =
-    optimalNetReturn <= 0
-      ? choseNoTrade
-        ? 100
-        : 0
-      : clamp((capitalReturn / optimalNetReturn) * 100, 0, 100)
-
-  const speed = timedOut ? 0 : mapRange(decisionTimeMs, 3000, 12000, 1, 0)
-  return base * (1 - ARB_SPEED_BONUS_MAX / 100) + ARB_SPEED_BONUS_MAX * speed * (base / 100)
+  const edgeCaptureScore = optimalNetReturn <= 0
+    ? choseNoTrade ? 100 : 0
+    : clamp(capitalReturn / optimalNetReturn, 0, 1) * 100
+  const falseTradeAvoidanceScore = choseNoTrade || capitalReturn > 0 ? 100 : 0
+  const size = sizingScore ?? edgeCaptureScore
+  // Скорость награждает только прибыльное исполнение или обоснованный пропуск.
+  const speedScore = !timedOut && (capitalReturn > 0 || (choseNoTrade && optimalNetReturn <= 0))
+    ? mapRange(decisionTimeMs, 3000, 12000, 100, 0) : 0
+  return edgeCaptureScore * 0.40 + falseTradeAvoidanceScore * 0.25 + size * 0.20 + speedScore * 0.15
 }
 
 export function buildCrossArbitrageResult(
@@ -144,6 +158,8 @@ export function buildCrossArbitrageResult(
     ).length,
     tradeCount: trades.length,
     averageDecisionMs,
+    averageSizeUnits: trades.length ? trades.reduce((sum, round) => sum + round.positionSize * 100, 0) / trades.length : 0,
+    sizeWorsenedCount: trades.filter((round) => round.liquidityHit && round.netReturn < round.netBeforeLiquidity).length,
     bestEdgePercent: profitable.length
       ? Math.max(...profitable.map((round) => round.netReturn)) * 100
       : 0,
@@ -171,7 +187,7 @@ export function venueName(scenario: CrossArbitrageScenario, venueId?: string): s
 }
 
 export function sizeLabel(size: number): string {
-  return `${Math.round(size * 100)}%`
+  return `${Math.round(size * 100)} ед.`
 }
 
 export function routeLabel(
@@ -235,7 +251,7 @@ export function roundFeedback(
 
   if (round.choseNoTrade) {
     if (!hasOpportunity) {
-      return { valuePercent, title: 'Верно: чистого арбитража не было' }
+      return { valuePercent, title: 'Исполнимой возможности не было' }
     }
     if (round.msBeforeClose !== undefined && round.msBeforeClose <= 0) {
       return {
@@ -263,7 +279,7 @@ export function roundFeedback(
     } else if (round.capitalReturn < round.optimalNetReturn * 0.8) {
       detail = `Больший размер дал бы до ${bestValue}`
     }
-    return { valuePercent, title: 'Арбитраж найден', ...(detail ? { detail } : {}) }
+    return { valuePercent, title: round.liquidityHit ? 'Часть edge потеряна из-за объёма' : 'Edge сохранился после комиссий', ...(detail ? { detail } : {}) }
   }
 
   if (tradedBestPair && round.quoteStep > 0) {
@@ -330,8 +346,13 @@ export function arbitrageObservations(result: CrossArbitrageResult): string[] {
     )
   } else if (feeTraps > 0) {
     observations.push('Ты входил в сделки, где разница в цене не перекрывала комиссии обеих площадок.')
-  } else if (result.falseTrades > 0) {
+  } else if (trades.some((round) => round.netBeforeLiquidity <= 0 && round.quoteStep > 0)) {
     observations.push('В части сделок edge закрылся раньше, чем сделка была собрана.')
+  }
+
+  const liquidityLosses = trades.filter((round) => round.liquidityHit && round.netReturn < round.netBeforeLiquidity)
+  if (liquidityLosses.length) {
+    observations.unshift(`${liquidityLosses.length === 1 ? 'В одной сделке' : `В ${liquidityLosses.length} сделках`} объём превысил ликвидность по лучшей цене: часть edge ушла на исполнение второго уровня.`)
   }
 
   const sized = trades.filter((round) => round.grossReturn > 0)

@@ -105,7 +105,7 @@ export function MarketShockGame({
   const commit = useCallback(
     (action: ShockAction, timedOut: boolean) => {
       const phase = phaseNumberOf(stage)
-      if (phase === 0 || lastCommittedRef.current >= phase) return
+      if (!deciding || phase === 0 || position === 0 || lastCommittedRef.current >= phase) return
       lastCommittedRef.current = phase
       const before = decisions.at(-1)?.positionAfter ?? initialExposure(scenario)
       const candleIndex = decisionCandleIndex(scenario, phase)
@@ -126,6 +126,17 @@ export function MarketShockGame({
       setDeciding(false)
       setNotice(timedOut ? 'Позиция оставлена без изменений.' : null)
 
+      if (decision.positionAfter === 0) {
+        setNotice('Позиция закрыта. Остаток сценария проигрывается без позиции.')
+        setStage('reveal')
+        const completedDecisions = [...decisions, decision]
+        revealTo(scenario.candles.length, () => {
+          setStage('result')
+          onComplete(buildMarketShockResult(scenario, completedDecisions, levels))
+        })
+        return
+      }
+
       if (phase < 3) {
         playPhase(phase + 1)
         return
@@ -134,12 +145,12 @@ export function MarketShockGame({
       setStage('reveal')
       revealTo(scenario.candles.length, () => setRevealDone(true))
     },
-    [decisions, playPhase, revealTo, scenario, stage],
+    [deciding, position, decisions, levels, onComplete, playPhase, revealTo, scenario, stage],
   )
 
   const { remaining } = useCountdown({
     seconds: DECISION_SECONDS,
-    active: deciding && phaseNumber > 0,
+    active: deciding && phaseNumber > 0 && position !== 0,
     disabled: timerDisabled,
     resetKey: `${scenario.id}-${stage}`,
     onExpire: () => commit('hold', true),
@@ -263,6 +274,11 @@ export function MarketShockGame({
                 entryPrice={scenario.initialPosition.entryPrice}
                 price={price}
               />
+              {position === 0 ? (
+                <p className="tnum text-sm text-chalk-400">
+                  Цена выхода: {formatPrice(decisions.at(-1)!.price)} · Зафиксированный PnL: {formatPercent(pnlPercent, 2)}
+                </p>
+              ) : null}
               <FinalReveal
                 scenario={scenario}
                 ready={revealDone}

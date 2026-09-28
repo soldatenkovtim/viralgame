@@ -88,6 +88,7 @@ export function BlindReplay({
         markers={markers}
         segments={segments}
         editable={false}
+        showDates
       />
 
       <div className="flex flex-wrap gap-x-5 gap-y-2 border-t border-ink-800 px-4 py-3 text-xs text-chalk-400">

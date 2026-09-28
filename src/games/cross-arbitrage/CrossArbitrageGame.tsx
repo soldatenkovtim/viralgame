@@ -48,6 +48,7 @@ export function CrossArbitrageGame({
   const [rounds, setRounds] = useState<ArbitrageRoundResult[]>([])
   const [buyVenue, setBuyVenue] = useState<string | null>(null)
   const [sellVenue, setSellVenue] = useState<string | null>(null)
+  const [positionSize, setPositionSize] = useState<number>(0.25)
   const [elapsedMs, setElapsedMs] = useState(0)
   const [feedback, setFeedback] = useState<RoundFeedback | null>(null)
 
@@ -74,6 +75,7 @@ export function CrossArbitrageGame({
 
   const startRound = useCallback((index: number) => {
     setRoundIndex(index)
+    setPositionSize(0.25)
     setBuyVenue(null)
     setSellVenue(null)
     setFeedback(null)
@@ -96,7 +98,10 @@ export function CrossArbitrageGame({
       if (committedRef.current) return
       committedRef.current = true
 
-      const decisionTimeMs = timedOut ? limitMs : Date.now() - startRef.current
+      const elapsed = Date.now() - startRef.current
+      timedOut = timedOut || (!timerDisabled && elapsed >= limitMs)
+      if (timedOut) decision = { positionSize: 0 }
+      const decisionTimeMs = timedOut ? limitMs : elapsed
       const round = evaluateRound(scenario, { ...decision, decisionTimeMs, timedOut })
 
       setRounds((current) => [...current, round])
@@ -113,7 +118,7 @@ export function CrossArbitrageGame({
         decisionTimeMs,
       })
     },
-    [limitMs, scenario, session.id],
+    [limitMs, scenario, session.id, timerDisabled],
   )
 
   // Если время вышло, сделка просто не открывается. Это не поражение.
@@ -172,7 +177,7 @@ export function CrossArbitrageGame({
       />
 
       {stage === 'feedback' && feedback ? (
-        <FeedbackCard feedback={feedback} />
+        <FeedbackCard feedback={feedback} round={rounds.at(-1)!} />
       ) : (
         <div className="flex flex-col gap-6 rounded-xl border border-ink-700 bg-ink-900 p-5 sm:p-6">
           <VenueRow
@@ -198,12 +203,8 @@ export function CrossArbitrageGame({
               quotes={quotes}
               buyVenue={buyVenue as string}
               sellVenue={sellVenue as string}
-              onPick={(positionSize) =>
-                commit(
-                  { buyVenue: buyVenue as string, sellVenue: sellVenue as string, positionSize },
-                  false,
-                )
-              }
+              selected={positionSize}
+              onPick={setPositionSize}
             />
           ) : null}
 
@@ -211,6 +212,14 @@ export function CrossArbitrageGame({
             <p className="text-xs leading-relaxed text-chalk-500">
               Если чистой прибыли после комиссий нет — сделку можно не открывать.
             </p>
+            <Button
+              variant="primary"
+              size="lg"
+              disabled={!canPickSize || buyVenue === sellVenue}
+              onClick={() => commit({ buyVenue: buyVenue!, sellVenue: sellVenue!, positionSize }, false)}
+            >
+              Исполнить сделку
+            </Button>
             <Button
               size="lg"
               className="shrink-0"
@@ -237,13 +246,16 @@ function Intro({ marketCount, onStart }: { marketCount: number; onStart: () => v
       </div>
 
       <p className="text-lg leading-relaxed font-medium text-chalk-50">
-        Один актив. Несколько площадок. Цены отличаются — но не каждое расхождение
-        приносит прибыль.
+        Один актив торгуется на нескольких площадках. Найди расхождение, которое остаётся прибыльным после комиссий и исполнения.
       </p>
       <p className="text-base leading-relaxed font-medium text-chalk-200">
-        Найди возможность, учти комиссии и собери сделку раньше, чем рынок выровняется.
+        Покупка идёт по Ask. Продажа — по Bid. Не каждое расхождение является сделкой.
       </p>
 
+      <p className="text-sm leading-relaxed text-chalk-400">
+        Считай, что капитал уже размещён на всех площадках. Переводы между ними не учитываются.
+        Объём сверх лучшей котировки исполняется по второму уровню, показанному в таблице.
+      </p>
       <p className="text-xs leading-relaxed text-chalk-500">
         {marketCount} рынков подряд, на каждый — {ARB_DECISION_SECONDS} секунд. Если время
         закончится, сделка просто не откроется — это не проигрыш.
@@ -290,7 +302,7 @@ function QuoteBoard({
   buyVenue: string | null
   sellVenue: string | null
 }) {
-  const hasLiquidity = quotes.some((quote) => quote.availableLiquidity !== undefined)
+  const hasLiquidity = true
   const columns = hasLiquidity
     ? 'grid-cols-[1.1fr_1fr_1fr_0.9fr_0.9fr]'
     : 'grid-cols-[1.1fr_1fr_1fr_0.9fr]'
@@ -306,7 +318,7 @@ function QuoteBoard({
             <span className="text-right">Bid</span>
             <span className="text-right">Ask</span>
             <span className="text-right">Комиссия</span>
-            {hasLiquidity ? <span className="text-right">Объём</span> : null}
+            {hasLiquidity ? <span className="text-right">Доступно Bid / Ask</span> : null}
           </div>
 
           {quotes.map((quote) => {
@@ -335,11 +347,13 @@ function QuoteBoard({
                 </span>
                 {hasLiquidity ? (
                   <span className="tnum text-right text-sm text-chalk-400">
-                    {quote.availableLiquidity !== undefined
-                      ? `${quote.availableLiquidity} ед.`
-                      : 'без лимита'}
+                    {quote.bidLiquidity} / {quote.askLiquidity} ед.
                   </span>
                 ) : null}
+                {(quote.secondBidLiquidity ?? 0) + (quote.secondAskLiquidity ?? 0) > 0 ? <span className="col-span-5 text-xs text-chalk-500">
+                  Второй уровень: Bid {formatPrice(quote.secondBid ?? quote.bid)} · {quote.secondBidLiquidity ?? 0} ед.
+                  {' / '}Ask {formatPrice(quote.secondAsk ?? quote.ask)} · {quote.secondAskLiquidity ?? 0} ед.
+                </span> : null}
               </div>
             )
           })}
@@ -351,7 +365,7 @@ function QuoteBoard({
         {converging ? (
           <span className="flex animate-fade items-center gap-1.5 text-market-down">
             <TrendingDown className="h-3.5 w-3.5" aria-hidden />
-            Котировки сходятся
+            Расхождение сокращается
           </span>
         ) : null}
       </div>
@@ -361,24 +375,17 @@ function QuoteBoard({
 
 function PriceCell({
   value,
-  before,
   emphasized,
 }: {
   value: number
   before?: number
   emphasized: boolean
 }) {
-  const flash =
-    before === undefined || before === value
-      ? ''
-      : value > before
-        ? 'animate-flash-up'
-        : 'animate-flash-down'
 
   return (
     <span
       key={value}
-      className={`tnum rounded px-1 text-right text-base ${flash} ${
+      className={`tnum rounded px-1 text-right text-base ${
         emphasized ? 'text-chalk-50' : 'text-chalk-200'
       }`}
     >
@@ -445,20 +452,19 @@ function SizePicker({
   quotes,
   buyVenue,
   sellVenue,
+  selected,
   onPick,
 }: {
   quotes: ArbitrageVenueQuote[]
   buyVenue: string
   sellVenue: string
+  selected: number
   onPick: (size: number) => void
 }) {
   const buy = quotes.find((quote) => quote.venueId === buyVenue) as ArbitrageVenueQuote
   const sell = quotes.find((quote) => quote.venueId === sellVenue) as ArbitrageVenueQuote
   const difference = ((sell.bid - buy.ask) / buy.ask) * 100
-  const limits = [buy.availableLiquidity, sell.availableLiquidity].filter(
-    (value): value is number => value !== undefined,
-  )
-  const liquidity = limits.length ? Math.min(...limits) : null
+  const liquidity = Math.min(buy.askLiquidity, sell.bidLiquidity)
 
   return (
     <div className="flex animate-fade-up flex-col gap-4 border-t border-ink-800 pt-5">
@@ -475,6 +481,9 @@ function SizePicker({
         />
       </div>
 
+      <p className="text-xs text-chalk-400">
+        Доступно по лучшей цене: {buy.venueName} Ask — {buy.askLiquidity} ед.; {sell.venueName} Bid — {sell.bidLiquidity} ед.
+      </p>
       <div className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="text-lg font-normal tracking-tight text-chalk-50">Размер сделки</h2>
@@ -492,14 +501,15 @@ function SizePicker({
               <button
                 key={size}
                 type="button"
+                aria-pressed={selected === size}
                 onClick={() => onPick(size)}
-                className="tnum flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-lg border border-ink-700 bg-ink-950 text-chalk-50 transition-colors duration-150 hover:border-violet-accent hover:bg-violet-accent/10"
+                className={` ${selected === size ? 'ring-2 ring-violet-accent' : ''} tnum flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-lg border border-ink-700 bg-ink-950 text-chalk-50 transition-colors duration-150 hover:border-violet-accent hover:bg-violet-accent/10`}
               >
                 <span className="text-base font-medium">{sizeLabel(size)}</span>
                 <span
                   className={`text-[11px] ${overLimit ? 'text-market-down' : 'text-chalk-500'}`}
                 >
-                  {units} ед.
+                  {overLimit ? 'Часть на втором уровне' : 'По лучшей цене'}
                 </span>
               </button>
             )
@@ -527,7 +537,7 @@ function Summary({
   )
 }
 
-function FeedbackCard({ feedback }: { feedback: RoundFeedback }) {
+function FeedbackCard({ feedback, round }: { feedback: RoundFeedback; round: ArbitrageRoundResult }) {
   return (
     <div className="flex animate-fade-up flex-col gap-2 rounded-xl border border-ink-700 bg-ink-900 p-6 sm:p-8">
       <span className={`tnum text-4xl font-light ${pnlColor(Number(feedback.valuePercent.toFixed(2)))}`}>
@@ -537,12 +547,29 @@ function FeedbackCard({ feedback }: { feedback: RoundFeedback }) {
       {feedback.detail ? (
         <span className="text-sm text-chalk-400">{feedback.detail}</span>
       ) : null}
+      <ExecutionBreakdown round={round} />
       <div className="mt-4 h-0.5 w-full overflow-hidden rounded-full bg-ink-800">
         <div
           className="h-full rounded-full bg-violet-accent/70"
           style={{ animation: `mt-fill ${FEEDBACK_MS}ms linear both` }}
         />
       </div>
+    </div>
+  )
+}
+
+
+export function ExecutionBreakdown({ round }: { round: ArbitrageRoundResult }) {
+  if (round.choseNoTrade) return null
+  return (
+    <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-chalk-400">
+      <span>Gross spread {formatEdge(round.grossReturn * 100)}</span>
+      <span>Комиссии {formatEdge(-(round.feeReturn ?? round.grossReturn - round.netBeforeLiquidity) * 100)}</span>
+      <span>Slippage {formatEdge(-(round.slippageReturn ?? round.netBeforeLiquidity - round.netReturn) * 100)}</span>
+      <span>Net result {formatEdge(round.netReturn * 100)}</span>
+      {round.avgBuyPrice !== undefined && round.avgSellPrice !== undefined ? (
+        <span>Среднее исполнение: покупка {formatPrice(round.avgBuyPrice)} → продажа {formatPrice(round.avgSellPrice)}</span>
+      ) : null}
     </div>
   )
 }

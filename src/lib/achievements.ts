@@ -161,7 +161,7 @@ export function crossArbitrageAchievement(result: CrossArbitrageResult): Achieve
     candidates.push({
       id: 'no-fuss',
       title: 'Без суеты',
-      description: 'Ты правильно пропустил все ложные возможности.',
+      description: 'Ты не открывал сделки в рынках без исполнимой возможности.',
     })
   }
 
