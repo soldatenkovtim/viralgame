@@ -1,6 +1,6 @@
 import { Pool } from 'pg'
-import { ApiError, newRoom, roomView, updateRoom, type StoredRoom } from './roomDomain.ts'
-import type { RoomService } from './roomHttp.ts'
+import { ApiError, newRoom, roomView, updateRoom, type StoredRoom } from './roomDomain.js'
+import type { RoomService } from './roomHttp.js'
 
 export function createPostgresRoomService(pool: Pool): RoomService {
   let initialized: Promise<void> | undefined

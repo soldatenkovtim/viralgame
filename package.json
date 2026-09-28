@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "start": "node server/start.ts",
-    "build": "tsc -b && vite build",
+    "start": "node dist-server/server/start.js",
+    "build": "tsc -b && vite build && tsc -p tsconfig.server.json",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",

@@ -1,9 +1,9 @@
 import { DatabaseSync } from 'node:sqlite'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { ApiError, newRoom, roomView, updateRoom, type StoredRoom } from './roomDomain.ts'
-export { roomMiddleware } from './roomHttp.ts'
-export type { RoomService } from './roomHttp.ts'
+import { ApiError, newRoom, roomView, updateRoom, type StoredRoom } from './roomDomain.js'
+export { roomMiddleware } from './roomHttp.js'
+export type { RoomService } from './roomHttp.js'
 
 export function createRoomService(filename: string) {
   if (filename !== ':memory:') mkdirSync(dirname(filename), { recursive: true })

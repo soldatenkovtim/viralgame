@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import type { RoomView, RoomSeat } from '../src/duel/roomTypes.ts'
-import { ApiError } from './roomDomain.ts'
+import type { RoomView, RoomSeat } from '../src/duel/roomTypes.js'
+import { ApiError } from './roomDomain.js'
 type Awaitable<T> = T | Promise<T>
 export interface RoomService {
   create(type: string, token: string): Awaitable<RoomSeat>
