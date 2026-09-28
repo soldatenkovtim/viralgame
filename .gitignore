@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Persistent duel rooms (participant credentials and results)
+.data/

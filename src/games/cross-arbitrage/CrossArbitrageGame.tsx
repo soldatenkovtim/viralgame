@@ -1,3 +1,4 @@
+import type { ChallengeContext } from '@/modes/config'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, Ban, TrendingDown } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -37,6 +38,7 @@ export function CrossArbitrageGame({
   timerDisabled = false,
   onComplete,
 }: {
+  context?: ChallengeContext
   session: CrossArbitrageSession
   timerDisabled?: boolean
   onComplete: (result: CrossArbitrageResult) => void
@@ -62,7 +64,7 @@ export function CrossArbitrageGame({
   const scenario = scenarios[roundIndex]
   const limitMs = (scenario.durationSeconds || ARB_DECISION_SECONDS) * 1000
   const path = useMemo(() => buildQuotePath(scenario), [scenario])
-  const step = quoteStepAt(elapsedMs, path.length)
+  const step = quoteStepAt(elapsedMs, path.length, scenario.quoteStepMs)
   const quotes = path[step]
   const previousQuotes = step > 0 ? path[step - 1] : null
 
@@ -141,7 +143,7 @@ export function CrossArbitrageGame({
   }, [rounds, scenarios.length, session, stage, startRound])
 
   if (stage === 'intro') {
-    return <Intro marketCount={scenarios.length} onStart={() => startRound(0)} />
+    return <Intro seconds={scenarios[0].durationSeconds} marketCount={scenarios.length} onStart={() => startRound(0)} />
   }
 
   const remaining = Math.max(0, Math.ceil((limitMs - elapsedMs) / 1000))
@@ -235,7 +237,7 @@ export function CrossArbitrageGame({
   )
 }
 
-function Intro({ marketCount, onStart }: { marketCount: number; onStart: () => void }) {
+function Intro({ seconds, marketCount, onStart }: { seconds: number; marketCount: number; onStart: () => void }) {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-5 py-20 sm:px-8 sm:py-28">
       <div className="flex flex-col gap-4">
@@ -254,10 +256,10 @@ function Intro({ marketCount, onStart }: { marketCount: number; onStart: () => v
 
       <p className="text-sm leading-relaxed text-chalk-400">
         Считай, что капитал уже размещён на всех площадках. Переводы между ними не учитываются.
-        Объём сверх лучшей котировки исполняется по второму уровню, показанному в таблице.
+        Объём сверх лучшей котировки исполняется по следующим уровням, показанным в таблице.
       </p>
       <p className="text-xs leading-relaxed text-chalk-500">
-        {marketCount} рынков подряд, на каждый — {ARB_DECISION_SECONDS} секунд. Если время
+        {marketCount} рынков подряд, на каждый — {seconds} секунд. Если время
         закончится, сделка просто не откроется — это не проигрыш.
       </p>
 
@@ -354,6 +356,7 @@ function QuoteBoard({
                   Второй уровень: Bid {formatPrice(quote.secondBid ?? quote.bid)} · {quote.secondBidLiquidity ?? 0} ед.
                   {' / '}Ask {formatPrice(quote.secondAsk ?? quote.ask)} · {quote.secondAskLiquidity ?? 0} ед.
                 </span> : null}
+                {quote.thirdBid !== undefined && <span className="col-span-5 text-xs text-chalk-500">Третий уровень: покупка {formatPrice(quote.thirdAsk!)} · {quote.thirdAskLiquidity} ед. / продажа {formatPrice(quote.thirdBid)} · {quote.thirdBidLiquidity} ед.</span>}
               </div>
             )
           })}
@@ -509,7 +512,7 @@ function SizePicker({
                 <span
                   className={`text-[11px] ${overLimit ? 'text-market-down' : 'text-chalk-500'}`}
                 >
-                  {overLimit ? 'Часть на втором уровне' : 'По лучшей цене'}
+                  {overLimit ? (buy.thirdAsk !== undefined || sell.thirdBid !== undefined ? 'Часть по глубине' : 'Часть на втором уровне') : 'По лучшей цене'}
                 </span>
               </button>
             )

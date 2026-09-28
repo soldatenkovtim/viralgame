@@ -609,7 +609,7 @@ export function TradingChart(props: {
     if (!plugin) return
 
     const mapped: SeriesMarker<Time>[] = (markers ?? [])
-      .filter((marker) => marker.candleIndex < visibleCount)
+      .filter((marker) => Number.isInteger(marker.candleIndex) && marker.candleIndex >= 0 && marker.candleIndex < Math.min(visibleCount, candles.length))
       .map((marker) => ({
         time: bucketStart(candles[marker.candleIndex].time, origin, frame.seconds) as Time,
         position: marker.position,

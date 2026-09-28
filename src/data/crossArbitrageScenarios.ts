@@ -307,5 +307,5 @@ export function pickCrossArbitrageSession(attempt: number): CrossArbitrageSessio
 }
 
 export function sessionScenarios(session: CrossArbitrageSession): CrossArbitrageScenario[] {
-  return session.scenarioIds.map(getCrossArbitrageScenario)
+  return session.scenarios ?? session.scenarioIds.map(getCrossArbitrageScenario)
 }

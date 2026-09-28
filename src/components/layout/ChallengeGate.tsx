@@ -24,7 +24,8 @@ export function ChallengeGate({
   const debug = useDebugParams()
   const unlocked = useGameStore((state) => state.unlockedChallenges.includes(challenge))
 
-  if (debug.enabled || unlocked) return children
+  const advanced = useGameStore(s => s.selectedMode === 'advanced' && s.advancedUnlocked)
+  if (advanced || debug.enabled || unlocked) return children
 
   const previous = CHALLENGE_ORDER[CHALLENGE_ORDER.indexOf(challenge) - 1]
 

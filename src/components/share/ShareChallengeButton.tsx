@@ -1,3 +1,5 @@
+import { useDuelResult } from '@/duel/resultContext'
+import { DuelShareButton } from '@/duel/DuelResultShare'
 import { useState } from 'react'
 import { Check, Send } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -15,6 +17,10 @@ import {
  * который другой трейдер пройдёт по тому же seed.
  */
 export function ShareChallengeButton({ payload }: { payload: SharePayload }) {
+  const duelResult = useDuelResult()
+  return duelResult ? <DuelShareButton result={duelResult} /> : <LegacyShareButton payload={payload} />
+}
+function LegacyShareButton({ payload }: { payload: SharePayload }) {
   const [state, setState] = useState<'idle' | 'shared' | 'copied'>('idle')
   const url = buildShareUrl(payload)
   const title = challengeShareTitles[payload.t]
@@ -39,7 +45,7 @@ export function ShareChallengeButton({ payload }: { payload: SharePayload }) {
         {state === 'idle' ? (
           <>
             <Send className="h-4 w-4" aria-hidden />
-            Отправить этот рынок другому трейдеру
+            Бросить вызов трейдеру
           </>
         ) : (
           <>

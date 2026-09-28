@@ -1,3 +1,5 @@
+import { difficultyFor } from '@/modes/config'
+import type { ChallengeContext } from '@/modes/config'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import type { ChartMarker } from '@/components/charts/CandleChart'
@@ -14,7 +16,6 @@ import type {
 } from '@/types/game'
 import {
   applyShockAction,
-  DECISION_SECONDS,
   decisionCandleIndex,
   initialExposure,
   positionLabel,
@@ -50,10 +51,12 @@ export function MarketShockGame({
   timerDisabled = false,
   onComplete,
 }: {
+  context?: ChallengeContext
   scenario: MarketShockScenario
   timerDisabled?: boolean
   onComplete: (result: MarketShockResult) => void
 }) {
+  const difficulty = difficultyFor('black-swan', scenario.mode === 'advanced')
   const [stage, setStage] = useState<MarketShockStage>('intro')
   const [deciding, setDeciding] = useState(false)
   const [revealDone, setRevealDone] = useState(false)
@@ -149,7 +152,7 @@ export function MarketShockGame({
   )
 
   const { remaining } = useCountdown({
-    seconds: DECISION_SECONDS,
+    seconds: difficulty.timerSeconds,
     active: deciding && phaseNumber > 0 && position !== 0,
     disabled: timerDisabled,
     resetKey: `${scenario.id}-${stage}`,
@@ -218,7 +221,7 @@ export function MarketShockGame({
         <aside className="flex flex-col gap-4">
           {stage === 'context' ? (
             <>
-              <MarketShockMetrics context={scenario.context} />
+              {difficulty.hintsEnabled && <MarketShockMetrics context={scenario.context} />}
               <PositionSummary
                 position={position}
                 pnlPercent={pnlPercent}
@@ -240,12 +243,12 @@ export function MarketShockGame({
 
           {phase ? (
             <>
-              <MarketShockMetrics
+              {difficulty.hintsEnabled && <MarketShockMetrics
                 context={scenario.context}
                 phase={phase}
                 phaseNumber={phaseNumber}
                 pending={!deciding}
-              />
+              />}
               <PositionSummary
                 position={position}
                 pnlPercent={pnlPercent}
@@ -257,6 +260,7 @@ export function MarketShockGame({
                 position={position}
                 deciding={deciding}
                 remaining={remaining}
+                totalSeconds={difficulty.timerSeconds}
                 timerDisabled={timerDisabled}
                 selected={selected}
                 notice={notice}
@@ -325,7 +329,7 @@ function FinalReveal({
       </dl>
       {scenario.synthetic ? (
         <p className="text-xs leading-relaxed text-chalk-500">
-          Сценарий стилизован на основе реального рыночного события.
+          {scenario.mode === 'advanced' ? 'Синтетический сценарий для проверки решений в неоднозначном рынке.' : 'Сценарий стилизован на основе реального рыночного события.'}
         </p>
       ) : null}
       <Button variant="primary" size="lg" fullWidth onClick={onContinue}>

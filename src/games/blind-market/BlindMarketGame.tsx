@@ -1,3 +1,6 @@
+import { difficultyFor } from '@/modes/config'
+import { useCountdown } from '@/hooks/useCountdown'
+import type { ChallengeContext } from '@/modes/config'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ArrowRight, EyeOff, X } from 'lucide-react'
 import {
@@ -63,9 +66,13 @@ export function BlindMarketGame({
   scenario,
   onComplete,
 }: {
+  context?: ChallengeContext
   scenario: BlindMarketScenario
   onComplete: (result: BlindMarketResult) => void
 }) {
+  const difficulty = difficultyFor('blind-market', scenario.mode === 'advanced')
+  const advanced = !difficulty.hintsEnabled
+  const committed = useRef(false)
   const [stage, setStage] = useState<Stage>('intro')
   const [checkpointIndex, setCheckpointIndex] = useState(0)
   const [selectedInfo, setSelectedInfo] = useState<BlindInfoKey[]>([])
@@ -243,6 +250,7 @@ export function BlindMarketGame({
   }
 
   const startDecision = useCallback(() => {
+    committed.current = false
     decisionStartRef.current = Date.now()
     setStage('decision')
   }, [])
@@ -268,6 +276,8 @@ export function BlindMarketGame({
   }
 
   const commitDecision = (exposure: number, decision: Omit<BlindDecision, 'exposure'>) => {
+    if (committed.current || stage !== 'decision') return
+    committed.current = true
     const nextDecisions = [...decisions, { ...decision, exposure }]
     setDecisions(nextDecisions)
     setDirection(null)
@@ -291,6 +301,7 @@ export function BlindMarketGame({
       // Сработавший стоп закрывает позицию — старый уровень стопа больше не нужен.
       if (simulateBlind(scenario, nextDecisions, target - 1).exposure === 0) setStopPrice(null)
       setCheckpointIndex((index) => index + 1)
+      committed.current = false
       decisionStartRef.current = Date.now()
       setStage('decision')
     })
@@ -324,8 +335,13 @@ export function BlindMarketGame({
     })
   }
 
+  const { remaining } = useCountdown({ seconds: difficulty.timerSeconds, active: advanced && stage === 'decision', resetKey: `${scenario.id}-${checkpointIndex}`,
+    onExpire: () => commitDecision(currentExposure, { checkpointIndex, direction: currentExposure > 0 ? 'long' : currentExposure < 0 ? 'short' : 'flat',
+      action: checkpointIndex === 0 ? undefined : currentExposure === 0 ? 'stay-flat' : 'hold', confidence, priceAtDecision: currentPrice,
+      stopPrice: currentExposure !== 0 ? stopPrice ?? undefined : undefined, timeMs: difficulty.timerSeconds * 1000 }) })
+
   if (stage === 'intro') {
-    return <Intro onStart={() => setStage('info')} />
+    return <Intro advanced={advanced} onStart={() => advanced ? startDecision() : setStage('info')} />
   }
 
   if (stage === 'info') {
@@ -400,7 +416,8 @@ export function BlindMarketGame({
             <EyeOff className="h-4 w-4 text-chalk-500" aria-hidden />
             Актив и дата скрыты
           </span>
-          <InfoStrip scenario={scenario} selected={selectedInfo} />
+          {!advanced && <InfoStrip scenario={scenario} selected={selectedInfo} />}
+          {advanced && stage === 'decision' && <span role="timer" className="text-sm text-violet-soft">{remaining} с · по истечении — без изменения позиции</span>}
         </div>
         <DecisionSteps
           current={checkpointIndex}
@@ -421,7 +438,7 @@ export function BlindMarketGame({
                   {formatPercent(dayChange, 2)} за 24ч
                 </span>
               </div>
-              <TimeframeSwitch value={timeframe} onChange={setTimeframe} />
+              <TimeframeSwitch options={advanced ? ['15m', '1h', '4h'] : undefined} value={timeframe} onChange={setTimeframe} />
             </div>
             <DrawingToolbar
               tool={tool === 'stop' ? 'none' : tool}
@@ -530,7 +547,7 @@ export function BlindMarketGame({
   )
 }
 
-function Intro({ onStart }: { onStart: () => void }) {
+function Intro({ advanced, onStart }: { advanced: boolean; onStart: () => void }) {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-5 py-20 sm:px-8 sm:py-28">
       <div className="flex flex-col gap-4">
@@ -541,7 +558,7 @@ function Intro({ onStart }: { onStart: () => void }) {
       </div>
 
       <div className="flex flex-col gap-4 text-base leading-relaxed text-chalk-200">
-        <p>Перед тобой реальный рыночный паттерн, но мы скрыли актив и дату.</p>
+        <p>{advanced ? 'Перед тобой синтетический рынок с ложными сигналами и неоднозначными движениями.' : 'Перед тобой реальный рыночный паттерн, но мы скрыли актив и дату.'}</p>
         <p>
           Короткая сессия: три решения по мере развития ситуации. График рабочий — можно
           менять таймфрейм, размечать уровни и ставить стоп.
@@ -550,9 +567,9 @@ function Intro({ onStart }: { onStart: () => void }) {
 
       <div className="flex flex-col gap-2 rounded-xl border border-ink-700 bg-ink-900 p-5 text-sm text-chalk-400">
         <span className="tnum">Капитал: {CAPITAL.toLocaleString('ru-RU')}</span>
-        <span>Три точки принятия решения, 2–3 минуты</span>
-        <span>Таймфреймы 15м / 1ч / 4ч / 1Д и объём на графике</span>
-        <span>Два дополнительных блока информации на выбор</span>
+        <span>{advanced ? 'Три точки принятия решения, по 13 секунд после появления рынка' : 'Три точки принятия решения, 2–3 минуты'}</span>
+        <span>{advanced ? 'Таймфреймы 15м / 1ч / 4ч и объём на графике' : 'Таймфреймы 15м / 1ч / 4ч / 1Д и объём на графике'}</span>
+        <span>{advanced ? 'Оцени движение и объём на графике без текстовых подсказок' : 'Два дополнительных блока информации на выбор'}</span>
       </div>
 
       <Button variant="primary" size="lg" className="self-start" onClick={onStart}>

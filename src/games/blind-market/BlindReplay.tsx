@@ -66,7 +66,7 @@ export function BlindReplay({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-800 px-4 py-2.5">
         <div className="flex items-center gap-4">
           <h3 className="text-sm text-chalk-200">Разбор сессии</h3>
-          <TimeframeSwitch value={timeframe} onChange={setTimeframe} />
+          <TimeframeSwitch options={scenario.mode === 'advanced' ? ['15m', '1h', '4h'] : undefined} value={timeframe} onChange={setTimeframe} />
         </div>
         <button
           type="button"

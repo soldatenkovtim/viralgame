@@ -51,6 +51,7 @@ export function MarketShockDecisionPanel({
   position,
   deciding,
   remaining,
+  totalSeconds = DECISION_SECONDS,
   timerDisabled,
   selected,
   notice,
@@ -62,6 +63,7 @@ export function MarketShockDecisionPanel({
   /** false — свечи ещё дорисовываются, кнопки неактивны. */
   deciding: boolean
   remaining: number
+  totalSeconds?: number
   timerDisabled: boolean
   selected: ShockAction | null
   notice?: string | null
@@ -74,7 +76,7 @@ export function MarketShockDecisionPanel({
         <span className="tnum text-[11px] tracking-[0.14em] text-chalk-500 uppercase">
           Решение {phaseNumber} из 3
         </span>
-        {deciding && !timerDisabled ? <Countdown remaining={remaining} /> : null}
+        {deciding && !timerDisabled ? <Countdown total={totalSeconds} remaining={remaining} /> : null}
       </div>
 
       {notice ? (
@@ -110,7 +112,7 @@ export function MarketShockDecisionPanel({
   )
 }
 
-function Countdown({ remaining }: { remaining: number }) {
+function Countdown({ remaining, total }: { remaining: number; total: number }) {
   const urgent = remaining <= 5
   return (
     <div className="flex items-center gap-2.5" aria-live="polite">
@@ -122,7 +124,7 @@ function Countdown({ remaining }: { remaining: number }) {
           className={`h-full rounded-full transition-[width] duration-1000 ease-linear ${
             urgent ? 'bg-market-down' : 'bg-chalk-500'
           }`}
-          style={{ width: `${(remaining / DECISION_SECONDS) * 100}%` }}
+          style={{ width: `${(remaining / total) * 100}%` }}
         />
       </div>
     </div>

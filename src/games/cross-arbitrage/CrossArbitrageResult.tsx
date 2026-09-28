@@ -11,7 +11,7 @@ import {
 import { ShareChallengeButton } from '@/components/share/ShareChallengeButton'
 import { LinkButton } from '@/components/ui/Button'
 import { Disclaimer, SectionLabel, Stat } from '@/components/ui/Card'
-import { getCrossArbitrageScenario } from '@/data/crossArbitrageScenarios'
+import { sessionScenarios } from '@/data/crossArbitrageScenarios'
 import { crossArbitrageAchievement } from '@/lib/achievements'
 import { formatNumber, pnlColor } from '@/lib/formatting'
 import { scaleTrait, traitLabels } from '@/lib/profile'
@@ -113,7 +113,7 @@ export function CrossArbitrageResult({
         <h2 className="text-lg font-normal tracking-tight text-chalk-50">Рынок за рынком</h2>
         <ol className="flex flex-col gap-3">
           {result.rounds.map((round, index) => {
-            const scenario = getCrossArbitrageScenario(round.scenarioId)
+            const scenario = sessionScenarios(session).find(s => s.id === round.scenarioId)!
             const feedback = roundFeedback(round, scenario)
             return (
               <li
@@ -160,11 +160,11 @@ export function CrossArbitrageResult({
 
       <section className="grid gap-8 rounded-xl border border-ink-700 bg-ink-900 p-6 sm:p-8 lg:grid-cols-[1fr_1.2fr]">
         <div className="flex flex-col gap-3">
-          <SectionLabel>Вклад в Trading Profile</SectionLabel>
+          <SectionLabel>{session.mode === 'advanced' ? 'Характеристики прохождения' : 'Вклад в Trading Profile'}</SectionLabel>
           <p className="text-sm leading-relaxed text-chalk-400">
-            Кросс-арбитраж добавляет в профиль новую характеристику — «Поиск
+            {session.mode === 'advanced' ? 'Поиск возможностей, дисциплина и адаптивность по решениям в этом продвинутом сценарии.' : <>Кросс-арбитраж добавляет в профиль новую характеристику — «Поиск
             возможностей» — и дополняет дисциплину и адаптивность. Скорость влияет
-            только на адаптивность и не является главным критерием.
+            только на адаптивность и не является главным критерием.</>}
           </p>
         </div>
         <div className="flex flex-col gap-5">

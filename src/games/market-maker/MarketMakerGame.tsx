@@ -1,3 +1,4 @@
+import type { ChallengeContext } from '@/modes/config'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   ArrowLeft,
@@ -26,6 +27,7 @@ export function MarketMakerGame({
   scenario,
   onComplete,
 }: {
+  context?: ChallengeContext
   scenario: MarketMakerScenario
   onComplete: (result: MarketMakerResult) => void
 }) {
@@ -100,7 +102,7 @@ export function MarketMakerGame({
   }, [stage, act, handleHedge])
 
   if (stage === 'intro') {
-    return <Intro onStart={() => setStage('running')} durationSeconds={scenario.durationSeconds} />
+    return <Intro advanced={scenario.mode === 'advanced'} onStart={() => setStage('running')} durationSeconds={scenario.durationSeconds} />
   }
 
   if (!snapshot) return null
@@ -164,7 +166,7 @@ export function MarketMakerGame({
 
         <aside className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-1">
-            <InventoryCard inventory={snapshot.inventory} />
+            <InventoryCard softLimit={scenario.softInventoryLimit} inventory={snapshot.inventory} />
             <div className="flex flex-col gap-2 rounded-xl border border-ink-700 bg-ink-900 px-5 py-4">
               <span className="text-[11px] tracking-[0.16em] text-chalk-500 uppercase">PnL</span>
               <span className={`tnum text-3xl leading-none font-light ${pnlColor(snapshot.pnl)}`}>
@@ -213,21 +215,21 @@ function QuoteCell({
   )
 }
 
-function riskLevel(inventory: number): { label: string; className: string } {
+function riskLevel(inventory: number, softLimit: number): { label: string; className: string } {
   const size = Math.abs(inventory)
   if (size > MM_HARD_INVENTORY_LIMIT) return { label: 'сверх лимита', className: 'text-market-down' }
-  if (size > MM_SOFT_INVENTORY_LIMIT) return { label: 'повышенный', className: 'text-risk' }
+  if (size > softLimit) return { label: 'повышенный', className: 'text-risk' }
   if (size >= 8) return { label: 'умеренный', className: 'text-chalk-200' }
   return { label: 'низкий', className: 'text-chalk-400' }
 }
 
-function InventoryCard({ inventory }: { inventory: number }) {
-  const risk = riskLevel(inventory)
+function InventoryCard({ inventory, softLimit = MM_SOFT_INVENTORY_LIMIT }: { inventory: number; softLimit?: number }) {
+  const risk = riskLevel(inventory, softLimit)
   const scale = MM_HARD_INVENTORY_LIMIT + 5
   const position = ((Math.max(-scale, Math.min(scale, inventory)) + scale) / (scale * 2)) * 100
-  const softOffset = (MM_SOFT_INVENTORY_LIMIT / (scale * 2)) * 100
+  const softOffset = (softLimit / (scale * 2)) * 100
   const hardOffset = (MM_HARD_INVENTORY_LIMIT / (scale * 2)) * 100
-  const aboveSoft = Math.abs(inventory) > MM_SOFT_INVENTORY_LIMIT
+  const aboveSoft = Math.abs(inventory) > softLimit
   const aboveHard = Math.abs(inventory) > MM_HARD_INVENTORY_LIMIT
 
   return (
@@ -324,9 +326,11 @@ function RecentTrades({ trades }: { trades: MMTrade[] }) {
 }
 
 function Intro({
+  advanced,
   onStart,
   durationSeconds,
 }: {
+  advanced: boolean
   onStart: () => void
   durationSeconds: number
 }) {
@@ -351,6 +355,7 @@ function Intro({
       </div>
 
       <ul className="flex flex-col gap-2.5 rounded-xl border border-ink-700 bg-ink-900 p-5 text-sm text-chalk-400">
+        {advanced && <li>Хедж на 20% дороже. Позиция свыше 12 лотов несёт дополнительные издержки удержания.</li>}
         <li>Смещай котировку целиком или меняй ширину спреда</li>
         <li>Inventory переоценивается по рынку в каждый момент</li>
         <li>Хедж закрывает весь inventory, но стоит денег</li>

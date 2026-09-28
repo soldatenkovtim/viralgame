@@ -1,3 +1,4 @@
+import { useGameStore } from '@/store/gameStore'
 import { Sparkles, TrendingUp } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { ProfileMeter } from '@/components/progress/ProgressDots'
@@ -172,6 +173,9 @@ export function PersonalBestNote({
 }
 
 export function ProfileProgressBlock() {
+  const mode = useGameStore(s => s.selectedMode)
+  const advancedResults = useGameStore(s => s.advancedResults)
+  if (mode === 'advanced') return <p className="text-sm text-chalk-400">Продвинутый · {new Set(advancedResults.map(r => r.challengeType)).size} / 4</p>
   return (
     <div className="w-full max-w-sm">
       <ProfileMeter />

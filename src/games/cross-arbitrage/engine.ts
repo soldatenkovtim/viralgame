@@ -46,6 +46,11 @@ export function executionPrice(quote: ArbitrageVenueQuote, side: 'buy' | 'sell',
   const secondLiquidity = side === 'buy' ? quote.secondAskLiquidity : quote.secondBidLiquidity
   if (!Number.isFinite(units) || units <= 0) throw new Error('Invalid trade size')
   if (units <= liquidity) return best
+  const third = side === 'buy' ? quote.thirdAsk : quote.thirdBid
+  const thirdLiquidity = side === 'buy' ? quote.thirdAskLiquidity : quote.thirdBidLiquidity
+  if (second !== undefined && third !== undefined && units > liquidity + (secondLiquidity ?? 0) && units <= liquidity + (secondLiquidity ?? 0) + (thirdLiquidity ?? 0)) {
+    return (liquidity * best + (secondLiquidity ?? 0) * second + (units - liquidity - (secondLiquidity ?? 0)) * third) / units
+  }
   if (second === undefined || units > liquidity + (secondLiquidity ?? 0)) {
     throw new Error('Insufficient depth')
   }
@@ -142,7 +147,10 @@ export function buildQuotePath(scenario: CrossArbitrageScenario): ArbitrageVenue
               : 0
         if (shift === 0) return quote
         return {
-          ...quote, bid: roundPrice(quote.bid + shift), ask: roundPrice(quote.ask + shift),
+          ...quote,
+          ...(quote.thirdBid !== undefined ? { thirdBid: roundPrice(quote.thirdBid + shift) } : {}),
+          ...(quote.thirdAsk !== undefined ? { thirdAsk: roundPrice(quote.thirdAsk + shift) } : {}),
+          bid: roundPrice(quote.bid + shift), ask: roundPrice(quote.ask + shift),
           ...(quote.secondBid !== undefined ? { secondBid: roundPrice(quote.secondBid + shift) } : {}),
           ...(quote.secondAsk !== undefined ? { secondAsk: roundPrice(quote.secondAsk + shift) } : {}),
         }
@@ -153,15 +161,15 @@ export function buildQuotePath(scenario: CrossArbitrageScenario): ArbitrageVenue
 }
 
 /** Какой шаг котировок виден через elapsedMs после их появления. */
-export function quoteStepAt(elapsedMs: number, pathLength: number): number {
-  if (pathLength <= 1 || elapsedMs < ARB_CONVERGENCE_DELAY_MS) return 0
-  const step = 1 + Math.floor((elapsedMs - ARB_CONVERGENCE_DELAY_MS) / ARB_QUOTE_STEP_MS)
+export function quoteStepAt(elapsedMs: number, pathLength: number, intervalMs = ARB_QUOTE_STEP_MS): number {
+  if (pathLength <= 1 || elapsedMs < (intervalMs === ARB_QUOTE_STEP_MS ? ARB_CONVERGENCE_DELAY_MS : intervalMs)) return 0
+  const step = 1 + Math.floor((elapsedMs - (intervalMs === ARB_QUOTE_STEP_MS ? ARB_CONVERGENCE_DELAY_MS : intervalMs)) / intervalMs)
   return Math.min(pathLength - 1, step)
 }
 
-export function stepStartMs(step: number): number {
+export function stepStartMs(step: number, intervalMs = ARB_QUOTE_STEP_MS): number {
   if (step <= 0) return 0
-  return ARB_CONVERGENCE_DELAY_MS + (step - 1) * ARB_QUOTE_STEP_MS
+  return (intervalMs === ARB_QUOTE_STEP_MS ? ARB_CONVERGENCE_DELAY_MS : intervalMs) + (step - 1) * intervalMs
 }
 
 /**
@@ -178,7 +186,7 @@ export function windowCloseMs(
 
   for (let step = 1; step < path.length; step += 1) {
     const outcome = evaluateTrade(path[step], initial.buyVenue, initial.sellVenue, 1)
-    if (outcome.netBeforeLiquidity <= 0) return stepStartMs(step)
+    if (outcome.netBeforeLiquidity <= 0) return stepStartMs(step, scenario.quoteStepMs)
   }
   return null
 }

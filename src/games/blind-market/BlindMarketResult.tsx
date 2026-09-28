@@ -134,7 +134,7 @@ export function BlindMarketResult({
 
       <BlindReplay scenario={scenario} result={result} />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+      <div className={`grid gap-6 ${scenario.crowd.length > 0 ? 'lg:grid-cols-[1fr_1fr]' : ''}`}>
         <div className="rounded-xl border border-ink-700 bg-ink-900 p-6">
           <h3 className="mb-6 text-lg font-normal tracking-tight text-chalk-50">
             Как развивалась сессия
@@ -143,7 +143,7 @@ export function BlindMarketResult({
         </div>
 
         <div className="flex flex-col gap-6">
-          <CrowdStats title="На второй точке:" items={scenario.crowd} />
+          {scenario.crowd.length > 0 && <CrowdStats title="На второй точке:" items={scenario.crowd} />}
         </div>
       </div>
 
