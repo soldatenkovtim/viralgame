@@ -1,9 +1,7 @@
+import { selectScenario } from '@/modes/scenarios'
+import { DuelResultShare } from '@/duel/DuelResultShare'
 import { useEffect, useMemo, useState } from 'react'
 import { ChallengeGate } from '@/components/layout/ChallengeGate'
-import {
-  getMarketMakerScenario,
-  pickMarketMakerScenario,
-} from '@/data/marketMakerScenarios'
 import { MarketMakerGame } from '@/games/market-maker/MarketMakerGame'
 import { MarketMakerResult } from '@/games/market-maker/MarketMakerResult'
 import { useDebugParams } from '@/hooks/useDebug'
@@ -12,6 +10,7 @@ import { useGameStore, type SaveOutcome } from '@/store/gameStore'
 import type { MarketMakerResult as MMResult } from '@/types/game'
 
 export function MarketMakerPage() {
+  const mode = useGameStore(s => s.selectedMode) === 'advanced' ? 'advanced' : 'standard'
   const debug = useDebugParams()
   const saveResult = useGameStore((state) => state.saveResult)
 
@@ -20,20 +19,19 @@ export function MarketMakerPage() {
 
   // Смена потока раскрывается только в replay. Номер попытки читается один раз,
   // чтобы сохранение результата не подменило сценарий на экране итогов.
-  const scenario = useMemo(
-    () =>
-      debug.scenario
-        ? getMarketMakerScenario(debug.scenario)
-        : pickMarketMakerScenario(useGameStore.getState().attempts['market-maker'] ?? 0),
-    [debug.scenario],
-  )
+  const scenario = useMemo(() => {
+    const state = useGameStore.getState()
+    const attempt = mode === 'advanced' ? state.advancedResults.filter(r => r.challengeType === 'market-maker').length : state.attempts['market-maker'] ?? 0
+    return selectScenario('market-maker', mode === 'advanced', attempt, debug.scenario)
+  }, [debug.scenario, mode])
 
   useEffect(() => {
+    if (mode === 'advanced') trackEvent('advanced_challenge_started', { challengeType: 'market-maker', scenarioId: scenario.id })
     trackEvent('market_maker_started', { scenarioId: scenario.id, seed: scenario.seed })
-  }, [scenario])
+  }, [scenario, mode])
 
   const handleComplete = (completed: MMResult) => {
-    const saved = saveResult({ challengeType: 'market-maker', result: completed })
+    const saved = saveResult({ challengeType: 'market-maker', result: completed }, mode)
     setResult(completed)
     setOutcome(saved)
     trackEvent('market_maker_completed', {
@@ -49,14 +47,16 @@ export function MarketMakerPage() {
 
   const content =
     result && outcome ? (
+      <DuelResultShare payload={{ challengeType: 'market-maker', result }}>
       <MarketMakerResult
         result={result}
         outcome={outcome}
         nextHref="/challenge/black-swan"
         nextLabel="Открыть следующее испытание"
       />
+      </DuelResultShare>
     ) : (
-      <MarketMakerGame scenario={scenario} onComplete={handleComplete} />
+      <MarketMakerGame context={{ mode, seed: scenario.seed }} scenario={scenario} onComplete={handleComplete} />
     )
 
   return <ChallengeGate challenge="market-maker">{content}</ChallengeGate>

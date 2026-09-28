@@ -1,3 +1,4 @@
+export type { GameMode, ChallengeContext, ScenarioDifficultyConfig } from '@/modes/config'
 import type { TimeframeId } from '@/games/blind-market/timeframes'
 
 export type ChallengeType =
@@ -122,6 +123,7 @@ export interface BlindMarketResult {
 }
 
 export interface BlindMarketScenario {
+  mode?: 'standard' | 'advanced'
   id: string
   title: string
   seed: number
@@ -178,6 +180,10 @@ export interface MMFairValuePhase {
 }
 
 export interface MarketMakerScenario {
+  hedgeCostMultiplier?: number
+  softInventoryLimit?: number
+  inventoryCarryCost?: number
+  mode?: 'standard' | 'advanced'
   id: string
   seed: number
   /** Короткое описание для debug-панели. */
@@ -297,6 +303,7 @@ export interface MarketShockContext {
 export type ShockCrowd = Record<ShockAction, number>
 
 export interface MarketShockScenario {
+  mode?: 'standard' | 'advanced'
   id: string
   seed: number
   pattern: ShockPattern
@@ -385,6 +392,10 @@ export interface ArbitrageVenueQuote {
   /** Объём на первом уровне, отдельно для каждой стороны. */
   bidLiquidity: number
   askLiquidity: number
+  thirdBid?: number
+  thirdAsk?: number
+  thirdBidLiquidity?: number
+  thirdAskLiquidity?: number
   secondBid?: number
   secondAsk?: number
   secondBidLiquidity?: number
@@ -398,6 +409,8 @@ export interface ArbitrageVenueQuote {
 export type CrossArbitrageKind = 'obvious' | 'false' | 'none' | 'small' | 'multiple'
 
 export interface CrossArbitrageScenario {
+  quoteStepMs?: number
+  mode?: 'standard' | 'advanced'
   id: string
   asset: string
   kind: CrossArbitrageKind
@@ -411,6 +424,8 @@ export interface CrossArbitrageScenario {
 
 /** Один полный challenge — пять рынков подряд. */
 export interface CrossArbitrageSession {
+  scenarios?: CrossArbitrageScenario[]
+  mode?: 'standard' | 'advanced'
   id: string
   seed: number
   scenarioIds: string[]

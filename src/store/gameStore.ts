@@ -1,3 +1,6 @@
+import type { GameMode } from '@/modes/config'
+import type { DuelResult } from '@/duel/types'
+import { trackEvent } from '@/lib/analytics'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
@@ -67,6 +70,15 @@ export interface SaveOutcome {
 }
 
 export interface GameState {
+  selectedMode: GameMode
+  advancedUnlocked: boolean
+  standardResults: ChallengeResult[]
+  advancedResults: ChallengeResult[]
+  advancedBests: Record<string, number>
+  duelHistory: DuelResult[]
+  setMode: (mode: GameMode) => void
+  unlockAdvanced: () => void
+  saveDuel: (result: DuelResult) => void
   completedChallenges: ChallengeType[]
   unlockedChallenges: ChallengeType[]
   challengeResults: ChallengeResult[]
@@ -89,7 +101,7 @@ export interface GameState {
   seriesCompletedAt?: string
 
   unlockChallenge: (challenge: ChallengeType) => void
-  saveResult: (payload: ResultPayload) => SaveOutcome
+  saveResult: (payload: ResultPayload, mode?: 'standard' | 'advanced') => SaveOutcome
   setPlayerName: (name: string) => void
   resetProgress: () => void
   restartSeries: () => void
@@ -99,6 +111,12 @@ export interface GameState {
 }
 
 const initialState = {
+  selectedMode: 'standard' as GameMode,
+  advancedUnlocked: false,
+  standardResults: [] as ChallengeResult[],
+  advancedResults: [] as ChallengeResult[],
+  advancedBests: {} as Record<string, number>,
+  duelHistory: [] as DuelResult[],
   completedChallenges: [] as ChallengeType[],
   unlockedChallenges: ['blind-market'] as ChallengeType[],
   challengeResults: [] as ChallengeResult[],
@@ -129,6 +147,12 @@ function resultSliceFor(payload: ResultPayload): Partial<GameState> {
 
 function partialize(state: GameState) {
   return {
+    selectedMode: state.selectedMode,
+    advancedUnlocked: state.advancedUnlocked,
+    standardResults: state.standardResults,
+    advancedResults: state.advancedResults,
+    advancedBests: state.advancedBests,
+    duelHistory: state.duelHistory,
     completedChallenges: state.completedChallenges,
     unlockedChallenges: state.unlockedChallenges,
     challengeResults: state.challengeResults,
@@ -236,10 +260,30 @@ export const useGameStore = create<GameState>()(
             : { unlockedChallenges: [...state.unlockedChallenges, challenge] },
         ),
 
-      saveResult: (payload) => {
+      setMode: (mode) => {
+        const state = get()
+        if (mode === 'advanced' && !state.advancedUnlocked) return
+        set({ selectedMode: mode })
+        trackEvent('mode_selected', { mode })
+      },
+      unlockAdvanced: () => {
+        if (new Set(get().standardResults.map(r => r.challengeType)).size !== 4 || get().advancedUnlocked) return
+        set({ advancedUnlocked: true })
+        trackEvent('advanced_unlocked')
+      },
+      saveDuel: (result) => set(state => ({ duelHistory: [...state.duelHistory.filter(r => r.id !== result.id), result] })),
+      saveResult: (payload, mode = 'standard') => {
         const { challengeType, result } = payload
         const state = get()
         const points = toPoints(result.score)
+        if (mode === 'advanced') {
+          const previousBest = state.advancedBests[challengeType] ?? null
+          const isPersonalBest = previousBest === null || points > previousBest
+          const advancedResults = [...state.advancedResults, { challengeType, scenarioId: result.scenarioId, score: result.score, completedAt: new Date().toISOString() }]
+          set({ advancedResults, advancedBests: { ...state.advancedBests, [challengeType]: Math.max(previousBest ?? 0, points) } })
+          trackEvent('advanced_challenge_completed', { challengeType, scenarioId: result.scenarioId })
+          return { points, previousBest, isPersonalBest, pointsToBest: Math.max(0, (previousBest ?? 0) - points), unlockedNext: null, seriesCompleted: new Set(advancedResults.map(r => r.challengeType)).size === 4 }
+        }
         const previousBest = state.personalBests[challengeType] ?? null
         const isPersonalBest = previousBest === null || points > previousBest
 
@@ -288,6 +332,7 @@ export const useGameStore = create<GameState>()(
 
         set({
           ...resultSlice,
+          standardResults: [...state.standardResults, challengeResult],
           completedChallenges: nextState.completedChallenges,
           unlockedChallenges: nextState.unlockedChallenges,
           challengeResults: nextState.challengeResults,
@@ -307,6 +352,7 @@ export const useGameStore = create<GameState>()(
             : state.seriesCompletedAt,
         })
 
+        get().unlockAdvanced()
         return {
           points,
           previousBest,
@@ -324,6 +370,7 @@ export const useGameStore = create<GameState>()(
       /** Повторное прохождение серии: рекорды и попытки сохраняются. */
       restartSeries: () =>
         set((state) => ({
+          selectedMode: 'standard',
           completedChallenges: [],
           unlockedChallenges: ['blind-market'],
           challengeResults: [],
@@ -365,7 +412,7 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: 'market-trials-v1',
-      version: 4,
+      version: 5,
       // v1 — серия из трёх испытаний. Прошедшим «Рыночный шок» открываем
       // четвёртое, а профиль без «Поиска возможностей» пересобирается позже.
       // v2 — маркет-мейкер без разложения PnL и фаз потока.
@@ -388,6 +435,15 @@ export const useGameStore = create<GameState>()(
         }
         if (version < 4 && state.blackSwanResult) {
           state.blackSwanResult = upgradeMarketShockResult(state.blackSwanResult)
+        }
+        if (version < 5) {
+          state.selectedMode = 'standard'
+          state.standardResults = state.challengeResults ?? []
+          // Старые сохранения могли сбрасывать серию, сохраняя личные рекорды.
+          state.advancedUnlocked = CHALLENGE_ORDER.every(type => state.personalBests?.[type] !== undefined || state.completedChallenges?.includes(type) || state.standardResults.some(r => r.challengeType === type))
+          state.advancedResults = []
+          state.advancedBests = {}
+          state.duelHistory = []
         }
         return state
       },

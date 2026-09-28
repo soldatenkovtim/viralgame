@@ -60,8 +60,8 @@ const NICKNAMES = [
  * Рейтинг в прототипе полностью смоделирован.
  * Генерация детерминированная, чтобы список не прыгал между рендерами.
  */
-function buildMockLeaderboard(): Omit<LeaderboardEntry, 'rank'>[] {
-  const random = createRandom(77123)
+function buildMockLeaderboard(mode: 'standard' | 'advanced' = 'standard'): Omit<LeaderboardEntry, 'rank'>[] {
+  const random = createRandom(mode === 'advanced' ? 99173 : 77123)
 
   return NICKNAMES.map((nickname, index) => {
     // Верхние ники получают более высокий score, но с заметным разбросом.
@@ -86,8 +86,8 @@ export interface CurrentUser {
 }
 
 /** Вставляет игрока в таблицу по его score и пересчитывает места. */
-export function buildLeaderboard(currentUser?: CurrentUser | null): LeaderboardEntry[] {
-  const entries: Omit<LeaderboardEntry, 'rank'>[] = [...mockLeaderboard]
+export function buildLeaderboard(currentUser?: CurrentUser | null, mode: 'standard' | 'advanced' = 'standard'): LeaderboardEntry[] {
+  const entries: Omit<LeaderboardEntry, 'rank'>[] = [...(mode === 'advanced' ? buildMockLeaderboard('advanced') : mockLeaderboard)]
 
   if (currentUser) {
     entries.push({ ...currentUser, isCurrentUser: true })

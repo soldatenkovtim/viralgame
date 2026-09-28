@@ -41,7 +41,7 @@ export function MarketShockIntro({
       </dl>
 
       <p className="text-xs leading-relaxed text-chalk-500">
-        Рынок будет развиваться в три этапа. На каждое решение — {DECISION_SECONDS} секунд; отсчёт
+        Рынок будет развиваться в три этапа. На каждое решение — {scenario.mode === 'advanced' ? 13 : DECISION_SECONDS} секунд; отсчёт
         начнётся только после того, как ты изучишь график. PnL считается в процентах от капитала.
       </p>
 

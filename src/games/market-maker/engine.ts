@@ -199,7 +199,7 @@ export class MarketMakerEngine {
 
   hedgeCostFor(units: number): number {
     if (units === 0) return 0
-    return Math.abs(units) * MM_HEDGE_COST_PER_UNIT * MM_LOT_SIZE + MM_HEDGE_TICKET_FEE
+    return (Math.abs(units) * MM_HEDGE_COST_PER_UNIT * MM_LOT_SIZE + MM_HEDGE_TICKET_FEE) * (this.scenario.hedgeCostMultiplier ?? 1)
   }
 
   /* ------------------------------- цикл ------------------------------- */
@@ -218,6 +218,7 @@ export class MarketMakerEngine {
     if (phase.pnlStart === null) phase.pnlStart = pnlBefore
 
     this.inventoryMtm += this.inventory * (market - this.marketPath[tick - 1]) * MM_LOT_SIZE
+    this.inventoryMtm -= Math.max(0, Math.abs(this.inventory) - (this.scenario.softInventoryLimit ?? MM_SOFT_INVENTORY_LIMIT)) * (this.scenario.inventoryCarryCost ?? 0) * MM_LOT_SIZE
     this.spreadSamples.push(this.spread)
 
     const bid = this.bid
@@ -278,7 +279,7 @@ export class MarketMakerEngine {
       }
     }
 
-    if (Math.abs(this.inventory) > MM_SOFT_INVENTORY_LIMIT) this.ticksAboveSoft += 1
+    if (Math.abs(this.inventory) > (this.scenario.softInventoryLimit ?? MM_SOFT_INVENTORY_LIMIT)) this.ticksAboveSoft += 1
 
     phase.ticks += 1
     phase.spreadSum += this.spread

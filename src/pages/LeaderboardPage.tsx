@@ -1,4 +1,5 @@
-import { useEffect, useMemo } from 'react'
+import { weightedChallengeScore } from '@/lib/profile'
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { LinkButton } from '@/components/ui/Button'
 import { Disclaimer, SectionLabel } from '@/components/ui/Card'
@@ -8,13 +9,15 @@ import { formatNumber } from '@/lib/formatting'
 import { CHALLENGE_ORDER, useGameStore } from '@/store/gameStore'
 
 export function LeaderboardPage() {
+  const [mode, setMode] = useState<'standard' | 'advanced'>('standard')
+  const advancedBests = useGameStore(s => s.advancedBests)
   const completed = useGameStore((state) => state.completedChallenges)
   const profile = useGameStore((state) => state.tradingProfile)
   const playerName = useGameStore((state) => state.playerName)
   const bestOverallScore = useGameStore((state) => state.bestOverallScore)
 
-  const complete = completed.length === CHALLENGE_ORDER.length
-  const score = bestOverallScore()
+  const complete = mode === 'standard' ? completed.length === CHALLENGE_ORDER.length : CHALLENGE_ORDER.every(t => advancedBests[t] !== undefined)
+  const score = mode === 'standard' ? bestOverallScore() : Math.round(weightedChallengeScore({ blindMarket: advancedBests['blind-market'] ?? 0, marketMaker: advancedBests['market-maker'] ?? 0, blackSwan: advancedBests['black-swan'] ?? 0, crossArbitrage: advancedBests['cross-arbitrage'] ?? 0 }))
 
   // В рейтинге учитывается лучший результат каждого испытания, а не последний.
   const rows = useMemo(
@@ -24,11 +27,11 @@ export function LeaderboardPage() {
           ? {
               nickname: playerName || 'ты',
               score,
-              archetype: profile?.archetype ?? 'Системный трейдер',
+              archetype: mode === 'advanced' ? 'Продвинутый режим' : profile?.archetype ?? 'Системный трейдер',
             }
-          : null,
+          : null, mode,
       ),
-    [complete, playerName, score, profile],
+    [complete, playerName, score, profile, mode],
   )
 
   const myRank = rows.find((row) => row.isCurrentUser)?.rank
@@ -39,6 +42,7 @@ export function LeaderboardPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-10 px-5 py-14 sm:px-8 sm:py-20">
+      <div className="flex gap-3" aria-label="Режим рейтинга">{(['standard', 'advanced'] as const).map(m => <button key={m} aria-pressed={mode === m} onClick={() => setMode(m)} className={`rounded-lg border px-4 py-3 text-sm ${mode === m ? 'border-violet-accent text-chalk-50' : 'border-ink-700 text-chalk-400'}`}>{m === 'standard' ? 'Стандартный' : 'Продвинутый'}</button>)}</div>
       <header className="flex flex-col gap-5">
         <SectionLabel>Тестовый рейтинг</SectionLabel>
         <h1 className="text-4xl font-light tracking-[-0.025em] text-chalk-50 sm:text-5xl">
@@ -62,7 +66,7 @@ export function LeaderboardPage() {
               <Th className="w-16">#</Th>
               <Th>Ник</Th>
               <Th>Архетип</Th>
-              <Th className="text-right">Score</Th>
+              <Th className="text-right">Очки</Th>
             </tr>
           </thead>
           <tbody>

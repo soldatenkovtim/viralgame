@@ -176,7 +176,7 @@ export function MarketShockResult({
           <p className="text-sm leading-relaxed text-chalk-400">{scenario.revealDescription}</p>
           {scenario.synthetic ? (
             <p className="mt-2 text-xs leading-relaxed text-chalk-500">
-              Сценарий стилизован на основе реального рыночного события.
+              {scenario.mode === 'advanced' ? 'Синтетический сценарий для проверки решений в неоднозначном рынке.' : 'Сценарий стилизован на основе реального рыночного события.'}
             </p>
           ) : null}
         </div>

@@ -48,9 +48,9 @@ export function ProgressDots({ current }: { current?: ChallengeType }) {
   )
 }
 
-export function ProfileMeter({ className = '' }: { className?: string }) {
+export function ProfileMeter({ className = '', completedCount }: { className?: string; completedCount?: number }) {
   const completed = useGameStore((state) => state.completedChallenges)
-  const percent = profileCompletion(completed.length)
+  const percent = profileCompletion(completedCount ?? completed.length)
 
   return (
     <div className={`flex flex-col gap-2 ${className}`}>

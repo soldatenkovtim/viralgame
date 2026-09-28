@@ -1,5 +1,6 @@
+import { selectScenario } from '@/modes/scenarios'
+import { DuelResultShare } from '@/duel/DuelResultShare'
 import { useEffect, useMemo, useState } from 'react'
-import { getBlindScenario, pickBlindScenario } from '@/data/blindMarketScenarios'
 import { BlindMarketGame } from '@/games/blind-market/BlindMarketGame'
 import { BlindMarketResult } from '@/games/blind-market/BlindMarketResult'
 import { useDebugParams } from '@/hooks/useDebug'
@@ -8,26 +9,27 @@ import { useGameStore, type SaveOutcome } from '@/store/gameStore'
 import type { BlindMarketResult as BlindResult } from '@/types/game'
 
 export function BlindMarketPage() {
+  const mode = useGameStore(s => s.selectedMode) === 'advanced' ? 'advanced' : 'standard'
   const debug = useDebugParams()
-  const attempts = useGameStore((state) => state.attempts['blind-market'] ?? 0)
   const saveResult = useGameStore((state) => state.saveResult)
 
   const [result, setResult] = useState<BlindResult | null>(null)
   const [outcome, setOutcome] = useState<SaveOutcome | null>(null)
 
   // Сценарий фиксируется на весь раунд: при реплее он меняется, но не во время игры.
-  const scenario = useMemo(
-    () => (debug.scenario ? getBlindScenario(debug.scenario) : pickBlindScenario(attempts)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [debug.scenario],
-  )
+  const scenario = useMemo(() => {
+    const state = useGameStore.getState()
+    const attempt = mode === 'advanced' ? state.advancedResults.filter(r => r.challengeType === 'blind-market').length : state.attempts['blind-market'] ?? 0
+    return selectScenario('blind-market', mode === 'advanced', attempt, debug.scenario)
+  }, [debug.scenario, mode])
 
   useEffect(() => {
+    if (mode === 'advanced') trackEvent('advanced_challenge_started', { challengeType: 'blind-market', scenarioId: scenario.id })
     trackEvent('blind_market_started', { scenarioId: scenario.id, seed: scenario.seed })
-  }, [scenario])
+  }, [scenario, mode])
 
   const handleComplete = (completed: BlindResult) => {
-    const saved = saveResult({ challengeType: 'blind-market', result: completed })
+    const saved = saveResult({ challengeType: 'blind-market', result: completed }, mode)
     setResult(completed)
     setOutcome(saved)
     trackEvent('blind_market_completed', {
@@ -40,6 +42,7 @@ export function BlindMarketPage() {
 
   if (result && outcome) {
     return (
+      <DuelResultShare payload={{ challengeType: 'blind-market', result }}>
       <BlindMarketResult
         scenario={scenario}
         result={result}
@@ -47,8 +50,9 @@ export function BlindMarketPage() {
         nextHref="/challenge/market-maker"
         nextLabel="Открыть следующее испытание"
       />
+      </DuelResultShare>
     )
   }
 
-  return <BlindMarketGame scenario={scenario} onComplete={handleComplete} />
+  return <BlindMarketGame context={{ mode, seed: scenario.seed }} scenario={scenario} onComplete={handleComplete} />
 }

@@ -1,3 +1,6 @@
+import { ModeBoundary } from '@/modes/ModeSelector'
+import { RoomPage } from '@/duel/RoomPage'
+import { DuelLanding } from '@/duel/DuelLanding'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import { MarketShockPage } from '@/pages/MarketShockPage'
@@ -20,16 +23,18 @@ export function AppRouter() {
           <Route path="/" element={<HomePage />} />
           <Route path="/play" element={<PlayPage />} />
 
-          <Route path="/challenge/blind-market" element={<BlindMarketPage />} />
-          <Route path="/challenge/market-maker" element={<MarketMakerPage />} />
-          <Route path="/challenge/black-swan" element={<MarketShockPage />} />
-          <Route path="/challenge/cross-arbitrage" element={<CrossArbitragePage />} />
+          <Route path="/challenge/blind-market" element={<ModeBoundary><BlindMarketPage /></ModeBoundary>} />
+          <Route path="/challenge/market-maker" element={<ModeBoundary><MarketMakerPage /></ModeBoundary>} />
+          <Route path="/challenge/black-swan" element={<ModeBoundary><MarketShockPage /></ModeBoundary>} />
+          <Route path="/challenge/cross-arbitrage" element={<ModeBoundary><CrossArbitragePage /></ModeBoundary>} />
           <Route
             path="/challenge/cross-arbitrage/shared"
             element={<SharedChallengePage />}
           />
           <Route path="/challenge/:id/shared" element={<SharedChallengePage />} />
 
+          <Route path="/duel/room/:roomId" element={<RoomPage />} />
+          <Route path="/duel/:challengeType" element={<DuelLanding />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
 

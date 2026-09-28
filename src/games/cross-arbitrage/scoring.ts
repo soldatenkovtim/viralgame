@@ -1,3 +1,4 @@
+import { advancedArbitrageScenarios } from '@/data/advanced/scenarios'
 import { getCrossArbitrageScenario } from '@/data/crossArbitrageScenarios'
 import { formatNumber, plural } from '@/lib/formatting'
 import { clamp, mapRange } from '@/lib/random'
@@ -34,7 +35,7 @@ export function evaluateRound(
   decision: ArbitrageDecision,
 ): ArbitrageRoundResult {
   const path = buildQuotePath(scenario)
-  const quoteStep = quoteStepAt(decision.decisionTimeMs, path.length)
+  const quoteStep = quoteStepAt(decision.decisionTimeMs, path.length, scenario.quoteStepMs)
   // Сравнение идёт с исходными котировками: дождаться схождения и нажать
   // «Сделки нет» не должно считаться верным ответом.
   const optimal = bestTrade(scenario.quotes)
@@ -226,7 +227,7 @@ export function buildArbitrageSharePayload(
 /** Короткая подпись решения — для shared-сравнения и таймлайна. */
 export function roundShortLabel(round: ArbitrageRoundResult): string {
   if (round.choseNoTrade) return round.timedOut ? 'Сделки нет · время' : 'Сделки нет'
-  const scenario = getCrossArbitrageScenario(round.scenarioId)
+  const scenario = advancedArbitrageScenarios.find(s => s.id === round.scenarioId) ?? getCrossArbitrageScenario(round.scenarioId)
   return `${routeLabel(scenario, round.buyVenue, round.sellVenue)} · ${sizeLabel(round.positionSize)}`
 }
 
