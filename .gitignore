@@ -25,3 +25,8 @@ dist-ssr
 
 # Persistent duel rooms (participant credentials and results)
 .data/
+
+.vercel/
+.env
+.env.*
+!.env.example

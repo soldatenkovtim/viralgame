@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": { "api/duels.ts": { "maxDuration": 30 } },
+  "rewrites": [
+    { "source": "/api/duels/:id/:action", "destination": "/api/duels?roomPath=:id/:action" },
+    { "source": "/api/duels/:id", "destination": "/api/duels?roomPath=:id" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}

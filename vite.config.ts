@@ -4,13 +4,14 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
 import { networkInterfaces } from 'node:os'
-import { createRoomService, roomMiddleware } from './server/rooms.ts'
+import { roomMiddleware } from './server/roomHttp.ts'
+import { configuredRooms } from './server/configuredRooms.ts'
 
 function duelServer(): Plugin {
   return {
     name: 'duel-rooms',
-    configureServer(server) {
-      const rooms = createRoomService(process.env.DUEL_DB_PATH || '.data/duels.sqlite')
+    async configureServer(server) {
+      const rooms = await configuredRooms()
       server.middlewares.use(roomMiddleware(rooms))
       server.middlewares.use('/api/duel-network', (_req, res) => {
         const address = Object.entries(networkInterfaces()).sort(([a], [b]) => Number(!/^(en|eth|wlan)/.test(a)) - Number(!/^(en|eth|wlan)/.test(b))).flatMap(([, entries]) => entries ?? []).find(a => a.family === 'IPv4' && !a.internal)?.address
@@ -19,8 +20,8 @@ function duelServer(): Plugin {
       })
       server.httpServer?.once('close', () => rooms.close())
     },
-    configurePreviewServer(server) {
-      const rooms = createRoomService(process.env.DUEL_DB_PATH || '.data/duels.sqlite')
+    async configurePreviewServer(server) {
+      const rooms = await configuredRooms()
       server.middlewares.use(roomMiddleware(rooms))
       server.httpServer.once('close', () => rooms.close())
     },
