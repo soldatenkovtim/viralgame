@@ -30,7 +30,7 @@ export function PlayPage() {
             Испытания
           </h1>
           <p className="max-w-xl text-sm leading-relaxed text-chalk-400">
-            Каждое испытание открывает следующее. Профиль собирается из всех трёх —
+            Каждое испытание открывает следующее. Профиль собирается из всех четырёх —
             и описывает только эту игровую сессию.
           </p>
         </div>
@@ -40,7 +40,7 @@ export function PlayPage() {
         </div>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {CHALLENGE_ORDER.map((challenge) => (
           <ChallengeCard
             key={challenge}

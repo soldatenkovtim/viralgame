@@ -2,6 +2,7 @@ const RU = 'ru-RU'
 
 /** Проценты в русском формате: +4,8% */
 export function formatPercent(value: number, digits = 1, withSign = true): string {
+  if (Object.is(value, -0)) value = 0
   const formatted = value.toLocaleString(RU, {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,

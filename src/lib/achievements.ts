@@ -1,9 +1,10 @@
 import { getBlindScenario } from '@/data/blindMarketScenarios'
 import type {
   Achievement,
-  BlackSwanResult,
   BlindMarketResult,
+  CrossArbitrageResult,
   MarketMakerResult,
+  MarketShockResult,
 } from '@/types/game'
 
 /**
@@ -72,11 +73,20 @@ export function marketMakerAchievement(result: MarketMakerResult): Achievement |
     })
   }
 
-  if (result.botType === 'informed' && result.pnl > 0) {
+  const informed = result.phases.filter((phase) => phase.regime === 'informed')
+  if (informed.length > 0 && informed.every((phase) => phase.pnlChange > 0)) {
     candidates.push({
       id: 'survived-toxic',
       title: 'Пережил токсичный поток',
-      description: 'Ты закончил раунд положительно против информированного бота.',
+      description: 'Ты прошёл фазу информированного потока с положительным PnL.',
+    })
+  }
+
+  if (result.spreadPnl > 0 && result.spreadPnl >= Math.abs(result.inventoryPnl) * 3 && result.tradeCount >= 20) {
+    candidates.push({
+      id: 'spread-capture',
+      title: 'Чистый спред',
+      description: 'Почти весь результат пришёл от спреда, а не от движения позиции.',
     })
   }
 
@@ -91,13 +101,13 @@ export function marketMakerAchievement(result: MarketMakerResult): Achievement |
   return pickOne(candidates)
 }
 
-export function blackSwanAchievement(result: BlackSwanResult): Achievement | null {
+export function marketShockAchievement(result: MarketShockResult): Achievement | null {
   const candidates: Achievement[] = []
 
   const reducedBeforeShock = result.decisions.some(
     (decision) =>
-      decision.phaseIndex === 0 &&
-      Math.abs(decision.exposureAfter) < Math.abs(decision.exposureBefore),
+      decision.phase === 1 &&
+      Math.abs(decision.positionAfter) < Math.abs(decision.positionBefore),
   )
   if (reducedBeforeShock) {
     candidates.push({
@@ -115,11 +125,70 @@ export function blackSwanAchievement(result: BlackSwanResult): Achievement | nul
     })
   }
 
+  if (result.levels.length > 0 && result.positionChanges > 0) {
+    candidates.push({
+      id: 'marked-levels',
+      title: 'По своей разметке',
+      description: 'Ты отметил уровни на этапе контекста и менял позицию по ходу сценария.',
+    })
+  }
+
   if (result.maxDrawdown < 4) {
     candidates.push({
       id: 'shallow-drawdown',
       title: 'Мелкая просадка',
       description: 'Твоя просадка осталась ниже 4% на всём сценарии.',
+    })
+  }
+
+  return pickOne(candidates)
+}
+
+export function crossArbitrageAchievement(result: CrossArbitrageResult): Achievement | null {
+  const candidates: Achievement[] = []
+  const { rounds } = result
+
+  if (result.tradeCount > 0 && result.falseTrades === 0) {
+    candidates.push({
+      id: 'clean-spread',
+      title: 'Чистый спред',
+      description: 'Ни одной сделки с отрицательным net edge.',
+    })
+  }
+
+  const emptyRounds = rounds.filter((round) => round.optimalNetReturn <= 0)
+  if (emptyRounds.length > 0 && emptyRounds.every((round) => round.choseNoTrade && !round.timedOut)) {
+    candidates.push({
+      id: 'no-fuss',
+      title: 'Без суеты',
+      description: 'Ты правильно пропустил все ложные возможности.',
+    })
+  }
+
+  const closeCall = rounds.some(
+    (round) =>
+      round.profitable &&
+      round.msBeforeClose !== undefined &&
+      round.msBeforeClose > 0 &&
+      round.msBeforeClose < 5000,
+  )
+  if (closeCall) {
+    candidates.push({
+      id: 'window-closing',
+      title: 'Окно закрывается',
+      description: 'Ты нашёл возможность менее чем за 5 секунд до схождения котировок.',
+    })
+  }
+
+  const opportunityRounds = rounds.filter((round) => round.optimalNetReturn > 0)
+  if (
+    opportunityRounds.length > 0 &&
+    opportunityRounds.every((round) => round.optimalChoice)
+  ) {
+    candidates.push({
+      id: 'best-route',
+      title: 'Лучший маршрут',
+      description: 'Во всех прибыльных рынках ты выбрал оптимальную пару площадок.',
     })
   }
 

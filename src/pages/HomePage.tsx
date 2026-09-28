@@ -2,6 +2,7 @@ import { ArrowRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { ChallengeCard } from '@/components/ui/ChallengeCard'
 import { trackEvent } from '@/lib/analytics'
+import { ChallengeCounter } from '@/components/progress/ProgressDots'
 import { CHALLENGE_ORDER, useGameStore } from '@/store/gameStore'
 
 export function HomePage() {
@@ -32,12 +33,12 @@ export function HomePage() {
         </h1>
 
         <p className="max-w-2xl text-lg leading-relaxed text-chalk-200 sm:text-xl">
-          Три рынка. Три разных испытания. Посмотрим, как ты принимаешь решения,
-          когда правильного ответа заранее нет.
+          Четыре рынка. Четыре разных испытания. Посмотрим, как ты принимаешь
+          решения, когда правильного ответа заранее нет.
         </p>
 
         <p className="max-w-xl text-sm leading-relaxed text-chalk-500">
-          Без регистрации. Около 10 минут. Результат не является оценкой
+          Без регистрации. Около 12 минут. Результат не является оценкой
           профессиональной квалификации.
         </p>
 
@@ -54,13 +55,11 @@ export function HomePage() {
             />
           </button>
 
-          <span className="tnum text-sm text-chalk-500">
-            {completed.length} / 3 испытаний
-          </span>
+          <ChallengeCounter />
         </div>
       </section>
 
-      <section className="grid gap-4 pb-20 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="grid gap-4 pb-20 sm:grid-cols-2 lg:grid-cols-4">
         {CHALLENGE_ORDER.map((challenge) => (
           <ChallengeCard
             key={challenge}

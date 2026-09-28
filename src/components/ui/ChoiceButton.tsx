@@ -11,6 +11,7 @@ export function ChoiceButton({
   selected = false,
   disabled = false,
   tone = 'neutral',
+  compact = false,
   onClick,
 }: {
   label: string
@@ -18,6 +19,7 @@ export function ChoiceButton({
   selected?: boolean
   disabled?: boolean
   tone?: 'neutral' | 'up' | 'down'
+  compact?: boolean
   onClick?: () => void
 }) {
   const toneRing =
@@ -39,11 +41,15 @@ export function ChoiceButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`flex min-h-16 flex-col items-start justify-center gap-1 rounded-xl border px-5 py-4 text-left transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-35 ${
-        selected ? selectedRing : `border-ink-700 bg-ink-900 ${toneRing}`
-      }`}
+      className={`flex flex-col items-start justify-center gap-1 border text-left transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-35 ${
+        compact ? 'min-h-12 rounded-lg px-4 py-2.5' : 'min-h-16 rounded-xl px-5 py-4'
+      } ${selected ? selectedRing : `border-ink-700 bg-ink-900 ${toneRing}`}`}
     >
-      <span className="text-base font-medium tracking-tight text-chalk-50">{label}</span>
+      <span
+        className={`font-medium tracking-tight text-chalk-50 ${compact ? 'text-sm' : 'text-base'}`}
+      >
+        {label}
+      </span>
       {hint ? <span className="text-xs text-chalk-500">{hint}</span> : null}
     </button>
   )

@@ -3,7 +3,7 @@
  *
  * Бэкенда нет — события просто пишутся в консоль. Набор и форма событий
  * подобраны так, чтобы в рабочей версии из них считались воронки:
- * start rate, completion rate, переходы 1→2 и 2→3, share rate,
+ * start rate, completion rate, переходы 1→2, 2→3 и 3→4, share rate,
  * открытие и прохождение shared-ссылок, replay rate и конверсия в карьеру.
  */
 export type AnalyticsEvent =
@@ -15,6 +15,9 @@ export type AnalyticsEvent =
   | 'market_maker_completed'
   | 'black_swan_started'
   | 'black_swan_completed'
+  | 'cross_arbitrage_started'
+  | 'cross_arbitrage_round'
+  | 'cross_arbitrage_completed'
   | 'profile_viewed'
   | 'challenge_shared'
   | 'shared_challenge_opened'

@@ -50,7 +50,7 @@ export function LeaderboardPage() {
           </p>
         ) : (
           <p className="text-sm text-chalk-400">
-            Пройди все три испытания, чтобы попасть в таблицу.
+            Пройди все четыре испытания, чтобы попасть в таблицу.
           </p>
         )}
       </header>

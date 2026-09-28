@@ -14,7 +14,7 @@ function prefersReducedMotion(): boolean {
  * Интервал и колбэк живут вне updater'а React — иначе Strict Mode
  * и повторный вызов setState обрывают раскрытие на середине.
  */
-export function useReveal(initial: number, stepMs = 85) {
+export function useReveal(initial: number, stepMs = 85, stepSize = 1) {
   const [visible, setVisible] = useState(initial)
   const visibleRef = useRef(initial)
   const targetRef = useRef(initial)
@@ -49,13 +49,13 @@ export function useReveal(initial: number, stepMs = 85) {
       }
 
       timerRef.current = window.setInterval(() => {
-        const next = Math.min(visibleRef.current + 1, targetRef.current)
+        const next = Math.min(visibleRef.current + stepSize, targetRef.current)
         visibleRef.current = next
         setVisible(next)
         if (next >= targetRef.current) finish()
       }, stepMs)
     },
-    [finish, stepMs, stop],
+    [finish, stepMs, stepSize, stop],
   )
 
   const reset = useCallback(

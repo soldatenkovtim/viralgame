@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, Inbox } from 'lucide-react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { CandleChart, type ChartMarker } from '@/components/charts/CandleChart'
+import type { ChartMarker } from '@/components/charts/CandleChart'
+import { TradingChart } from '@/components/charts/TradingChart'
 import {
   ComparisonNarrative,
   ComparisonTable,
@@ -11,26 +12,45 @@ import {
 import { LinkButton } from '@/components/ui/Button'
 import { Button } from '@/components/ui/Button'
 import { Disclaimer, SectionLabel } from '@/components/ui/Card'
-import { getBlackSwanScenario } from '@/data/blackSwanScenarios'
 import { getBlindScenario } from '@/data/blindMarketScenarios'
+import {
+  getCrossArbitrageSession,
+  sessionScenarios,
+} from '@/data/crossArbitrageScenarios'
 import { getMarketMakerScenario } from '@/data/marketMakerScenarios'
 import { BlindMarketGame } from '@/games/blind-market/BlindMarketGame'
 import { actionShortLabels } from '@/games/blind-market/scoring'
-import { BlackSwanGame } from '@/games/black-swan/BlackSwanGame'
-import { actionShortLabels as swanActionLabels } from '@/games/black-swan/scoring'
+import { CrossArbitrageGame } from '@/games/cross-arbitrage/CrossArbitrageGame'
+import { bestTrade } from '@/games/cross-arbitrage/engine'
+import {
+  formatDecisionSeconds,
+  formatEdge,
+  roundShortLabel,
+} from '@/games/cross-arbitrage/scoring'
 import { MarketMakerGame } from '@/games/market-maker/MarketMakerGame'
+import { actionPastLabels as shockActionLabels } from '@/games/market-shock/engine'
+import { MarketShockGame } from '@/games/market-shock/MarketShockGame'
+import { getMarketShockScenario } from '@/games/market-shock/scenarios'
 import { trackEvent } from '@/lib/analytics'
-import { exposureLabel, formatMoney, formatNumber, formatPercent, formatPrice } from '@/lib/formatting'
+import {
+  exposureLabel,
+  formatMoney,
+  formatNumber,
+  formatPercent,
+  formatPrice,
+  plural,
+} from '@/lib/formatting'
 import { decodeSharePayload, type SharePayload } from '@/lib/sharing'
 import { challengeTitles, useGameStore } from '@/store/gameStore'
 import type {
-  BlackSwanResult,
   BlindMarketResult,
   ChallengeType,
+  CrossArbitrageResult,
   MarketMakerResult,
+  MarketShockResult,
 } from '@/types/game'
 
-type AnyResult = BlindMarketResult | MarketMakerResult | BlackSwanResult
+type AnyResult = BlindMarketResult | MarketMakerResult | MarketShockResult | CrossArbitrageResult
 
 export function SharedChallengePage() {
   const { id } = useParams<{ id: string }>()
@@ -96,6 +116,18 @@ export function SharedChallengePage() {
     )
   }
 
+  if (challengeType === 'cross-arbitrage') {
+    return (
+      <CrossArbitrageGame
+        session={getCrossArbitrageSession(payload.s)}
+        onComplete={(result) => {
+          saveResult({ challengeType, result })
+          finish(result)
+        }}
+      />
+    )
+  }
+
   if (challengeType === 'market-maker') {
     return (
       <MarketMakerGame
@@ -109,8 +141,8 @@ export function SharedChallengePage() {
   }
 
   return (
-    <BlackSwanGame
-      scenario={getBlackSwanScenario(payload.s)}
+    <MarketShockGame
+      scenario={getMarketShockScenario(payload.s)}
       onComplete={(result) => {
         saveResult({ challengeType, result })
         finish(result)
@@ -198,11 +230,13 @@ function SharedComparison({
             Где ваши решения разошлись
           </h2>
           <div className="rounded-xl border border-ink-700 bg-ink-900 p-3 sm:p-5">
-            <CandleChart
+            <TradingChart
+              className="h-[420px]"
               candles={chart.candles}
               visibleCount={chart.candles.length}
+              timeframe="1h"
+              annotations={{ levels: [], trendLine: null }}
               markers={chart.markers}
-              height={340}
             />
           </div>
         </section>
@@ -299,9 +333,13 @@ function buildComparison(payload: SharePayload, result: AnyResult): ComparisonVi
     }
   }
 
+  if (payload.t === 'cross-arbitrage') {
+    return buildArbitrageComparison(payload, result as CrossArbitrageResult)
+  }
+
   if (payload.t === 'black-swan') {
-    const swan = result as BlackSwanResult
-    const myLabels = swan.decisions.map((decision) => swanActionLabels[decision.action])
+    const swan = result as MarketShockResult
+    const myLabels = swan.decisions.map((decision) => shockActionLabels[decision.action])
 
     return {
       rows: [
@@ -313,14 +351,14 @@ function buildComparison(payload: SharePayload, result: AnyResult): ComparisonVi
           theirsTone: payload.r >= 0 ? 'up' : 'down',
         },
         ...myLabels.map((label, index) => ({
-          label: index === myLabels.length - 1 ? 'Развитие' : `Шок №${index + 1}`,
+          label: `Решение ${index + 1}`,
           mine: label,
           theirs: payload.a[index] ?? '—',
           diverged: label !== payload.a[index],
         })),
       ],
       ghost: myLabels.map((label, index) => ({
-        moment: index === myLabels.length - 1 ? 'Развитие' : `Шок №${index + 1}`,
+        moment: `Решение ${index + 1}`,
         mine: label,
         theirs: payload.a[index] ?? '—',
       })),
@@ -358,6 +396,95 @@ function buildComparison(payload: SharePayload, result: AnyResult): ComparisonVi
     ghost: [],
     narrative:
       'Вы котировали один и тот же поток. Разница в результате — это разница в том, как быстро каждый из вас менял спред и сбрасывал инвентарь.',
+    chart: null,
+  }
+}
+
+function tradesLabel(count: number): string {
+  return `${count} ${plural(count, ['сделка', 'сделки', 'сделок'])}`
+}
+
+function falseLabel(count: number): string {
+  return `${count} ${plural(count, ['ложная', 'ложных', 'ложных'])}`
+}
+
+function buildArbitrageComparison(
+  payload: SharePayload,
+  arb: CrossArbitrageResult,
+): ComparisonView {
+  const [theirTrades = 0, theirFalse = 0, theirMs = 0, theirFound = 0] = payload.m ?? []
+  const theirReturn = payload.r
+  const myLabels = arb.rounds.map(roundShortLabel)
+
+  const scenarios = sessionScenarios(getCrossArbitrageSession(payload.s))
+  const available =
+    scenarios.reduce((sum, scenario) => sum + Math.max(0, bestTrade(scenario.quotes).capitalReturn), 0) *
+    100
+  const theirCaptured = (payload.p ?? []).reduce((sum, value) => sum + Math.max(0, value), 0)
+  const myCaptured = arb.rounds.reduce((sum, round) => sum + Math.max(0, round.capitalReturn), 0) * 100
+
+  const rows: ComparisonRow[] = [
+    {
+      label: 'Результат',
+      mine: formatEdge(arb.totalReturnPercent),
+      theirs: formatEdge(theirReturn),
+      mineTone: arb.totalReturnPercent > 0 ? 'up' : arb.totalReturnPercent < 0 ? 'down' : 'neutral',
+      theirsTone: theirReturn > 0 ? 'up' : theirReturn < 0 ? 'down' : 'neutral',
+    },
+    { label: 'Сделок', mine: tradesLabel(arb.tradeCount), theirs: tradesLabel(theirTrades) },
+    { label: 'Ложных сделок', mine: falseLabel(arb.falseTrades), theirs: falseLabel(theirFalse) },
+    {
+      label: 'Найдено возможностей',
+      mine: `${arb.found} / ${arb.opportunities}`,
+      theirs: `${theirFound} / ${arb.opportunities}`,
+    },
+    {
+      label: 'Среднее время',
+      mine: formatDecisionSeconds(arb.averageDecisionMs),
+      theirs: formatDecisionSeconds(theirMs),
+    },
+    ...myLabels.map((label, index) => ({
+      label: `Рынок ${index + 1}`,
+      mine: label,
+      theirs: payload.a[index] ?? '—',
+      diverged: label !== payload.a[index],
+    })),
+  ]
+
+  const sentences: string[] = []
+  const myReturn = Number(arb.totalReturnPercent.toFixed(2))
+  if (myLabels.every((label, index) => label === payload.a[index])) {
+    sentences.push('Вы собрали одни и те же маршруты с тем же размером — рынок читался одинаково.')
+  } else if (arb.tradeCount < theirTrades && myReturn > theirReturn) {
+    sentences.push('Ты совершил меньше сделок, но сохранил больший чистый edge.')
+  } else if (arb.tradeCount > theirTrades && myReturn > theirReturn) {
+    sentences.push('Ты открыл больше сделок, и дополнительные сделки пережили комиссии.')
+  } else if (arb.tradeCount > theirTrades && myReturn < theirReturn) {
+    sentences.push('Ты торговал чаще, но часть лишних сделок ушла на комиссии.')
+  } else if (arb.falseTrades < theirFalse) {
+    sentences.push('Ты реже входил в сделки, которые после комиссий уходили в минус.')
+  } else if (arb.falseTrades > theirFalse) {
+    sentences.push('Разница в результате — в сделках, где комиссии оказались выше расхождения.')
+  } else if (myReturn !== theirReturn) {
+    sentences.push('Вы торговали похоже — разница в выборе пары и размере позиции.')
+  }
+
+  if (available > 0) {
+    const myShare = Math.round((myCaptured / available) * 100)
+    const theirShare = Math.round((theirCaptured / available) * 100)
+    sentences.push(
+      `Из доступного в этих рынках edge ты собрал ${myShare}%, другой игрок — ${theirShare}%.`,
+    )
+  }
+
+  return {
+    rows,
+    ghost: myLabels.map((label, index) => ({
+      moment: `Рынок ${index + 1} · ${scenarios[index]?.asset ?? ''}`,
+      mine: label,
+      theirs: payload.a[index] ?? '—',
+    })),
+    narrative: sentences.length ? sentences.join(' ') : null,
     chart: null,
   }
 }

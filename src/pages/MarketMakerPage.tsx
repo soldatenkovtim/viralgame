@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChallengeGate } from '@/components/layout/ChallengeGate'
 import {
   getMarketMakerScenario,
-  pickRandomMarketMakerScenario,
+  pickMarketMakerScenario,
 } from '@/data/marketMakerScenarios'
 import { MarketMakerGame } from '@/games/market-maker/MarketMakerGame'
 import { MarketMakerResult } from '@/games/market-maker/MarketMakerResult'
@@ -18,12 +18,13 @@ export function MarketMakerPage() {
   const [result, setResult] = useState<MMResult | null>(null)
   const [outcome, setOutcome] = useState<SaveOutcome | null>(null)
 
-  // Тип контрагента выбирается случайно и не показывается до конца раунда.
+  // Смена потока раскрывается только в replay. Номер попытки читается один раз,
+  // чтобы сохранение результата не подменило сценарий на экране итогов.
   const scenario = useMemo(
     () =>
       debug.scenario
         ? getMarketMakerScenario(debug.scenario)
-        : pickRandomMarketMakerScenario(),
+        : pickMarketMakerScenario(useGameStore.getState().attempts['market-maker'] ?? 0),
     [debug.scenario],
   )
 
@@ -37,8 +38,10 @@ export function MarketMakerPage() {
     setOutcome(saved)
     trackEvent('market_maker_completed', {
       scenarioId: completed.scenarioId,
-      botType: completed.botType,
       pnl: Math.round(completed.pnl),
+      spreadPnl: Math.round(completed.spreadPnl),
+      inventoryPnl: Math.round(completed.inventoryPnl),
+      hedgeCosts: Math.round(completed.hedgeCosts),
       score: Math.round(completed.score),
       isPersonalBest: saved.isPersonalBest,
     })
@@ -50,7 +53,7 @@ export function MarketMakerPage() {
         result={result}
         outcome={outcome}
         nextHref="/challenge/black-swan"
-        nextLabel="Открыть последнее испытание"
+        nextLabel="Открыть следующее испытание"
       />
     ) : (
       <MarketMakerGame scenario={scenario} onComplete={handleComplete} />

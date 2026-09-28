@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { ArrowRight } from 'lucide-react'
-import { CandleChart, type ChartMarker } from '@/components/charts/CandleChart'
 import {
   AchievementNote,
   CrowdStats,
@@ -19,6 +18,7 @@ import { exposureLabel, formatMoney, formatPercent, plural, pnlColor } from '@/l
 import type { SharePayload } from '@/lib/sharing'
 import type { BlindMarketResult as BlindResult, BlindMarketScenario } from '@/types/game'
 import { infoLabels } from './InfoSelector'
+import { BlindReplay } from './BlindReplay'
 import { actionShortLabels } from './scoring'
 import type { SaveOutcome } from '@/store/gameStore'
 
@@ -36,20 +36,6 @@ export function BlindMarketResult({
   nextLabel: string
 }) {
   const achievement = useMemo(() => blindMarketAchievement(result), [result])
-
-  const markers = useMemo<ChartMarker[]>(
-    () =>
-      result.decisions.map((decision, index) => ({
-        candleIndex: scenario.checkpoints[index] - 1,
-        position: decision.exposure >= 0 ? 'belowBar' : 'aboveBar',
-        shape:
-          decision.exposure > 0 ? 'arrowUp' : decision.exposure < 0 ? 'arrowDown' : 'circle',
-        color:
-          decision.exposure === 0 ? '#7b5cff' : decision.exposure > 0 ? '#2ebd85' : '#f0616d',
-        text: exposureLabel(decision.exposure),
-      })),
-    [result.decisions, scenario.checkpoints],
-  )
 
   const timeline = useMemo<TimelineStep[]>(() => {
     const steps: TimelineStep[] = []
@@ -104,6 +90,8 @@ export function BlindMarketResult({
         </div>
       </ResultHeader>
 
+      <AssetReveal scenario={scenario} />
+
       <MetricGrid>
         <Stat
           label="Результат"
@@ -144,14 +132,7 @@ export function BlindMarketResult({
 
       <AchievementNote achievement={achievement} />
 
-      <section className="rounded-xl border border-ink-700 bg-ink-900 p-3 sm:p-5">
-        <CandleChart
-          candles={scenario.candles}
-          visibleCount={scenario.candles.length}
-          markers={markers}
-          height={340}
-        />
-      </section>
+      <BlindReplay scenario={scenario} result={result} />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
         <div className="rounded-xl border border-ink-700 bg-ink-900 p-6">
@@ -163,15 +144,6 @@ export function BlindMarketResult({
 
         <div className="flex flex-col gap-6">
           <CrowdStats title="На второй точке:" items={scenario.crowd} />
-
-          <div className="flex flex-col gap-3 rounded-xl border border-ink-700 bg-ink-900 p-6">
-            <h3 className="text-lg font-normal tracking-tight text-chalk-50">
-              {scenario.reveal.title}
-            </h3>
-            <p className="text-sm leading-relaxed text-chalk-400">
-              {scenario.reveal.description}
-            </p>
-          </div>
         </div>
       </div>
 
@@ -190,5 +162,30 @@ export function BlindMarketResult({
         </div>
       </div>
     </div>
+  )
+}
+
+function AssetReveal({ scenario }: { scenario: BlindMarketScenario }) {
+  const { asset, reveal, info } = scenario
+
+  return (
+    <section className="flex flex-col gap-5 rounded-xl border border-violet-accent/40 bg-violet-accent/5 p-6 sm:flex-row sm:items-start sm:justify-between sm:gap-10 sm:p-8">
+      <div className="flex shrink-0 flex-col gap-2">
+        <span className="text-[11px] tracking-[0.14em] text-chalk-500 uppercase">
+          Ты торговал
+        </span>
+        <span className="text-3xl font-light tracking-[-0.02em] text-chalk-50 sm:text-4xl">
+          {asset.name}
+        </span>
+        <span className="tnum text-sm text-chalk-400">
+          {asset.ticker} · {asset.exchange} · {info.sector}
+        </span>
+      </div>
+
+      <div className="flex max-w-xl flex-col gap-2">
+        <h3 className="text-lg font-normal tracking-tight text-chalk-50">{reveal.title}</h3>
+        <p className="text-sm leading-relaxed text-chalk-400">{reveal.description}</p>
+      </div>
+    </section>
   )
 }
