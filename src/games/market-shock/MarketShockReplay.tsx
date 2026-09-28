@@ -3,7 +3,7 @@ import { Play } from 'lucide-react'
 import type { ChartMarker } from '@/components/charts/CandleChart'
 import { CHART_COLORS } from '@/components/charts/TradingChart'
 import { useReveal } from '@/hooks/useReveal'
-import { formatPercent } from '@/lib/formatting'
+import { formatPercent, formatPrice } from '@/lib/formatting'
 import type { MarketShockResult, MarketShockScenario } from '@/types/game'
 import {
   actionPastLabels,
@@ -27,6 +27,8 @@ export function MarketShockReplay({
   const total = scenario.candles.length
   const [playing, setPlaying] = useState(false)
   const { visible, revealTo, reset } = useReveal(total, 40, 1)
+  const exit = result.decisions.find((decision) => decision.positionAfter === 0)
+  const exitTime = exit ? scenario.candles[decisionCandleIndex(scenario, exit.phase)].time : undefined
   const startIndex = scenario.initialVisibleIndex - 1
 
   const markers = useMemo<ChartMarker[]>(() => {
@@ -46,7 +48,9 @@ export function MarketShockReplay({
         position: 'aboveBar',
         shape: 'circle',
         color: '#9b84ff',
-        text: `${decision.phase}. ${actionPastLabels[decision.action]} · ${positionLabel(decision.positionAfter)}`,
+        text: decision.positionAfter === 0
+          ? `Полный выход · ${formatPrice(decision.price)}`
+          : `${decision.phase}. ${actionPastLabels[decision.action]} · ${positionLabel(decision.positionAfter)}`,
       })
     })
 
@@ -87,6 +91,7 @@ export function MarketShockReplay({
         position={initialExposure(scenario)}
         levels={result.levels}
         markers={markers}
+        mutedAfter={exitTime}
         editable={false}
         className="h-[clamp(380px,60vh,600px)]"
         toolbarExtra={
@@ -101,6 +106,12 @@ export function MarketShockReplay({
           </button>
         }
       />
+      {exit ? (
+        <p className="mt-3 text-xs text-chalk-400">
+          Полный выход: {formatPrice(exit.price)} · PnL {formatPercent(result.pnlPercent, 2)}.
+          Серые свечи — рынок после закрытия позиции.
+        </p>
+      ) : null}
       <ExposureStrip scenario={scenario} result={result} />
     </section>
   )

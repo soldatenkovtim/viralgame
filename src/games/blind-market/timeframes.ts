@@ -100,6 +100,13 @@ export function formatSessionTime(time: number, origin: number, withClock = true
   return withClock ? `${day}, ${formatClock(time)}` : day
 }
 
+/** Календарное время свечи в UTC для раскрытого разбора. */
+export function formatCalendarTime(time: number, withClock = true): string {
+  const date = new Date(time * 1000)
+  const label = `${pad(date.getUTCDate())}.${pad(date.getUTCMonth() + 1)}.${date.getUTCFullYear()}`
+  return withClock ? `${label}, ${formatClock(time)}` : label
+}
+
 export function formatVolume(value: number): string {
   if (value >= 1_000_000) return `${(value / 1_000_000).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} млн`
   if (value >= 10_000) return `${(value / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} тыс`

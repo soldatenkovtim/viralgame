@@ -23,6 +23,7 @@ export function MarketShockChart({
   markers,
   editable = true,
   toolbarExtra,
+  mutedAfter,
   className = 'h-[clamp(420px,calc(100vh-260px),720px)]',
 }: {
   scenario: MarketShockScenario
@@ -34,6 +35,7 @@ export function MarketShockChart({
   markers?: ChartMarker[]
   editable?: boolean
   toolbarExtra?: ReactNode
+  mutedAfter?: number
   className?: string
 }) {
   const [timeframe, setTimeframe] = useState<TimeframeId>(scenario.primaryTimeframe)
@@ -158,6 +160,7 @@ export function MarketShockChart({
         entry={entry}
         lastPriceTitle="CURRENT"
         markers={markers}
+        mutedAfter={mutedAfter}
         editable={editable}
         hint={tool === 'level' ? 'Кликни по графику, чтобы поставить уровень' : null}
         onDraw={handleDraw}

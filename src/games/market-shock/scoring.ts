@@ -1,4 +1,4 @@
-import { formatPercent } from '@/lib/formatting'
+import { formatPercent, formatPrice } from '@/lib/formatting'
 import { clamp, mapRange } from '@/lib/random'
 import type {
   MarketShockResult,
@@ -219,6 +219,14 @@ export function marketShockInsights(
   const notes: string[] = []
   const push = (text: string) => {
     if (notes.length < 2 && !notes.includes(text)) notes.push(text)
+  }
+
+  const exit = decisions.find((decision) => decision.positionAfter === 0)
+  if (exit) {
+    const laterMove = (scenario.candles.at(-1)!.close / exit.price - 1) * 100
+    push(`Ты полностью закрыл позицию по цене ${formatPrice(exit.price)}. Зафиксированный PnL — ${formatPercent(result.pnlPercent, 2)} к капиталу.`)
+    push(`После выхода цена изменилась на ${formatPercent(laterMove, 2)}. Этот участок рынка прошёл без позиции и не повлиял на твой PnL.`)
+    return notes
   }
 
   const [first, second, third] = decisions

@@ -29,6 +29,7 @@ import {
   aggregateCandles,
   bucketStart,
   formatClock,
+  formatCalendarTime,
   formatSessionTime,
   formatVolume,
   getTimeframe,
@@ -98,6 +99,10 @@ export function TradingChart(props: {
   segments?: OverlaySegment[]
   /** Можно ли выделять и перетаскивать уровни. */
   editable?: boolean
+  /** Раскрыть календарные даты после завершения игры. */
+  showDates?: boolean
+  /** Приглушить свечи после полного выхода (UTC timestamp). */
+  mutedAfter?: number
   /** Можно ли перетаскивать стоп. */
   stopDraggable?: boolean
   hint?: string | null
@@ -121,6 +126,7 @@ export function TradingChart(props: {
     hint,
     visibleBars,
     lastPriceTitle = '',
+    mutedAfter,
     className = 'h-[480px]',
   } = props
 
@@ -131,7 +137,7 @@ export function TradingChart(props: {
   const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null)
   const overlayRef = useRef<OverlayPrimitive | null>(null)
   const priceLinesRef = useRef<IPriceLine[]>([])
-  const renderedRef = useRef<{ timeframe: TimeframeId; visibleCount: number } | null>(null)
+  const renderedRef = useRef<{ timeframe: TimeframeId; visibleCount: number; mutedAfter?: number } | null>(null)
   const anchorRef = useRef<ChartPoint | null>(null)
   const previewRef = useRef<ChartPoint | null>(null)
   const dragRef = useRef<HitTarget | null>(null)
@@ -265,12 +271,16 @@ export function TradingChart(props: {
           if (type === TickMarkType.Time || type === TickMarkType.TimeWithSeconds) {
             return formatClock(seconds)
           }
-          return `День ${sessionDay(seconds, geometryRef.current.origin)}`
+          return propsRef.current.showDates
+            ? formatCalendarTime(seconds, false)
+            : `День ${sessionDay(seconds, geometryRef.current.origin)}`
         },
       },
       localization: {
         locale: 'ru-RU',
-        timeFormatter: (time: Time) => formatSessionTime(time as number, geometryRef.current.origin),
+        timeFormatter: (time: Time) => propsRef.current.showDates
+          ? formatCalendarTime(time as number)
+          : formatSessionTime(time as number, geometryRef.current.origin),
         priceFormatter: (price: number) => price.toFixed(2),
       },
       crosshair: {
@@ -483,16 +493,21 @@ export function TradingChart(props: {
       high: bar.high,
       low: bar.low,
       close: bar.close,
+      ...(mutedAfter !== undefined && bar.time > mutedAfter
+        ? { color: '#666674', borderColor: '#666674', wickColor: '#666674' }
+        : {}),
     })
     const toVolume = (bar: OhlcvCandle) => ({
       time: bar.time as UTCTimestamp,
       value: bar.volume,
-      color: bar.close >= bar.open ? VOLUME_UP : VOLUME_DOWN,
+      color: mutedAfter !== undefined && bar.time > mutedAfter
+        ? 'rgba(107, 107, 120, 0.3)'
+        : bar.close >= bar.open ? VOLUME_UP : VOLUME_DOWN,
     })
 
     const rendered = renderedRef.current
     const canAppend =
-      rendered !== null && rendered.timeframe === timeframe && visibleCount >= rendered.visibleCount
+      rendered !== null && rendered.mutedAfter === mutedAfter && rendered.timeframe === timeframe && visibleCount >= rendered.visibleCount
 
     if (!canAppend) {
       candleSeries.setData(bars.map(toCandle))
@@ -511,10 +526,10 @@ export function TradingChart(props: {
       }
     }
 
-    renderedRef.current = { timeframe, visibleCount }
+    renderedRef.current = { timeframe, visibleCount, mutedAfter }
     refreshOverlay()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bars, timeframe])
+  }, [bars, timeframe, mutedAfter])
 
   // Уровни, вход и стоп — нативные price lines с метками на ценовой оси.
   useEffect(() => {
@@ -629,6 +644,7 @@ export function TradingChart(props: {
           bar={hovered}
           previousClose={previous?.close}
           origin={origin}
+          showDates={props.showDates}
           x={hover.x}
           y={hover.y}
           paneWidth={paneWidth}
@@ -642,6 +658,7 @@ function OhlcvTooltip({
   bar,
   previousClose,
   origin,
+  showDates,
   x,
   y,
   paneWidth,
@@ -649,6 +666,7 @@ function OhlcvTooltip({
   bar: OhlcvCandle
   previousClose?: number
   origin: number
+  showDates?: boolean
   x: number
   y: number
   paneWidth: number
@@ -672,7 +690,7 @@ function OhlcvTooltip({
       className="pointer-events-none absolute z-20 flex flex-col gap-1.5 rounded-lg border border-ink-600 bg-ink-950/95 px-3 py-2.5 text-xs shadow-lg"
       style={{ left, top, width }}
     >
-      <span className="text-chalk-400">{formatSessionTime(bar.time, origin)}</span>
+      <span className="text-chalk-400">{showDates ? formatCalendarTime(bar.time) : formatSessionTime(bar.time, origin)}</span>
       <div className="tnum grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
         {rows.map(([label, value]) => (
           <div key={label} className="contents">

@@ -9,7 +9,8 @@ function quote(
   bid: number,
   ask: number,
   feePercent: number,
-  availableLiquidity?: number,
+  availableLiquidity = 100,
+  depthRate = 0.004,
 ): ArbitrageVenueQuote {
   return {
     venueId: venueName.toLowerCase(),
@@ -17,7 +18,12 @@ function quote(
     bid,
     ask,
     feeRate: feePercent / 100,
-    ...(availableLiquidity !== undefined ? { availableLiquidity } : {}),
+    bidLiquidity: availableLiquidity,
+    askLiquidity: availableLiquidity,
+    secondBid: Math.round(bid * (1 - depthRate) * 100) / 100,
+    secondAsk: Math.round(ask * (1 + depthRate) * 100) / 100,
+    secondBidLiquidity: 100 - availableLiquidity,
+    secondAskLiquidity: 100 - availableLiquidity,
   }
 }
 
@@ -54,16 +60,16 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
   {
     id: 'arb_x_liquidity',
     asset: 'ASSET X',
-    kind: 'obvious',
+    kind: 'small',
     seed: 610103,
     durationSeconds: 15,
     quotes: [
-      quote('Alpha', 99.62, 99.8, 0.05, 50),
+      quote('Alpha', 99.62, 99.8, 0.05, 25),
       quote('Beta', 99.99, 100.2, 0.06),
       quote('Gamma', 99.7, 99.95, 0.08),
     ],
     revealText:
-      'Edge был небольшим, а на Alpha по котировке стояло только 50 единиц. Всё, что выше, исполнялось хуже и съедало прибыль.',
+      'Edge был небольшим, а на Alpha по котировке стояло только 25 единиц. Всё, что выше, исполнялось хуже и съедало прибыль.',
   },
   {
     id: 'arb_btc_liquidity',
@@ -73,7 +79,7 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
     durationSeconds: 15,
     quotes: [
       quote('Alpha', 64_012, 64_040, 0.05),
-      quote('Beta', 64_318, 64_352, 0.08, 30),
+      quote('Beta', 64_318, 64_352, 0.08, 30, 0.0005),
       quote('Gamma', 64_110, 64_150, 0.06),
     ],
     revealText:
@@ -206,12 +212,12 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
     seed: 610401,
     durationSeconds: 15,
     quotes: [
-      quote('Alpha', 99.55, 99.75, 0.08, 30),
+      quote('Alpha', 99.55, 99.75, 0.08, 10, 0.01),
       quote('Beta', 100.3, 100.52, 0.1),
       quote('Gamma', 99.95, 100.05, 0.05),
     ],
     revealText:
-      'Gamma → Beta тоже приносило прибыль, но Alpha → Beta давало почти вчетверо больше — даже с учётом тонкой ликвидности на Alpha.',
+      'Alpha давала самую дешёвую покупку, но только для 10 единиц. При полном объёме маршрут Gamma → Beta приносил больше благодаря глубине.',
   },
   {
     id: 'arb_eth_multiple',
@@ -253,7 +259,7 @@ export const crossArbitrageSessions: CrossArbitrageSession[] = [
       'arb_x_false',
       'arb_x_multiple_liq',
       'arb_eth_dynamic',
-      'arb_x_none',
+      'arb_x_liquidity',
     ],
   },
   {
@@ -272,7 +278,7 @@ export const crossArbitrageSessions: CrossArbitrageSession[] = [
     seed: 510303,
     scenarioIds: [
       'arb_y_obvious',
-      'arb_btc_none',
+      'arb_x_liquidity',
       'arb_x_multiple_dynamic',
       'arb_eth_false',
       'arb_btc_liquidity',

@@ -1,3 +1,4 @@
+import { ExecutionBreakdown } from './CrossArbitrageGame'
 import { useMemo } from 'react'
 import { ArrowRight } from 'lucide-react'
 import {
@@ -25,6 +26,7 @@ import {
   roundFeedback,
   roundShortLabel,
   routeLabel,
+  sizeLabel,
   type CrossArbitrageTraits,
 } from './scoring'
 
@@ -84,6 +86,8 @@ export function CrossArbitrageResult({
           value={result.bestEdgePercent > 0 ? formatEdge(result.bestEdgePercent) : '—'}
           valueClassName={result.bestEdgePercent > 0 ? 'text-market-up' : 'text-chalk-200'}
         />
+        <Stat label="Средний размер сделки" value={`${formatNumber(result.averageSizeUnits ?? 0, 1)} ед.`} />
+        <Stat label="Размер ухудшил edge" value={`${result.sizeWorsenedCount ?? 0} раз`} />
       </MetricGrid>
 
       <PersonalBestNote
@@ -127,10 +131,11 @@ export function CrossArbitrageResult({
                   <span className="text-sm text-chalk-200">{feedback.title}</span>
                   {round.optimalNetReturn > 0 ? (
                     <span className="tnum text-xs text-chalk-500">
-                      Лучший маршрут: {routeLabel(scenario, round.optimalBuyVenue, round.optimalSellVenue)}{' '}
-                      · {formatEdge(round.optimalNetReturn * 100)}
+                      Лучший вариант на старте: {routeLabel(scenario, round.optimalBuyVenue, round.optimalSellVenue)}{' '}
+                      · {sizeLabel(round.optimalPositionSize ?? 1)} · {formatEdge(round.optimalNetReturn * 100)}
                     </span>
                   ) : null}
+                  <ExecutionBreakdown round={round} />
                   {scenario.revealText ? (
                     <span className="text-xs leading-relaxed text-chalk-500">
                       {scenario.revealText}

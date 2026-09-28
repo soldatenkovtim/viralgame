@@ -11,7 +11,7 @@ import type { ArbitrageVenueQuote, CrossArbitrageScenario } from '@/types/game'
 import {
   ARB_CONVERGENCE_DELAY_MS,
   ARB_DECISION_SECONDS,
-  ARB_LIQUIDITY_PENALTY,
+  executionPrice,
   bestTrade,
   buildQuotePath,
   evaluateTrade,
@@ -36,14 +36,16 @@ const quote = (
   bid: number,
   ask: number,
   feeRate: number,
-  availableLiquidity?: number,
+  availableLiquidity = 100,
 ): ArbitrageVenueQuote => ({
   venueId,
   venueName: venueId,
   bid,
   ask,
   feeRate,
-  ...(availableLiquidity !== undefined ? { availableLiquidity } : {}),
+  bidLiquidity: availableLiquidity, askLiquidity: availableLiquidity,
+  secondBid: bid * 0.999, secondAsk: ask * 1.001,
+  secondBidLiquidity: 100 - availableLiquidity, secondAskLiquidity: 100 - availableLiquidity,
 })
 
 const noTrade = (decisionTimeMs = 4000): ArbitrageDecision => ({
@@ -97,7 +99,7 @@ describe('evaluateTrade', () => {
     expect(withinLimit.liquidityHit).toBe(false)
     expect(overLimit.liquidityHit).toBe(true)
     expect(overLimit.netBeforeLiquidity - overLimit.netReturn).toBeCloseTo(
-      ARB_LIQUIDITY_PENALTY * 0.5,
+      0.001 * 0.5 * 1.0005,
       12,
     )
   })
@@ -107,7 +109,7 @@ describe('сценарии', () => {
   it('содержат минимум 10 рынков всех четырёх типов', () => {
     expect(crossArbitrageScenarios.length).toBeGreaterThanOrEqual(10)
     const kinds = new Set(crossArbitrageScenarios.map((scenario) => scenario.kind))
-    expect(kinds).toEqual(new Set(['obvious', 'false', 'none', 'multiple']))
+    expect(kinds).toEqual(new Set(['obvious', 'false', 'none', 'small', 'multiple']))
   })
 
   it.each(crossArbitrageScenarios.map((scenario) => [scenario.id, scenario] as const))(
@@ -123,6 +125,11 @@ describe('сценарии', () => {
       scenario.quotes.forEach((item) => expect(item.ask).toBeGreaterThan(item.bid))
 
       switch (scenario.kind) {
+        case 'small':
+          expect(bestTrade(scenario.quotes).positionSize).toBeLessThan(1)
+          expect(Math.max(...routes.map((route) => route.netReturn))).toBeLessThanOrEqual(0)
+          expect(optimal).toBeGreaterThan(0)
+          break
         case 'obvious':
           expect(optimal).toBeGreaterThan(0)
           break
@@ -150,13 +157,13 @@ describe('сценарии', () => {
       expect(new Set(session.scenarioIds).size).toBe(5)
       session.scenarioIds.forEach((id) => expect(getCrossArbitrageScenario(id).id).toBe(id))
 
-      const empty = scenarios.filter((scenario) => bestTrade(scenario.quotes).capitalReturn <= 0)
+      const empty = scenarios.filter((scenario) => bestTrade(scenario.quotes).capitalReturn <= 0 || scenario.kind === 'small')
       expect(empty.length / scenarios.length).toBeGreaterThanOrEqual(0.25)
       expect(scenarios.some((scenario) => scenario.kind === 'false')).toBe(true)
       expect(scenarios.some((scenario) => scenario.dynamic)).toBe(true)
 
       const withLiquidity = scenarios.filter((scenario) =>
-        scenario.quotes.some((item) => item.availableLiquidity !== undefined),
+        scenario.quotes.some((item) => item.bidLiquidity < 100 || item.askLiquidity < 100),
       )
       expect(withLiquidity.length).toBeGreaterThanOrEqual(1)
       expect(withLiquidity.length).toBeLessThanOrEqual(2)
@@ -215,7 +222,7 @@ describe('evaluateRound и score рынка', () => {
     const round = evaluateRound(falseScenario, noTrade(2500))
     expect(round.optimalChoice).toBe(true)
     expect(round.roundScore).toBeCloseTo(100, 6)
-    expect(roundFeedback(round, falseScenario).title).toBe('Верно: чистого арбитража не было')
+    expect(roundFeedback(round, falseScenario).title).toBe('Исполнимой возможности не было')
   })
 
   it('сделка в ложном арбитраже — ноль и объяснение про комиссии', () => {
@@ -244,10 +251,10 @@ describe('evaluateRound и score рынка', () => {
     const best = evaluateRound(obvious, bestDecision(obvious, 2500))
     expect(best.optimalChoice).toBe(true)
     expect(best.roundScore).toBeCloseTo(100, 6)
-    expect(roundFeedback(best, obvious).title).toBe('Арбитраж найден')
+    expect(roundFeedback(best, obvious).title).toBe('Edge сохранился после комиссий')
 
     const skipped = evaluateRound(obvious, noTrade())
-    expect(skipped.roundScore).toBe(0)
+    expect(skipped.roundScore).toBe(25)
     expect(roundFeedback(skipped, obvious).title).toBe('Возможность пропущена')
   })
 
@@ -261,7 +268,7 @@ describe('evaluateRound и score рынка', () => {
     expect(oversized.roundScore).toBeLessThan(100)
   })
 
-  it('скорость меняет score не больше чем на 10%', () => {
+  it('скорость меняет score не больше чем на 15%', () => {
     const fast = arbitrageRoundScore({
       optimalNetReturn: 0.003,
       capitalReturn: 0.003,
@@ -277,7 +284,7 @@ describe('evaluateRound и score рынка', () => {
       timedOut: false,
     })
     expect(fast).toBeCloseTo(100, 6)
-    expect(slow).toBeCloseTo(90, 6)
+    expect(slow).toBeCloseTo(85, 6)
 
     const wrongButFast = arbitrageRoundScore({
       optimalNetReturn: 0,
@@ -293,7 +300,7 @@ describe('evaluateRound и score рынка', () => {
     const closeMs = windowCloseMs(dynamic, buildQuotePath(dynamic)) as number
     const late = evaluateRound(dynamic, noTrade(closeMs + 100))
     expect(late.optimalNetReturn).toBeGreaterThan(0)
-    expect(late.roundScore).toBe(0)
+    expect(late.roundScore).toBe(25)
     expect(roundFeedback(late, dynamic).title).toBe('Окно закрылось раньше решения')
 
     const lateTrade = evaluateRound(dynamic, { ...bestDecision(dynamic), decisionTimeMs: closeMs + 100 })
@@ -412,4 +419,54 @@ describe('formatEdge', () => {
     expect(formatEdge(0)).toBe('0,00%')
     expect(formatEdge(-0.0001)).toBe('0,00%')
   })
+})
+
+
+describe('двухуровневое исполнение', () => {
+  const buy = { ...quote('a', 249.1, 249.4, 0.001), askLiquidity: 25, secondAsk: 249.75, secondAskLiquidity: 75 }
+  const sell = { ...quote('b', 250.5, 251, 0.0009), bidLiquidity: 10, secondBid: 249.9, secondBidLiquidity: 90 }
+  it('считает VWAP обеих ног и комиссии от исполненного объёма', () => {
+    const trade = evaluateTrade([buy, sell], 'a', 'b', 0.5)
+    expect(trade.avgBuyPrice).toBeCloseTo((25 * 249.4 + 25 * 249.75) / 50, 10)
+    expect(trade.avgSellPrice).toBeCloseTo((10 * 250.5 + 40 * 249.9) / 50, 10)
+    expect(trade.netReturn).toBeCloseTo((trade.avgSellPrice * 0.9991 - trade.avgBuyPrice * 1.001) / 249.4, 10)
+    expect(trade.grossReturn - trade.feeReturn - trade.slippageReturn).toBeCloseTo(trade.netReturn, 10)
+  })
+  it('использует лучшую котировку на границе и отклоняет нехватку глубины', () => {
+    expect(executionPrice(buy, 'buy', 25)).toBe(249.4)
+    expect(() => executionPrice(buy, 'buy', 101)).toThrow('Insufficient depth')
+    expect(() => evaluateTrade([buy, sell], 'a', 'a', 0.25)).toThrow()
+  })
+  it('в каждом наборе есть ловушка комиссий и прибыль только на малом размере', () => {
+    for (const session of crossArbitrageSessions) {
+      const scenarios = sessionScenarios(session)
+      expect(scenarios.some((s) => s.kind === 'false')).toBe(true)
+      expect(scenarios.some((s) => s.kind === 'small')).toBe(true)
+    }
+  })
+  it('не наказывает размером прибыльный маршрут с полной глубиной', () => {
+    const source = getCrossArbitrageScenario('arb_x_liquidity')
+    const small = evaluateRound(source, bestDecision(source, 2500))
+    const large = evaluateRound(source, { ...bestDecision(source, 2500), positionSize: 1 })
+    expect(small.sizingScore).toBe(100)
+    expect(large.netReturn).toBeLessThan(0)
+    expect(large.sizingScore).toBe(0)
+    const result = buildCrossArbitrageResult(crossArbitrageSessions[0], [small, large])
+    expect(result.averageSizeUnits).toBe(62.5)
+    expect(result.sizeWorsenedCount).toBe(1)
+  })
+})
+
+
+it('score учитывает четыре независимые компоненты с весами 40/25/20/15', () => {
+  const score = arbitrageRoundScore({ optimalNetReturn: 0.004, capitalReturn: 0.002,
+    choseNoTrade: false, decisionTimeMs: 7500, timedOut: false, sizingScore: 80 })
+  expect(score).toBeCloseTo(50 * 0.4 + 100 * 0.25 + 80 * 0.2 + 50 * 0.15, 10)
+})
+
+
+it('глубина меняет лучший маршрут относительно минимального Ask', () => {
+  const source = getCrossArbitrageScenario('arb_x_multiple_liq')
+  expect(source.quotes.reduce((a, b) => a.ask < b.ask ? a : b).venueId).toBe('alpha')
+  expect(bestTrade(source.quotes).buyVenue).toBe('gamma')
 })

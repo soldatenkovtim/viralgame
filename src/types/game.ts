@@ -382,15 +382,20 @@ export interface ArbitrageVenueQuote {
   ask: number
   /** Доля от цены сделки: 0.001 = 0,10%. */
   feeRate: number
-  /** Сколько единиц можно исполнить по котировке. Нет поля — ликвидность не ограничена. */
-  availableLiquidity?: number
+  /** Объём на первом уровне, отдельно для каждой стороны. */
+  bidLiquidity: number
+  askLiquidity: number
+  secondBid?: number
+  secondAsk?: number
+  secondBidLiquidity?: number
+  secondAskLiquidity?: number
 }
 
 /**
  * A — очевидный арбитраж, B — ложный (gross > 0, net ≤ 0),
  * C — нет возможности, D — несколько вариантов, один заметно лучше.
  */
-export type CrossArbitrageKind = 'obvious' | 'false' | 'none' | 'multiple'
+export type CrossArbitrageKind = 'obvious' | 'false' | 'none' | 'small' | 'multiple'
 
 export interface CrossArbitrageScenario {
   id: string
@@ -423,13 +428,20 @@ export interface ArbitrageRoundResult {
   netBeforeLiquidity: number
   /** Чистый edge на единицу после комиссий и ликвидности. */
   netReturn: number
+  /** Расшифровка исполнения; optional для ранее сохранённых результатов. */
+  avgBuyPrice?: number
+  avgSellPrice?: number
+  feeReturn?: number
+  slippageReturn?: number
+  sizingScore?: number
   /** Вклад рынка в капитал: netReturn × positionSize. */
   capitalReturn: number
   /** Лучший достижимый вклад в капитал по исходным котировкам. */
   optimalNetReturn: number
   optimalBuyVenue?: string
   optimalSellVenue?: string
-  /** 0 при «Сделки нет», иначе 0.25 … 1. */
+  optimalPositionSize?: number
+  /** 0 при «Сделки нет», иначе 0.10 … 1. */
   positionSize: number
   decisionTimeMs: number
   /** Шаг котировок, по которому исполнилась сделка; 0 — исходные. */
@@ -455,6 +467,8 @@ export interface CrossArbitrageResult {
   missed: number
   correctPasses: number
   tradeCount: number
+  averageSizeUnits?: number
+  sizeWorsenedCount?: number
   averageDecisionMs: number
   /** Лучший чистый edge на единицу среди прибыльных сделок, %. */
   bestEdgePercent: number

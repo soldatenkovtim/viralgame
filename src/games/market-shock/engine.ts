@@ -130,7 +130,7 @@ export function simulateShock(
     points.push({ index: i, price, pnl, pnlPercent: (pnl / CAPITAL) * 100, exposure })
 
     const decision = byIndex.get(i)
-    if (decision) {
+    if (decision && exposure !== 0) {
       if (decision.action === 'hedge' && decision.positionBefore !== 0) {
         pnl -= CAPITAL * HEDGE_COST_RATE
       }
@@ -183,6 +183,7 @@ export function decisionsFromActions(
   let position = initialExposure(scenario)
   const decisions: ShockDecision[] = []
   actions.forEach((action, index) => {
+    if (position === 0 || index >= scenario.phaseCheckpoints.length) return
     const phase = index + 1
     const candleIndex = decisionCandleIndex(scenario, phase)
     const positionAfter = applyShockAction(position, action)

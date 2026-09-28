@@ -2,11 +2,9 @@ import { createRandom } from '@/lib/random'
 import type { ArbitrageVenueQuote, CrossArbitrageScenario } from '@/types/game'
 
 export const ARB_DECISION_SECONDS = 15
-export const ARB_POSITION_SIZES = [0.25, 0.5, 0.75, 1] as const
+export const ARB_POSITION_SIZES = [0.1, 0.25, 0.5, 1] as const
 /** 100% размера = 100 единиц актива. */
 export const ARB_FULL_SIZE_UNITS = 100
-/** Объём сверх доступной ликвидности исполняется на 0,10% хуже на каждой такой ноге. */
-export const ARB_LIQUIDITY_PENALTY = 0.001
 
 export const ARB_CONVERGENCE_DELAY_MS = 3000
 export const ARB_QUOTE_STEP_MS = 2500
@@ -28,6 +26,10 @@ export interface TradeOutcome {
   netReturn: number
   capitalReturn: number
   liquidityHit: boolean
+  avgBuyPrice: number
+  avgSellPrice: number
+  feeReturn: number
+  slippageReturn: number
 }
 
 function findQuote(quotes: ArbitrageVenueQuote[], venueId: string): ArbitrageVenueQuote {
@@ -36,43 +38,40 @@ function findQuote(quotes: ArbitrageVenueQuote[], venueId: string): ArbitrageVen
   return found
 }
 
-/** Доля объёма, которая не помещается в ликвидность площадки. */
-function excessShare(quote: ArbitrageVenueQuote, units: number): number {
-  if (quote.availableLiquidity === undefined || units <= quote.availableLiquidity) return 0
-  return (units - quote.availableLiquidity) / units
+/** Два уровня: неизвестная глубина не считается бесконечной ликвидностью. */
+export function executionPrice(quote: ArbitrageVenueQuote, side: 'buy' | 'sell', units: number): number {
+  const best = side === 'buy' ? quote.ask : quote.bid
+  const liquidity = side === 'buy' ? quote.askLiquidity : quote.bidLiquidity
+  const second = side === 'buy' ? quote.secondAsk : quote.secondBid
+  const secondLiquidity = side === 'buy' ? quote.secondAskLiquidity : quote.secondBidLiquidity
+  if (!Number.isFinite(units) || units <= 0) throw new Error('Invalid trade size')
+  if (units <= liquidity) return best
+  if (second === undefined || units > liquidity + (secondLiquidity ?? 0)) {
+    throw new Error('Insufficient depth')
+  }
+  return (liquidity * best + (units - liquidity) * second) / units
 }
 
-/** Покупка по ask, продажа по bid, комиссия на каждой ноге. */
+/** Комиссии начисляются на фактическую стоимость исполнения каждой ноги. */
 export function evaluateTrade(
-  quotes: ArbitrageVenueQuote[],
-  buyVenue: string,
-  sellVenue: string,
-  positionSize: number,
+  quotes: ArbitrageVenueQuote[], buyVenue: string, sellVenue: string, positionSize: number,
 ): TradeOutcome {
+  if (buyVenue === sellVenue) throw new Error('Buy and sell venues must differ')
   const buy = findQuote(quotes, buyVenue)
   const sell = findQuote(quotes, sellVenue)
-
-  const grossProfit = sell.bid - buy.ask
-  const buyFee = buy.ask * buy.feeRate
-  const sellFee = sell.bid * sell.feeRate
-  const netProfit = sell.bid - sellFee - buy.ask - buyFee
-
-  const grossReturn = grossProfit / buy.ask
-  const netBeforeLiquidity = netProfit / buy.ask
-
   const units = positionSize * ARB_FULL_SIZE_UNITS
-  const excess = excessShare(buy, units) + excessShare(sell, units)
-  const netReturn = netBeforeLiquidity - excess * ARB_LIQUIDITY_PENALTY
-
+  const avgBuyPrice = executionPrice(buy, 'buy', units)
+  const avgSellPrice = executionPrice(sell, 'sell', units)
+  const grossReturn = (sell.bid - buy.ask) / buy.ask
+  const netBeforeLiquidity = grossReturn - (buy.ask * buy.feeRate + sell.bid * sell.feeRate) / buy.ask
+  const feeReturn = (avgBuyPrice * buy.feeRate + avgSellPrice * sell.feeRate) / buy.ask
+  const slippageReturn = (avgBuyPrice - buy.ask + sell.bid - avgSellPrice) / buy.ask
+  const netReturn = grossReturn - feeReturn - slippageReturn
   return {
-    buyVenue,
-    sellVenue,
-    positionSize,
-    grossReturn,
-    netBeforeLiquidity,
-    netReturn,
+    buyVenue, sellVenue, positionSize, grossReturn, netBeforeLiquidity, netReturn,
     capitalReturn: netReturn * positionSize,
-    liquidityHit: excess > 0,
+    liquidityHit: units > buy.askLiquidity || units > sell.bidLiquidity,
+    avgBuyPrice, avgSellPrice, feeReturn, slippageReturn,
   }
 }
 
@@ -142,7 +141,11 @@ export function buildQuotePath(scenario: CrossArbitrageScenario): ArbitrageVenue
               ? buyShift * cumulative
               : 0
         if (shift === 0) return quote
-        return { ...quote, bid: roundPrice(quote.bid + shift), ask: roundPrice(quote.ask + shift) }
+        return {
+          ...quote, bid: roundPrice(quote.bid + shift), ask: roundPrice(quote.ask + shift),
+          ...(quote.secondBid !== undefined ? { secondBid: roundPrice(quote.secondBid + shift) } : {}),
+          ...(quote.secondAsk !== undefined ? { secondAsk: roundPrice(quote.secondAsk + shift) } : {}),
+        }
       }),
     )
   }

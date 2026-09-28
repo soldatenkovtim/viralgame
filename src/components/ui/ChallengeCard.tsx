@@ -8,14 +8,14 @@ export const challengeDescriptions: Record<ChallengeType, string> = {
   'market-maker': 'Котируй рынок и попробуй понять, кто торгует против тебя.',
   'black-swan': 'Ты уже в позиции. Рынок внезапно меняется.',
   'cross-arbitrage':
-    'Один актив торгуется на нескольких площадках. Найди расхождение раньше, чем рынок его закроет.',
+    'Один актив, несколько площадок. Найди исполнимый edge и не дай объёму съесть прибыль.',
 }
 
 export const challengeDurations: Record<ChallengeType, string> = {
   'blind-market': '3–4 минуты · 3 решения',
   'market-maker': '60 секунд · живой поток',
   'black-swan': '2–3 минуты · 3 фазы',
-  'cross-arbitrage': '2–3 минуты · 5 рынков',
+  'cross-arbitrage': '1,5–2 минуты · 5 рынков',
 }
 
 export function ChallengeCard({
