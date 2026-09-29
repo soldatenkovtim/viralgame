@@ -6,7 +6,7 @@ import { useReveal } from '@/hooks/useReveal'
 import type { BlindMarketResult, BlindMarketScenario, ChartAnnotations } from '@/types/game'
 import { TimeframeSwitch } from './ChartToolbar'
 import { actionShortLabels, buildTradeTimeline } from './scoring'
-import { DEFAULT_TIMEFRAME, type TimeframeId } from './timeframes'
+import { type TimeframeId } from './timeframes'
 import { legSegments, tradeMarkers } from './tradeAnnotations'
 
 const EMPTY_ANNOTATIONS: ChartAnnotations = { levels: [], trendLine: null }
@@ -23,7 +23,7 @@ export function BlindReplay({
   result: BlindMarketResult
 }) {
   const total = scenario.candles.length
-  const [timeframe, setTimeframe] = useState<TimeframeId>(DEFAULT_TIMEFRAME)
+  const [timeframe, setTimeframe] = useState<TimeframeId>(scenario.availableTimeframes.includes('1h') ? '1h' : scenario.baseTimeframe)
   const [playing, setPlaying] = useState(false)
   const { visible, revealTo, reset } = useReveal(total, 30, 3)
 
@@ -66,7 +66,7 @@ export function BlindReplay({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-800 px-4 py-2.5">
         <div className="flex items-center gap-4">
           <h3 className="text-sm text-chalk-200">Разбор сессии</h3>
-          <TimeframeSwitch options={scenario.mode === 'advanced' ? ['15m', '1h', '4h'] : undefined} value={timeframe} onChange={setTimeframe} />
+          <TimeframeSwitch options={scenario.availableTimeframes} value={timeframe} onChange={setTimeframe} />
         </div>
         <button
           type="button"

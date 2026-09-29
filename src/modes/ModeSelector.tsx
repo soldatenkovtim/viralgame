@@ -42,9 +42,9 @@ export function ModeSelector() {
 }
 export function ModeBoundary({ children }: { children: ReactNode }) {
   const mode = useGameStore(s => s.selectedMode)
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const challengeType = CHALLENGE_ORDER.find(type => pathname.endsWith(`/${type}`))
   return <><div className="mx-auto max-w-[1180px] px-5 pt-8 sm:px-8"><ModeSelector /></div>{mode === 'duel' && challengeType
     ? <CreateRoom challengeType={challengeType} />
-    : <div key={mode}>{children}</div>}</>
+    : <div key={`${mode}/${new URLSearchParams(search).get('scenario') ?? ''}`}>{children}</div>}</>
 }

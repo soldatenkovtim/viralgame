@@ -1,6 +1,7 @@
-import { selectScenario } from '@/modes/scenarios'
+import { useScenario } from '@/scenario-engine/useScenario'
+import { ScenarioReplay } from '@/components/results/ScenarioReplay'
 import { DuelResultShare } from '@/duel/DuelResultShare'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ChallengeGate } from '@/components/layout/ChallengeGate'
 import { CrossArbitrageGame } from '@/games/cross-arbitrage/CrossArbitrageGame'
 import { CrossArbitrageResult } from '@/games/cross-arbitrage/CrossArbitrageResult'
@@ -17,11 +18,7 @@ export function CrossArbitragePage() {
   const [result, setResult] = useState<ArbResult | null>(null)
   const [outcome, setOutcome] = useState<SaveOutcome | null>(null)
 
-  const session = useMemo(() => {
-    const state = useGameStore.getState()
-    const attempt = mode === 'advanced' ? state.advancedResults.filter(r => r.challengeType === 'cross-arbitrage').length : state.attempts['cross-arbitrage'] ?? 0
-    return selectScenario('cross-arbitrage', mode === 'advanced', attempt, debug.scenario)
-  }, [debug.scenario, mode])
+  const session = useScenario('cross-arbitrage', mode, debug.scenario)
 
   useEffect(() => {
     if (mode === 'advanced') trackEvent('advanced_challenge_started', { challengeType: 'cross-arbitrage', scenarioId: session.id })
@@ -54,9 +51,10 @@ export function CrossArbitragePage() {
         nextHref={mode === 'advanced' ? '/play' : '/profile'}
         nextLabel={mode === 'advanced' ? 'Результаты режимов' : 'Собрать мой профиль'}
       />
+      <ScenarioReplay challengeType="cross-arbitrage" scenarioId={session.id} />
       </DuelResultShare>
     ) : (
-      <CrossArbitrageGame
+      <CrossArbitrageGame key={session.id}
         context={{ mode, seed: session.seed }}
         session={session}
         timerDisabled={debug.timerDisabled}

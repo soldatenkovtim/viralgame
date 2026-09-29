@@ -174,15 +174,16 @@ export function MarketShockResult({
             {scenario.revealPeriod} · {scenario.revealEvent}
           </p>
           <p className="text-sm leading-relaxed text-chalk-400">{scenario.revealDescription}</p>
-          {scenario.synthetic ? (
+          {!scenario.synthetic ? (
             <p className="mt-2 text-xs leading-relaxed text-chalk-500">
-              {scenario.mode === 'advanced' ? 'Синтетический сценарий для проверки решений в неоднозначном рынке.' : 'Сценарий стилизован на основе реального рыночного события.'}
+              Рыночные данные основаны на реальном историческом движении актива. Базовые свечи — {scenario.baseTimeframe === '15m' ? '15 минут' : '1 день'}; старшие свечи агрегированы.
+              {' '}<a className="text-violet-soft" href={scenario.sourceUrl} target="_blank" rel="noreferrer">Источник: Yahoo Finance</a>
             </p>
           ) : null}
         </div>
       </div>
 
-      <CrowdByPhase scenario={scenario} result={result} />
+      {scenario.crowd.length > 0 && <CrowdByPhase scenario={scenario} result={result} />}
 
       <div className="flex flex-col gap-6 border-t border-ink-800 pt-10">
         <ShareChallengeButton payload={sharePayload} />

@@ -150,3 +150,13 @@ DUEL_DB_PATH=/var/lib/market-trials/duels.sqlite PORT=5173 npm start
 - Данные комнат хранятся в `.data/duels.sqlite` (исключён из git); ключи места — в `market-trials-room-seats-v1` на устройстве участника.
 - `npm test` проверяет общие сценарии, скрытие результатов, два независимых прохождения, исключение третьего игрока, повторные запросы, валидацию и сохранность после перезапуска.
 - Остальные проверки: `npm run typecheck`, `npm run build`, `npm run lint`.
+
+### Scenario variation
+
+Standard has three alternatives per challenge. `src/modes/scenarios.ts` is the typed catalog; `src/scenario-engine` owns selection and persisted history. Unseen IDs are selected before repeats, with independent Standard/Advanced histories. Full-series restart preserves history and personal bests. A completed profile remains tied to its series until the next full series.
+
+Cross Arbitrage retains five decisions per session and the existing scoring rules. Its three session variants emphasize clean edge, liquidity limits, and competing/false routes, each retaining profitable and no-trade examples for comparable scoring.
+
+Result records include scenario ID, mode, raw score and normalized score (currently equal). Result-page duel links preserve the exact market and challenger result; standalone two-player rooms use the same versioned Standard catalog. Unsupported older scenario links are rejected rather than silently assigned another market.
+
+Historical sources and transformation details: [data notes](src/scenarios/historical/README.md). Debug: append `?debug=1` and select a scenario in the panel; its list follows the current mode.

@@ -1,6 +1,7 @@
-import { selectScenario } from '@/modes/scenarios'
+import { useScenario } from '@/scenario-engine/useScenario'
+import { ScenarioReplay } from '@/components/results/ScenarioReplay'
 import { DuelResultShare } from '@/duel/DuelResultShare'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ChallengeGate } from '@/components/layout/ChallengeGate'
 import { MarketMakerGame } from '@/games/market-maker/MarketMakerGame'
 import { MarketMakerResult } from '@/games/market-maker/MarketMakerResult'
@@ -19,11 +20,7 @@ export function MarketMakerPage() {
 
   // Смена потока раскрывается только в replay. Номер попытки читается один раз,
   // чтобы сохранение результата не подменило сценарий на экране итогов.
-  const scenario = useMemo(() => {
-    const state = useGameStore.getState()
-    const attempt = mode === 'advanced' ? state.advancedResults.filter(r => r.challengeType === 'market-maker').length : state.attempts['market-maker'] ?? 0
-    return selectScenario('market-maker', mode === 'advanced', attempt, debug.scenario)
-  }, [debug.scenario, mode])
+  const scenario = useScenario('market-maker', mode, debug.scenario)
 
   useEffect(() => {
     if (mode === 'advanced') trackEvent('advanced_challenge_started', { challengeType: 'market-maker', scenarioId: scenario.id })
@@ -54,9 +51,10 @@ export function MarketMakerPage() {
         nextHref="/challenge/black-swan"
         nextLabel="Открыть следующее испытание"
       />
+      <ScenarioReplay challengeType="market-maker" scenarioId={scenario.id} />
       </DuelResultShare>
     ) : (
-      <MarketMakerGame context={{ mode, seed: scenario.seed }} scenario={scenario} onComplete={handleComplete} />
+      <MarketMakerGame key={scenario.id} context={{ mode, seed: scenario.seed }} scenario={scenario} onComplete={handleComplete} />
     )
 
   return <ChallengeGate challenge="market-maker">{content}</ChallengeGate>

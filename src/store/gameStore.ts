@@ -1,3 +1,4 @@
+import { emptyScenarioProgress, type ScenarioProgress, type ScenarioMode } from '@/scenario-engine/scenarioTypes'
 import type { GameMode } from '@/modes/config'
 import type { DuelResult } from '@/duel/types'
 import { trackEvent } from '@/lib/analytics'
@@ -70,6 +71,10 @@ export interface SaveOutcome {
 }
 
 export interface GameState {
+  scenarioProgress: Record<ChallengeType, ScenarioProgress>
+  advancedScenarioProgress: Record<ChallengeType, ScenarioProgress>
+  markScenarioStarted: (challengeType: ChallengeType, scenarioId: string, mode: ScenarioMode) => void
+
   selectedMode: GameMode
   advancedUnlocked: boolean
   standardResults: ChallengeResult[]
@@ -111,6 +116,8 @@ export interface GameState {
 }
 
 const initialState = {
+  scenarioProgress: emptyScenarioProgress(),
+  advancedScenarioProgress: emptyScenarioProgress(),
   selectedMode: 'standard' as GameMode,
   advancedUnlocked: false,
   standardResults: [] as ChallengeResult[],
@@ -147,6 +154,8 @@ function resultSliceFor(payload: ResultPayload): Partial<GameState> {
 
 function partialize(state: GameState) {
   return {
+    scenarioProgress: state.scenarioProgress,
+    advancedScenarioProgress: state.advancedScenarioProgress,
     selectedMode: state.selectedMode,
     advancedUnlocked: state.advancedUnlocked,
     standardResults: state.standardResults,
@@ -253,6 +262,12 @@ export const useGameStore = create<GameState>()(
     (set, get) => ({
       ...initialState,
 
+      markScenarioStarted: (challengeType, scenarioId, mode) => {
+        const key = mode === 'advanced' ? 'advancedScenarioProgress' : 'scenarioProgress'
+        const progress = get()[key][challengeType]
+        set({ [key]: { ...get()[key], [challengeType]: { ...progress,
+          seenScenarioIds: [...new Set([...progress.seenScenarioIds, scenarioId])], lastScenarioId: scenarioId } } })
+      },
       unlockChallenge: (challenge) =>
         set((state) =>
           state.unlockedChallenges.includes(challenge)
@@ -274,12 +289,18 @@ export const useGameStore = create<GameState>()(
       saveDuel: (result) => set(state => ({ duelHistory: [...state.duelHistory.filter(r => r.id !== result.id), result] })),
       saveResult: (payload, mode = 'standard') => {
         const { challengeType, result } = payload
+        const progressKey = mode === 'advanced' ? 'advancedScenarioProgress' : 'scenarioProgress'
+        const progress = get()[progressKey][challengeType]
+        set({ [progressKey]: { ...get()[progressKey], [challengeType]: { ...progress,
+          seenScenarioIds: [...new Set([...progress.seenScenarioIds, result.scenarioId])],
+          completedScenarioIds: [...new Set([...progress.completedScenarioIds, result.scenarioId])], lastScenarioId: result.scenarioId } } })
+        trackEvent('scenario_completed', { challengeType, scenarioId: result.scenarioId, mode })
         const state = get()
         const points = toPoints(result.score)
         if (mode === 'advanced') {
           const previousBest = state.advancedBests[challengeType] ?? null
           const isPersonalBest = previousBest === null || points > previousBest
-          const advancedResults = [...state.advancedResults, { challengeType, scenarioId: result.scenarioId, score: result.score, completedAt: new Date().toISOString() }]
+          const advancedResults = [...state.advancedResults, { challengeType, scenarioId: result.scenarioId, score: result.score, rawScore: result.score, normalizedScore: result.score, mode, completedAt: new Date().toISOString() }]
           set({ advancedResults, advancedBests: { ...state.advancedBests, [challengeType]: Math.max(previousBest ?? 0, points) } })
           trackEvent('advanced_challenge_completed', { challengeType, scenarioId: result.scenarioId })
           return { points, previousBest, isPersonalBest, pointsToBest: Math.max(0, (previousBest ?? 0) - points), unlockedNext: null, seriesCompleted: new Set(advancedResults.map(r => r.challengeType)).size === 4 }
@@ -294,11 +315,12 @@ export const useGameStore = create<GameState>()(
           challengeType,
           scenarioId: result.scenarioId,
           score: result.score,
+          rawScore: result.score, normalizedScore: result.score, mode,
           completedAt: new Date().toISOString(),
         }
 
-        // Последнее прохождение — то, из которого собирается профиль.
-        const resultSlice = resultSliceFor(payload)
+        // Один результат каждого испытания в текущей серии; одиночный replay его не заменяет.
+        const resultSlice = state.completedChallenges.includes(challengeType) ? {} : resultSliceFor(payload)
 
         const completedChallenges = state.completedChallenges.includes(challengeType)
           ? state.completedChallenges
@@ -339,7 +361,7 @@ export const useGameStore = create<GameState>()(
           firstResults: nextState.firstResults,
           personalBests: nextState.personalBests,
           attempts: nextState.attempts,
-          tradingProfile: seriesCompleted
+          tradingProfile: seriesCompleted && !state.tradingProfile
             ? buildTradingProfile({
                 blindMarket: nextState.blindMarketResult,
                 marketMaker: nextState.marketMakerResult,
@@ -347,7 +369,7 @@ export const useGameStore = create<GameState>()(
                 crossArbitrage: nextState.crossArbitrageResult,
               })
             : state.tradingProfile,
-          seriesCompletedAt: seriesCompleted
+          seriesCompletedAt: seriesCompleted && !state.seriesCompletedAt
             ? new Date().toISOString()
             : state.seriesCompletedAt,
         })
@@ -412,7 +434,7 @@ export const useGameStore = create<GameState>()(
     }),
     {
       name: 'market-trials-v1',
-      version: 5,
+      version: 6,
       // v1 — серия из трёх испытаний. Прошедшим «Рыночный шок» открываем
       // четвёртое, а профиль без «Поиска возможностей» пересобирается позже.
       // v2 — маркет-мейкер без разложения PnL и фаз потока.
@@ -444,6 +466,21 @@ export const useGameStore = create<GameState>()(
           state.advancedResults = []
           state.advancedBests = {}
           state.duelHistory = []
+        }
+        if (version < 6) {
+          state.scenarioProgress = emptyScenarioProgress()
+          state.advancedScenarioProgress = emptyScenarioProgress()
+          for (const [mode, results] of [['standard', state.standardResults ?? []], ['advanced', state.advancedResults ?? []]] as const) {
+            const target = mode === 'standard' ? state.scenarioProgress : state.advancedScenarioProgress
+            for (const r of results) {
+              r.mode = mode; r.rawScore = r.score; r.normalizedScore = r.score
+              const p = target[r.challengeType]
+              if (!p) continue
+              p.seenScenarioIds = [...new Set([...p.seenScenarioIds, r.scenarioId])]
+              p.completedScenarioIds = [...new Set([...p.completedScenarioIds, r.scenarioId])]
+              p.lastScenarioId = r.scenarioId
+            }
+          }
         }
         return state
       },

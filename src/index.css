@@ -34,6 +34,14 @@
     -webkit-text-size-adjust: 100%;
   }
 
+  /* Keep horizontal overscroll from navigating away from an active chart.
+     Vertical page scrolling remains available; the chart's wheel handler
+     also cancels the native gesture for WebKit implementations that need it. */
+  html:has([data-trading-chart]),
+  body:has([data-trading-chart]) {
+    overscroll-behavior-x: none;
+  }
+
   body {
     margin: 0;
     background-color: var(--color-ink-950);

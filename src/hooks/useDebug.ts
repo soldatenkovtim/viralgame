@@ -14,7 +14,7 @@ export function useDebugParams(): DebugParams {
 
   return {
     enabled: searchParams.get('debug') === '1',
-    scenario: searchParams.get('scenario'),
+    scenario: searchParams.get('debug') === '1' ? searchParams.get('scenario') : null,
     timerDisabled: searchParams.get('timer') === 'off',
   }
 }

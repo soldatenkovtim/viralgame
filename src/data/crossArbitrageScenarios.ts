@@ -1,3 +1,4 @@
+import { metadata } from '@/scenario-engine/scenarioTypes'
 import type {
   ArbitrageVenueQuote,
   CrossArbitrageScenario,
@@ -30,6 +31,7 @@ function quote(
 export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
   /* A — очевидный арбитраж */
   {
+    ...metadata('cross-arbitrage', 'arb_btc_obvious', 75),
     id: 'arb_btc_obvious',
     asset: 'BTC / USDT',
     kind: 'obvious',
@@ -44,6 +46,7 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
       'Beta котировала заметно выше остальных: разницы хватало с запасом даже после двух комиссий.',
   },
   {
+    ...metadata('cross-arbitrage', 'arb_y_obvious', 75),
     id: 'arb_y_obvious',
     asset: 'ASSET Y',
     kind: 'obvious',
@@ -58,6 +61,7 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
       'Самая дешёвая покупка была на Beta, самая дорогая продажа — на Alpha. Остальные пары почти не давали edge.',
   },
   {
+    ...metadata('cross-arbitrage', 'arb_x_liquidity', 75),
     id: 'arb_x_liquidity',
     asset: 'ASSET X',
     kind: 'small',
@@ -72,6 +76,7 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
       'Edge был небольшим, а на Alpha по котировке стояло только 25 единиц. Всё, что выше, исполнялось хуже и съедало прибыль.',
   },
   {
+    ...metadata('cross-arbitrage', 'arb_btc_liquidity', 75),
     id: 'arb_btc_liquidity',
     asset: 'BTC / USDT',
     kind: 'obvious',
@@ -86,6 +91,7 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
       'Лучшая пара — Alpha → Beta, но на Beta покупали только 30 единиц. Даже с ухудшением исполнения полный размер оставался выгоднее.',
   },
   {
+    ...metadata('cross-arbitrage', 'arb_eth_dynamic', 75),
     id: 'arb_eth_dynamic',
     asset: 'ETH / USDT',
     kind: 'obvious',
@@ -101,6 +107,7 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
       'Расхождение между Alpha и Beta было реальным, но другие участники тоже его видели — котировки сошлись за несколько секунд.',
   },
   {
+    ...metadata('cross-arbitrage', 'arb_btc_dynamic', 75),
     id: 'arb_btc_dynamic',
     asset: 'BTC / USDT',
     kind: 'obvious',
@@ -118,6 +125,7 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
 
   /* B — ложный арбитраж: gross > 0, после комиссий < 0 */
   {
+    ...metadata('cross-arbitrage', 'arb_x_false', 75),
     id: 'arb_x_false',
     asset: 'ASSET X',
     kind: 'false',
@@ -132,6 +140,7 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
       'Alpha → Beta выглядело как +0,15%, но две комиссии по 0,10% забирали 0,20%. Чистый результат — около −0,05%.',
   },
   {
+    ...metadata('cross-arbitrage', 'arb_btc_false', 75),
     id: 'arb_btc_false',
     asset: 'BTC / USDT',
     kind: 'false',
@@ -146,6 +155,7 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
       'Gamma → Beta давало около +0,19% по ценам, а комиссии в сумме — 0,20%. Расхождение почти целиком уходило на издержки.',
   },
   {
+    ...metadata('cross-arbitrage', 'arb_y_false', 75),
     id: 'arb_y_false',
     asset: 'ASSET Y',
     kind: 'false',
@@ -160,6 +170,7 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
       'Alpha → Beta давало +0,13% до комиссий. Комиссии обеих площадок в сумме — 0,19%.',
   },
   {
+    ...metadata('cross-arbitrage', 'arb_eth_false', 75),
     id: 'arb_eth_false',
     asset: 'ETH / USDT',
     kind: 'false',
@@ -176,6 +187,7 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
 
   /* C — нет возможности */
   {
+    ...metadata('cross-arbitrage', 'arb_x_none', 75),
     id: 'arb_x_none',
     asset: 'ASSET X',
     kind: 'none',
@@ -190,6 +202,7 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
       'Цены отличались, но самая высокая цена продажи была ниже самой низкой цены покупки. Собрать сделку было не из чего.',
   },
   {
+    ...metadata('cross-arbitrage', 'arb_btc_none', 75),
     id: 'arb_btc_none',
     asset: 'BTC / USDT',
     kind: 'none',
@@ -206,6 +219,7 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
 
   /* D — несколько вариантов, один заметно лучше */
   {
+    ...metadata('cross-arbitrage', 'arb_x_multiple_liq', 75),
     id: 'arb_x_multiple_liq',
     asset: 'ASSET X',
     kind: 'multiple',
@@ -220,6 +234,7 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
       'Alpha давала самую дешёвую покупку, но только для 10 единиц. При полном объёме маршрут Gamma → Beta приносил больше благодаря глубине.',
   },
   {
+    ...metadata('cross-arbitrage', 'arb_eth_multiple', 75),
     id: 'arb_eth_multiple',
     asset: 'ETH / USDT',
     kind: 'multiple',
@@ -234,6 +249,7 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
       'Прибыльных маршрутов было три, но Alpha → Beta давал больше, чем два остальных вместе.',
   },
   {
+    ...metadata('cross-arbitrage', 'arb_x_multiple_dynamic', 75),
     id: 'arb_x_multiple_dynamic',
     asset: 'ASSET X',
     kind: 'multiple',
@@ -251,39 +267,12 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
 ]
 
 export const crossArbitrageSessions: CrossArbitrageSession[] = [
-  {
-    id: 'arb_session_01',
-    seed: 510301,
-    scenarioIds: [
-      'arb_btc_obvious',
-      'arb_x_false',
-      'arb_x_multiple_liq',
-      'arb_eth_dynamic',
-      'arb_x_liquidity',
-    ],
-  },
-  {
-    id: 'arb_session_02',
-    seed: 510302,
-    scenarioIds: [
-      'arb_eth_multiple',
-      'arb_btc_false',
-      'arb_x_liquidity',
-      'arb_y_false',
-      'arb_btc_dynamic',
-    ],
-  },
-  {
-    id: 'arb_session_03',
-    seed: 510303,
-    scenarioIds: [
-      'arb_y_obvious',
-      'arb_x_liquidity',
-      'arb_x_multiple_dynamic',
-      'arb_eth_false',
-      'arb_btc_liquidity',
-    ],
-  },
+  { ...metadata('cross-arbitrage', 'clean-edge', 75), id: 'arb-clean-01', seed: 510301,
+    scenarioIds: ['arb_btc_obvious', 'arb_x_false', 'arb_y_false', 'arb_x_liquidity', 'arb_eth_dynamic'] },
+  { ...metadata('cross-arbitrage', 'liquidity-trap', 75), id: 'arb-liquidity-01', seed: 510302,
+    scenarioIds: ['arb_btc_false', 'arb_y_false', 'arb_x_liquidity', 'arb_x_multiple_liq', 'arb_eth_dynamic'] },
+  { ...metadata('cross-arbitrage', 'competing-routes', 75), id: 'arb-competing-01', seed: 510303,
+    scenarioIds: ['arb_x_multiple_liq', 'arb_eth_false', 'arb_x_false', 'arb_x_multiple_dynamic', 'arb_x_liquidity'] },
 ]
 
 export function getCrossArbitrageScenario(id: string): CrossArbitrageScenario {
@@ -299,11 +288,6 @@ export function getCrossArbitrageSession(id?: string | null): CrossArbitrageSess
     if (found) return found
   }
   return crossArbitrageSessions[0]
-}
-
-/** Выбор набора рынков по номеру попытки — при реплее рынки меняются. */
-export function pickCrossArbitrageSession(attempt: number): CrossArbitrageSession {
-  return crossArbitrageSessions[attempt % crossArbitrageSessions.length]
 }
 
 export function sessionScenarios(session: CrossArbitrageSession): CrossArbitrageScenario[] {

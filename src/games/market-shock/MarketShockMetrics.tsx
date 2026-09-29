@@ -51,7 +51,7 @@ export function MarketShockMetrics({
           valueClass={phase.priceChange >= 0 ? 'text-market-up' : 'text-market-down'}
         />
         <Metric label="Волатильность" value={`${formatSigned(phase.volatilityChange)}%`} />
-        <Metric label="Ликвидность" value={`${formatSigned(phase.liquidityChange)}%`} />
+        <Metric label="Ликвидность" value="Нет данных стакана" />
         <Metric label="Объём" value={`${formatNumber(phase.volumeMultiplier, 1)}×`} />
       </div>
     </Panel>

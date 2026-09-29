@@ -1,3 +1,4 @@
+import { trackEvent } from '@/lib/analytics'
 import { difficultyFor } from '@/modes/config'
 import { useCountdown } from '@/hooks/useCountdown'
 import type { ChallengeContext } from '@/modes/config'
@@ -21,7 +22,6 @@ import {
   pnlColor,
 } from '@/lib/formatting'
 import { CAPITAL } from '@/lib/constants'
-import { BLIND_BAR_SECONDS } from '@/data/blindMarketScenarios'
 import type {
   BlindDecision,
   BlindDirection,
@@ -42,7 +42,7 @@ import {
   POSITION_SIZES,
   simulateBlind,
 } from './scoring'
-import { DEFAULT_TIMEFRAME, type TimeframeId } from './timeframes'
+import { type TimeframeId } from './timeframes'
 import { tradeMarkers } from './tradeAnnotations'
 
 type Stage = 'intro' | 'info' | 'decision' | 'revealing' | 'finished'
@@ -54,7 +54,6 @@ const directionLabels: Record<BlindDirection, string> = {
 }
 
 const EMPTY_ANNOTATIONS: ChartAnnotations = { levels: [], trendLine: null }
-const BARS_PER_DAY = 86400 / BLIND_BAR_SECONDS
 /** Минимальный зазор между стопом и текущей ценой. */
 const STOP_GAP = 0.0005
 
@@ -85,7 +84,7 @@ export function BlindMarketGame({
   const [stopPrice, setStopPrice] = useState<number | null>(null)
   const [stopError, setStopError] = useState<string | null>(null)
 
-  const [timeframe, setTimeframe] = useState<TimeframeId>(DEFAULT_TIMEFRAME)
+  const [timeframe, setTimeframe] = useState<TimeframeId>(scenario.availableTimeframes.includes('1h') ? '1h' : scenario.baseTimeframe)
   const [annotations, setAnnotations] = useState<ChartAnnotations>(EMPTY_ANNOTATIONS)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [tool, setTool] = useState<DrawingTool>('none')
@@ -107,7 +106,7 @@ export function BlindMarketGame({
 
   const currentExposure = timeline.exposure
   const currentPrice = scenario.candles[visible - 1].close
-  const dayAgo = scenario.candles[Math.max(0, visible - 1 - BARS_PER_DAY)].close
+  const dayAgo = (scenario.candles.slice(0, visible).findLast(c => c.time <= scenario.candles[visible - 1].time - 86400) ?? scenario.candles[0]).close
   const dayChange = ((currentPrice - dayAgo) / dayAgo) * 100
 
   const isDeciding = stage === 'decision'
@@ -165,7 +164,7 @@ export function BlindMarketGame({
     setConfidence(70)
     setStopPrice(null)
     setStopError(null)
-    setTimeframe(DEFAULT_TIMEFRAME)
+    setTimeframe(scenario.availableTimeframes.includes('1h') ? '1h' : scenario.baseTimeframe)
     setAnnotations(EMPTY_ANNOTATIONS)
     setSelectedId(null)
     setTool('none')
@@ -341,7 +340,7 @@ export function BlindMarketGame({
       stopPrice: currentExposure !== 0 ? stopPrice ?? undefined : undefined, timeMs: difficulty.timerSeconds * 1000 }) })
 
   if (stage === 'intro') {
-    return <Intro advanced={advanced} onStart={() => advanced ? startDecision() : setStage('info')} />
+    return <Intro advanced={advanced} onStart={() => { trackEvent('scenario_started', { challengeType: 'blind-market', scenarioId: scenario.id, mode: scenario.mode }); if (advanced) startDecision(); else setStage('info') }} />
   }
 
   if (stage === 'info') {
@@ -438,7 +437,7 @@ export function BlindMarketGame({
                   {formatPercent(dayChange, 2)} за 24ч
                 </span>
               </div>
-              <TimeframeSwitch options={advanced ? ['15m', '1h', '4h'] : undefined} value={timeframe} onChange={setTimeframe} />
+              <TimeframeSwitch options={scenario.availableTimeframes} value={timeframe} onChange={setTimeframe} />
             </div>
             <DrawingToolbar
               tool={tool === 'stop' ? 'none' : tool}
@@ -568,7 +567,7 @@ function Intro({ advanced, onStart }: { advanced: boolean; onStart: () => void }
       <div className="flex flex-col gap-2 rounded-xl border border-ink-700 bg-ink-900 p-5 text-sm text-chalk-400">
         <span className="tnum">Капитал: {CAPITAL.toLocaleString('ru-RU')}</span>
         <span>{advanced ? 'Три точки принятия решения, по 13 секунд после появления рынка' : 'Три точки принятия решения, 2–3 минуты'}</span>
-        <span>{advanced ? 'Таймфреймы 15м / 1ч / 4ч и объём на графике' : 'Таймфреймы 15м / 1ч / 4ч / 1Д и объём на графике'}</span>
+        <span>Минутные и часовые таймфреймы, дневной контекст и объём на графике</span>
         <span>{advanced ? 'Оцени движение и объём на графике без текстовых подсказок' : 'Два дополнительных блока информации на выбор'}</span>
       </div>
 

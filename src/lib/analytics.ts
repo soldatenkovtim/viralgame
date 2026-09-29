@@ -7,6 +7,7 @@
  * открытие и прохождение shared-ссылок, replay rate и конверсия в карьеру.
  */
 export type AnalyticsEvent =
+  | 'scenario_selected' | 'scenario_started' | 'scenario_completed' | 'scenario_replayed' | 'alternate_scenario_clicked'
   | 'mode_selected' | 'advanced_unlocked' | 'advanced_challenge_started' | 'advanced_challenge_completed'
   | 'duel_created' | 'duel_link_copied' | 'duel_opened' | 'duel_started' | 'duel_completed' | 'duel_comparison_viewed' | 'duel_rechallenged'
   | 'game_opened'

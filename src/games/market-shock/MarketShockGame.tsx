@@ -1,3 +1,4 @@
+import { trackEvent } from '@/lib/analytics'
 import { difficultyFor } from '@/modes/config'
 import type { ChallengeContext } from '@/modes/config'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -182,7 +183,7 @@ export function MarketShockGame({
       <MarketShockIntro
         scenario={scenario}
         pnlPercent={pnlPercent}
-        onStart={() => setStage('context')}
+        onStart={() => { trackEvent('scenario_started', { challengeType: 'black-swan', scenarioId: scenario.id, mode: scenario.mode }); setStage('context') }}
       />
     )
   }
@@ -216,6 +217,7 @@ export function MarketShockGame({
           onLevelsChange={setLevels}
           markers={markers}
           editable={stage !== 'reveal'}
+          showDates={revealDone}
         />
 
         <aside className="flex flex-col gap-4">

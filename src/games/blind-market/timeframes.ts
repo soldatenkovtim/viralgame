@@ -1,6 +1,6 @@
 import type { OhlcvCandle } from '@/types/game'
 
-export type TimeframeId = '15m' | '1h' | '4h' | '1d'
+export type TimeframeId = '15m' | '1h' | '4h' | '1d' | '1w'
 
 export interface Timeframe {
   id: TimeframeId
@@ -15,6 +15,7 @@ export const TIMEFRAMES: Timeframe[] = [
   { id: '1h', label: '1ч', seconds: 60 * 60, defaultBars: 110 },
   { id: '4h', label: '4ч', seconds: 4 * 60 * 60, defaultBars: 90 },
   { id: '1d', label: '1Д', seconds: 24 * 60 * 60, defaultBars: 40 },
+  { id: '1w', label: '1Н', seconds: 7 * 86400, defaultBars: 40 },
 ]
 
 export const DEFAULT_TIMEFRAME: TimeframeId = '1h'
@@ -68,11 +69,21 @@ export function bucketStart(time: number, origin: number, seconds: number): numb
  * Данные идут без пропусков, поэтому время линейно переводится в логический
  * индекс бара. Центр бара — целый индекс, границы — ±0,5.
  */
-export function timeToLogical(time: number, origin: number, seconds: number): number {
+export function timeToLogical(time: number, origin: number, seconds: number, bars?: readonly OhlcvCandle[]): number {
+  if (bars?.length) {
+    let low = 0, high = bars.length
+    while (low < high) { const mid = (low + high) >>> 1; if (bars[mid].time <= time) low = mid + 1; else high = mid }
+    const index = Math.max(0, low - 1)
+    return index + (time - bars[index].time) / seconds - 0.5
+  }
   return (time - origin) / seconds - 0.5
 }
 
-export function logicalToTime(logical: number, origin: number, seconds: number): number {
+export function logicalToTime(logical: number, origin: number, seconds: number, bars?: readonly OhlcvCandle[]): number {
+  if (bars?.length) {
+    const index = Math.max(0, Math.min(bars.length - 1, Math.floor(logical + 0.5)))
+    return bars[index].time + (logical + 0.5 - index) * seconds
+  }
   return origin + (logical + 0.5) * seconds
 }
 

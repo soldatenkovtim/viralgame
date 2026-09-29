@@ -145,7 +145,7 @@ export function TradingChart(props: {
 
   const origin = candles[0]?.time ?? 0
   const frame = getTimeframe(timeframe)
-  const geometryRef = useRef({ origin, seconds: frame.seconds })
+  const geometryRef = useRef({ origin, seconds: frame.seconds, bars: [] as OhlcvCandle[] })
 
   const bars = useMemo(
     () => aggregateCandles(candles, visibleCount, frame.seconds),
@@ -157,7 +157,7 @@ export function TradingChart(props: {
 
   useLayoutEffect(() => {
     propsRef.current = props
-    geometryRef.current = { origin, seconds: frame.seconds }
+    geometryRef.current = { origin, seconds: frame.seconds, bars }
   })
 
   const refreshOverlay = () => {
@@ -223,8 +223,8 @@ export function TradingChart(props: {
       if (trend && !draggableOnly) {
         const { origin: o, seconds } = geometryRef.current
         const timeScale = chart.timeScale()
-        const x1 = logicalToX(timeScale, timeToLogical(trend.a.time, o, seconds))
-        const x2 = logicalToX(timeScale, timeToLogical(trend.b.time, o, seconds))
+        const x1 = logicalToX(timeScale, timeToLogical(trend.a.time, o, seconds, geometryRef.current.bars))
+        const x2 = logicalToX(timeScale, timeToLogical(trend.b.time, o, seconds, geometryRef.current.bars))
         const y1 = series.priceToCoordinate(trend.a.price)
         const y2 = series.priceToCoordinate(trend.b.price)
         if (x1 !== null && x2 !== null && y1 !== null && y2 !== null) {
@@ -289,7 +289,10 @@ export function TradingChart(props: {
         horzLine: { color: '#4a4a58', width: 1, style: LineStyle.Dashed, labelBackgroundColor: '#24242c' },
       },
       handleScroll: {
-        mouseWheel: false,
+        // Consume horizontal trackpad wheels (including at chart edges) instead
+        // of handing them to the browser's back/forward gesture. Lightweight
+        // Charts uses a non-passive wheel listener and calls preventDefault.
+        mouseWheel: true,
         pressedMouseMove: true,
         horzTouchDrag: true,
         vertTouchDrag: false,
@@ -338,7 +341,7 @@ export function TradingChart(props: {
 
     const overlay = new OverlayPrimitive()
     overlay.toLogical = (time) =>
-      timeToLogical(time, geometryRef.current.origin, geometryRef.current.seconds)
+      timeToLogical(time, geometryRef.current.origin, geometryRef.current.seconds, geometryRef.current.bars)
     overlay.hitTester = (x, y) => {
       if (propsRef.current.tool !== 'none') return null
       const hit = findHit(x, y, false)
@@ -361,7 +364,7 @@ export function TradingChart(props: {
       const logical = xToLogical(chart.timeScale(), x)
       if (price === null || logical === null) return null
       const { origin: o, seconds } = geometryRef.current
-      return { time: logicalToTime(logical, o, seconds), price }
+      return { time: logicalToTime(logical, o, seconds, geometryRef.current.bars), price }
     }
 
     chart.subscribeClick((param) => {
@@ -407,8 +410,7 @@ export function TradingChart(props: {
         setHover(null)
         return
       }
-      const { origin: o, seconds } = geometryRef.current
-      const index = Math.round(((param.time as number) - o) / seconds)
+      const index = geometryRef.current.bars.findIndex(bar => bar.time === param.time)
       setHover({ x: param.point.x, y: param.point.y, index })
     })
 
@@ -627,7 +629,7 @@ export function TradingChart(props: {
   const previous = hover && hover.index > 0 ? bars[hover.index - 1] : undefined
 
   return (
-    <div className={`relative w-full ${className}`}>
+    <div data-trading-chart className={`relative w-full ${className}`}>
       <div
         ref={containerRef}
         className={`absolute inset-0 ${tool !== 'none' ? 'cursor-crosshair' : ''}`}

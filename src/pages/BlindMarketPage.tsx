@@ -1,6 +1,7 @@
-import { selectScenario } from '@/modes/scenarios'
+import { useScenario } from '@/scenario-engine/useScenario'
+import { ScenarioReplay } from '@/components/results/ScenarioReplay'
 import { DuelResultShare } from '@/duel/DuelResultShare'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BlindMarketGame } from '@/games/blind-market/BlindMarketGame'
 import { BlindMarketResult } from '@/games/blind-market/BlindMarketResult'
 import { useDebugParams } from '@/hooks/useDebug'
@@ -17,11 +18,7 @@ export function BlindMarketPage() {
   const [outcome, setOutcome] = useState<SaveOutcome | null>(null)
 
   // Сценарий фиксируется на весь раунд: при реплее он меняется, но не во время игры.
-  const scenario = useMemo(() => {
-    const state = useGameStore.getState()
-    const attempt = mode === 'advanced' ? state.advancedResults.filter(r => r.challengeType === 'blind-market').length : state.attempts['blind-market'] ?? 0
-    return selectScenario('blind-market', mode === 'advanced', attempt, debug.scenario)
-  }, [debug.scenario, mode])
+  const scenario = useScenario('blind-market', mode, debug.scenario)
 
   useEffect(() => {
     if (mode === 'advanced') trackEvent('advanced_challenge_started', { challengeType: 'blind-market', scenarioId: scenario.id })
@@ -50,9 +47,10 @@ export function BlindMarketPage() {
         nextHref="/challenge/market-maker"
         nextLabel="Открыть следующее испытание"
       />
+      <ScenarioReplay challengeType="blind-market" scenarioId={scenario.id} />
       </DuelResultShare>
     )
   }
 
-  return <BlindMarketGame context={{ mode, seed: scenario.seed }} scenario={scenario} onComplete={handleComplete} />
+  return <BlindMarketGame key={scenario.id} context={{ mode, seed: scenario.seed }} scenario={scenario} onComplete={handleComplete} />
 }

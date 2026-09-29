@@ -1,3 +1,4 @@
+import type { BaseScenario } from '@/scenario-engine/scenarioTypes'
 export type { GameMode, ChallengeContext, ScenarioDifficultyConfig } from '@/modes/config'
 import type { TimeframeId } from '@/games/blind-market/timeframes'
 
@@ -23,6 +24,9 @@ export interface ChallengeResult {
   challengeType: ChallengeType
   scenarioId: string
   score: number
+  rawScore?: number
+  normalizedScore?: number
+  mode?: 'standard' | 'advanced'
   completedAt: string
 }
 
@@ -122,23 +126,31 @@ export interface BlindMarketResult {
   annotations?: ChartAnnotations
 }
 
-export interface BlindMarketScenario {
-  mode?: 'standard' | 'advanced'
+export interface BlindMarketScenario extends BaseScenario {
   id: string
   title: string
   seed: number
-  /** Базовые 15-минутные свечи; все таймфреймы агрегируются из них. */
+  hiddenAssetLabel: string
+  startTime: string
+  endTime: string
+  baseTimeframe: TimeframeId
+  availableTimeframes: TimeframeId[]
+  internalTags: string[]
+  sourceUrl: string
+  /** Базовые исторические OHLCV; старшие таймфреймы агрегируются из них. */
   candles: OhlcvCandle[]
   /** Индексы свечей, на которых рынок останавливается для решения. */
   checkpoints: number[]
-  /** Акция, по мотивам которой построен сценарий, — раскрывается только в конце. */
+  /** Реальный актив раскрывается только в конце. */
   asset: {
     name: string
     ticker: string
+    assetClass: 'equity' | 'index' | 'crypto' | 'commodity' | 'fx'
     exchange: string
   }
   reveal: {
     title: string
+    period: string
     description: string
   }
   info: {
@@ -179,11 +191,10 @@ export interface MMFairValuePhase {
   strength?: number
 }
 
-export interface MarketMakerScenario {
+export interface MarketMakerScenario extends BaseScenario {
   hedgeCostMultiplier?: number
   softInventoryLimit?: number
   inventoryCarryCost?: number
-  mode?: 'standard' | 'advanced'
   id: string
   seed: number
   /** Короткое описание для debug-панели. */
@@ -302,8 +313,7 @@ export interface MarketShockContext {
 /** Смоделированное распределение решений других игроков в фазе, %. */
 export type ShockCrowd = Record<ShockAction, number>
 
-export interface MarketShockScenario {
-  mode?: 'standard' | 'advanced'
+export interface MarketShockScenario extends BaseScenario {
   id: string
   seed: number
   pattern: ShockPattern
@@ -315,8 +325,15 @@ export interface MarketShockScenario {
   revealDescription: string
   /** Сценарий построен генератором, а не по историческим котировкам. */
   synthetic: boolean
+  asset: BlindMarketScenario['asset']
+  startTime: string
+  endTime: string
+  baseTimeframe: TimeframeId
+  internalTags: string[]
+  sourceUrl: string
   primaryTimeframe: TimeframeId
   contextTimeframe: TimeframeId
+  availableTimeframes?: TimeframeId[]
   /** Базовая серия в разрешении основного таймфрейма. */
   candles: OhlcvCandle[]
   /** Сколько свечей видно на этапе контекста. */
@@ -330,7 +347,7 @@ export interface MarketShockScenario {
   }
   context: MarketShockContext
   phases: [MarketShockPhase, MarketShockPhase, MarketShockPhase]
-  crowd: [ShockCrowd, ShockCrowd, ShockCrowd]
+  crowd: ShockCrowd[]
 }
 
 export interface ShockDecision {
@@ -408,9 +425,8 @@ export interface ArbitrageVenueQuote {
  */
 export type CrossArbitrageKind = 'obvious' | 'false' | 'none' | 'small' | 'multiple'
 
-export interface CrossArbitrageScenario {
+export interface CrossArbitrageScenario extends BaseScenario {
   quoteStepMs?: number
-  mode?: 'standard' | 'advanced'
   id: string
   asset: string
   kind: CrossArbitrageKind
@@ -423,9 +439,8 @@ export interface CrossArbitrageScenario {
 }
 
 /** Один полный challenge — пять рынков подряд. */
-export interface CrossArbitrageSession {
+export interface CrossArbitrageSession extends BaseScenario {
   scenarios?: CrossArbitrageScenario[]
-  mode?: 'standard' | 'advanced'
   id: string
   seed: number
   scenarioIds: string[]

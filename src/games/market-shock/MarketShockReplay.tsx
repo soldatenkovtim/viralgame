@@ -93,6 +93,7 @@ export function MarketShockReplay({
         markers={markers}
         mutedAfter={exitTime}
         editable={false}
+        showDates
         className="h-[clamp(380px,60vh,600px)]"
         toolbarExtra={
           <button
