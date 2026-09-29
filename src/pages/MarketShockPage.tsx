@@ -1,6 +1,7 @@
-import { selectScenario } from '@/modes/scenarios'
+import { useScenario } from '@/scenario-engine/useScenario'
+import { ScenarioReplay } from '@/components/results/ScenarioReplay'
 import { DuelResultShare } from '@/duel/DuelResultShare'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ChallengeGate } from '@/components/layout/ChallengeGate'
 import { MarketShockGame } from '@/games/market-shock/MarketShockGame'
 import { MarketShockResult } from '@/games/market-shock/MarketShockResult'
@@ -17,11 +18,7 @@ export function MarketShockPage() {
   const [result, setResult] = useState<ShockResult | null>(null)
   const [outcome, setOutcome] = useState<SaveOutcome | null>(null)
 
-  const scenario = useMemo(() => {
-    const state = useGameStore.getState()
-    const attempt = mode === 'advanced' ? state.advancedResults.filter(r => r.challengeType === 'black-swan').length : state.attempts['black-swan'] ?? 0
-    return selectScenario('black-swan', mode === 'advanced', attempt, debug.scenario)
-  }, [debug.scenario, mode])
+  const scenario = useScenario('black-swan', mode, debug.scenario)
 
   useEffect(() => {
     if (mode === 'advanced') trackEvent('advanced_challenge_started', { challengeType: 'black-swan', scenarioId: scenario.id })
@@ -58,9 +55,10 @@ export function MarketShockPage() {
         nextHref="/challenge/cross-arbitrage"
         nextLabel="Открыть последнее испытание"
       />
+      <ScenarioReplay challengeType="black-swan" scenarioId={scenario.id} />
       </DuelResultShare>
     ) : (
-      <MarketShockGame
+      <MarketShockGame key={scenario.id}
         context={{ mode, seed: scenario.seed }}
         scenario={scenario}
         timerDisabled={debug.timerDisabled}

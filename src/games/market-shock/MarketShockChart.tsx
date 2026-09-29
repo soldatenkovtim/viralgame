@@ -11,7 +11,7 @@ import { SHOCK_VISIBLE_BARS } from './scenarios'
 let levelSeq = 0
 
 /**
- * Рабочий график сценария: свечи и объём, два таймфрейма, линия входа
+ * Рабочий график сценария: свечи и объём, доступные таймфреймы, линия входа
  * и до двух собственных уровней. Будущие свечи в серию не попадают.
  */
 export function MarketShockChart({
@@ -22,6 +22,7 @@ export function MarketShockChart({
   onLevelsChange,
   markers,
   editable = true,
+  showDates = false,
   toolbarExtra,
   mutedAfter,
   className = 'h-[clamp(420px,calc(100vh-260px),720px)]',
@@ -34,6 +35,7 @@ export function MarketShockChart({
   onLevelsChange?: (levels: UserPriceLevel[]) => void
   markers?: ChartMarker[]
   editable?: boolean
+  showDates?: boolean
   toolbarExtra?: ReactNode
   mutedAfter?: number
   className?: string
@@ -106,7 +108,7 @@ export function MarketShockChart({
           <TimeframeSwitch
             value={timeframe}
             onChange={setTimeframe}
-            options={[scenario.primaryTimeframe, scenario.contextTimeframe]}
+            options={scenario.availableTimeframes ?? [scenario.primaryTimeframe, scenario.contextTimeframe]}
           />
           {toolbarExtra}
         </div>
@@ -149,6 +151,7 @@ export function MarketShockChart({
       </div>
 
       <TradingChart
+        key={showDates ? 'revealed-dates' : 'hidden-dates'}
         className={className}
         candles={scenario.candles}
         visibleCount={visibleCount}
@@ -162,6 +165,7 @@ export function MarketShockChart({
         markers={markers}
         mutedAfter={mutedAfter}
         editable={editable}
+        showDates={showDates}
         hint={tool === 'level' ? 'Кликни по графику, чтобы поставить уровень' : null}
         onDraw={handleDraw}
         onSelect={setSelectedId}

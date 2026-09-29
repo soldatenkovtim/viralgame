@@ -1,3 +1,4 @@
+import { scenarioCatalog } from '@/modes/scenarios'
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, Inbox } from 'lucide-react'
 import { useParams, useSearchParams } from 'react-router-dom'
@@ -74,7 +75,7 @@ export function SharedChallengePage() {
     })
   }, [payload])
 
-  if (!payload || (id && id !== payload.t)) {
+  if (!payload || (id && id !== payload.t) || !scenarioCatalog[payload.t].some(s => s.id === payload.s && s.seed === payload.d && s.mode === 'standard')) {
     return <BrokenLink />
   }
 
@@ -190,7 +191,7 @@ function Invitation({
       </Button>
 
       <Disclaimer>
-        Без регистрации. Рыночные данные в прототипе стилизованы и используются
+        Без регистрации. Испытания используются
         исключительно для тестирования игровой механики.
       </Disclaimer>
     </div>
@@ -234,7 +235,7 @@ function SharedComparison({
               className="h-[420px]"
               candles={chart.candles}
               visibleCount={chart.candles.length}
-              timeframe="1h"
+              timeframe="1d"
               annotations={{ levels: [], trendLine: null }}
               markers={chart.markers}
             />

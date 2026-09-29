@@ -1,3 +1,4 @@
+import { trackEvent } from '@/lib/analytics'
 import type { ChallengeContext } from '@/modes/config'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
@@ -102,7 +103,7 @@ export function MarketMakerGame({
   }, [stage, act, handleHedge])
 
   if (stage === 'intro') {
-    return <Intro advanced={scenario.mode === 'advanced'} onStart={() => setStage('running')} durationSeconds={scenario.durationSeconds} />
+    return <Intro advanced={scenario.mode === 'advanced'} onStart={() => { trackEvent('scenario_started', { challengeType: 'market-maker', scenarioId: scenario.id, mode: scenario.mode }); setStage('running') }} durationSeconds={scenario.durationSeconds} />
   }
 
   if (!snapshot) return null

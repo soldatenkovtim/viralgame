@@ -166,7 +166,7 @@ export function BlindMarketResult({
 }
 
 function AssetReveal({ scenario }: { scenario: BlindMarketScenario }) {
-  const { asset, reveal, info } = scenario
+  const { asset, reveal } = scenario
 
   return (
     <section className="flex flex-col gap-5 rounded-xl border border-violet-accent/40 bg-violet-accent/5 p-6 sm:flex-row sm:items-start sm:justify-between sm:gap-10 sm:p-8">
@@ -178,13 +178,16 @@ function AssetReveal({ scenario }: { scenario: BlindMarketScenario }) {
           {asset.name}
         </span>
         <span className="tnum text-sm text-chalk-400">
-          {asset.ticker} · {asset.exchange} · {info.sector}
+          {asset.ticker} · {asset.exchange}
         </span>
       </div>
 
       <div className="flex max-w-xl flex-col gap-2">
         <h3 className="text-lg font-normal tracking-tight text-chalk-50">{reveal.title}</h3>
         <p className="text-sm leading-relaxed text-chalk-400">{reveal.description}</p>
+        <p className="text-sm text-chalk-400">Период: {reveal.period}</p>
+        <p className="text-xs text-chalk-500">Рыночные данные основаны на реальном историческом движении актива. Базовые свечи: {scenario.baseTimeframe}; старшие свечи агрегированы из того же набора. Для акций цены поставщика учитывают дробления.</p>
+        <a className="text-xs text-violet-soft" href={scenario.sourceUrl} target="_blank" rel="noreferrer">Источник: Yahoo Finance</a>
       </div>
     </section>
   )

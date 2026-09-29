@@ -1,10 +1,7 @@
+import { scenarioPool } from '@/modes/scenarios'
 import { useState } from 'react'
 import { Bug, X } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { marketShockScenarios } from '@/games/market-shock/scenarios'
-import { blindMarketScenarios } from '@/data/blindMarketScenarios'
-import { crossArbitrageSessions } from '@/data/crossArbitrageScenarios'
-import { marketMakerScenarios } from '@/data/marketMakerScenarios'
 import { useDebugParams } from '@/hooks/useDebug'
 import { seedCompletedSeries } from '@/lib/debugSeed'
 import { CHALLENGE_ORDER, challengeTitles, useGameStore } from '@/store/gameStore'
@@ -15,6 +12,11 @@ import { CHALLENGE_ORDER, challengeTitles, useGameStore } from '@/store/gameStor
  */
 export function DebugPanel() {
   const debug = useDebugParams()
+  const mode = useGameStore(s => s.selectedMode) === 'advanced' ? 'advanced' : 'standard'
+  const blindMarketScenarios = scenarioPool('blind-market', mode)
+  const marketMakerScenarios = scenarioPool('market-maker', mode)
+  const marketShockScenarios = scenarioPool('black-swan', mode)
+  const crossArbitrageSessions = scenarioPool('cross-arbitrage', mode)
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [collapsed, setCollapsed] = useState(false)

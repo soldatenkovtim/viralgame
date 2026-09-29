@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.node.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "allowImportingTsExtensions": false,
+    "rootDir": ".",
+    "outDir": "dist-server"
+  },
+  "include": [
+    "server/start.ts",
+    "api/duels.ts"
+  ]
+}

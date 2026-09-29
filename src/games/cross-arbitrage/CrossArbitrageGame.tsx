@@ -143,7 +143,7 @@ export function CrossArbitrageGame({
   }, [rounds, scenarios.length, session, stage, startRound])
 
   if (stage === 'intro') {
-    return <Intro seconds={scenarios[0].durationSeconds} marketCount={scenarios.length} onStart={() => startRound(0)} />
+    return <Intro seconds={scenarios[0].durationSeconds} marketCount={scenarios.length} onStart={() => { trackEvent('scenario_started', { challengeType: 'cross-arbitrage', scenarioId: session.id, mode: session.mode }); startRound(0) }} />
   }
 
   const remaining = Math.max(0, Math.ceil((limitMs - elapsedMs) / 1000))

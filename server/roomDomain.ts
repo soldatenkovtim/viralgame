@@ -1,7 +1,7 @@
 import { randomBytes, randomInt, timingSafeEqual } from 'node:crypto'
-import type { RoomView, PlayerStatus, RoomRole } from '../src/duel/roomTypes.ts'
-import type { DuelPlayerResult } from '../src/duel/types.ts'
-import { roomMarkets } from './catalog.ts'
+import type { RoomView, PlayerStatus, RoomRole } from '../src/duel/roomTypes.js'
+import type { DuelPlayerResult } from '../src/duel/types.js'
+import { roomMarkets } from './catalog.js'
 export type StoredRoom = Omit<RoomView, 'role' | 'results'> & {
   hostToken: string; guestToken?: string
   hostResult?: DuelPlayerResult; guestResult?: DuelPlayerResult

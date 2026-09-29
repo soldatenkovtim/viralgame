@@ -348,9 +348,9 @@ describe('buildCrossArbitrageResult', () => {
     })
     const result = buildCrossArbitrageResult(session, rounds)
 
-    expect(result.falseTrades).toBe(1)
-    expect(result.missed).toBe(1)
-    expect(result.found).toBe(result.opportunities - 1)
+    expect(result.falseTrades).toBe(scenarios.filter(s => s.kind === 'false').length)
+    expect(result.missed).toBe(scenarios.filter(s => s.kind === 'multiple').length)
+    expect(result.found).toBe(result.opportunities - result.missed)
 
     const observations = arbitrageObservations(result)
     expect(observations.length).toBeGreaterThan(0)
@@ -441,7 +441,7 @@ describe('двухуровневое исполнение', () => {
     for (const session of crossArbitrageSessions) {
       const scenarios = sessionScenarios(session)
       expect(scenarios.some((s) => s.kind === 'false')).toBe(true)
-      expect(scenarios.some((s) => s.kind === 'small')).toBe(true)
+      expect(scenarios.some(s => { const best = bestTrade(s.quotes); return best.capitalReturn > 0 && best.positionSize < 1 })).toBe(true)
     }
   })
   it('не наказывает размером прибыльный маршрут с полной глубиной', () => {

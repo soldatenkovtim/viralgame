@@ -1,8 +1,8 @@
 import { createServer } from 'node:http'
 import { createReadStream, existsSync, statSync } from 'node:fs'
 import { resolve, extname, sep } from 'node:path'
-import { roomMiddleware } from './roomHttp.ts'
-import { configuredRooms } from './configuredRooms.ts'
+import { roomMiddleware } from './roomHttp.js'
+import { configuredRooms } from './configuredRooms.js'
 
 const root = resolve('dist')
 if (!existsSync(resolve(root, 'index.html'))) throw new Error('Сначала выполните npm run build')

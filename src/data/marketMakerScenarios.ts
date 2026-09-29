@@ -1,3 +1,4 @@
+import { metadata } from '@/scenario-engine/scenarioTypes'
 import type { FairValueRegime, FlowRegime, MarketMakerScenario } from '@/types/game'
 
 export const MM_TICK_MS = 500
@@ -18,77 +19,43 @@ export const MM_HARD_LIMIT_HAIRCUT = 0.3
 /** Через сколько тиков считается markout сделки (прокси adverse selection). */
 export const MM_MARKOUT_TICKS = 10
 
-/** Сценарий первого прохождения: плавная кривая сложности. */
-export const MM_FIRST_ROUND_ID = 'mm_first_round'
-
 export const marketMakerScenarios: MarketMakerScenario[] = [
   {
-    id: MM_FIRST_ROUND_ID,
-    seed: 270431,
-    title: 'Первый раунд: мягкий шум → моментум → информированный',
-    initialFairValue: 100,
-    durationSeconds: 60,
-    flowPhases: [
-      { regime: 'noise', from: 0, to: 15, intensity: 1.2 },
-      { regime: 'momentum', from: 15, to: 35, intensity: 1.1 },
-      { regime: 'informed', from: 35, to: 60, intensity: 0.5 },
-    ],
+    ...metadata('market-maker', 'noise-dominant', 60), id: 'mm-noise-01', seed: 270431,
+    title: 'Спокойный поток', initialFairValue: 100, durationSeconds: 60,
+    flowPhases: [{ regime: 'noise', from: 0, to: 60, intensity: 1.2 }],
     fairValuePhases: [
-      { regime: 'drift-up', from: 0, to: 15, strength: 0.6 },
-      { regime: 'drift-up', from: 15, to: 35, strength: 0.8 },
-      { regime: 'drift-up', from: 35, to: 60, strength: 0.5 },
+      { regime: 'calm', from: 0, to: 20, strength: 0.8 },
+      { regime: 'drift-up', from: 20, to: 40, strength: 0.55 },
+      { regime: 'calm', from: 40, to: 60, strength: 0.8 },
     ],
   },
   {
-    id: 'mm_informed_rally',
-    seed: 401173,
-    title: 'Шум → информированный → моментум',
-    initialFairValue: 100,
-    durationSeconds: 60,
+    ...metadata('market-maker', 'toxic-transition', 60), id: 'mm-toxic-01', seed: 401173,
+    title: 'Токсичный поток', initialFairValue: 100, durationSeconds: 60,
     flowPhases: [
-      { regime: 'noise', from: 0, to: 22 },
-      { regime: 'informed', from: 22, to: 42 },
-      { regime: 'momentum', from: 42, to: 60 },
+      { regime: 'noise', from: 0, to: 22, intensity: 1.1 },
+      { regime: 'informed', from: 22, to: 44, intensity: 0.5 },
+      { regime: 'noise', from: 44, to: 60, intensity: 1.1 },
     ],
     fairValuePhases: [
-      { regime: 'calm', from: 0, to: 24 },
-      { regime: 'drift-up', from: 24, to: 44 },
-      { regime: 'volatile', from: 44, to: 60 },
+      { regime: 'calm', from: 0, to: 22, strength: 0.8 },
+      { regime: 'drift-up', from: 22, to: 44, strength: 0.85 },
+      { regime: 'calm', from: 44, to: 60, strength: 0.8 },
     ],
   },
   {
-    id: 'mm_late_informed',
-    seed: 918264,
-    title: 'Шум → моментум → информированный',
-    initialFairValue: 100,
-    durationSeconds: 60,
+    ...metadata('market-maker', 'inventory-pressure', 60), id: 'mm-inventory-01', seed: 918264,
+    title: 'Давление на inventory', initialFairValue: 100, durationSeconds: 60,
     flowPhases: [
-      { regime: 'noise', from: 0, to: 24 },
-      { regime: 'momentum', from: 24, to: 40 },
-      { regime: 'informed', from: 40, to: 60 },
+      { regime: 'noise', from: 0, to: 18, intensity: 1.1 },
+      { regime: 'momentum', from: 18, to: 44, intensity: 1.1 },
+      { regime: 'noise', from: 44, to: 60, intensity: 1.1 },
     ],
     fairValuePhases: [
-      { regime: 'calm', from: 0, to: 22 },
-      { regime: 'drift-down', from: 22, to: 38 },
-      { regime: 'calm', from: 38, to: 42 },
-      { regime: 'drift-down', from: 42, to: 60 },
-    ],
-  },
-  {
-    id: 'mm_informed_break',
-    seed: 553902,
-    title: 'Шум → информированный → шум',
-    initialFairValue: 100,
-    durationSeconds: 60,
-    flowPhases: [
-      { regime: 'noise', from: 0, to: 14, intensity: 0.8 },
-      { regime: 'informed', from: 14, to: 34 },
-      { regime: 'noise', from: 34, to: 60 },
-    ],
-    fairValuePhases: [
-      { regime: 'calm', from: 0, to: 14, strength: 0.7 },
-      { regime: 'drift-down', from: 14, to: 34 },
-      { regime: 'volatile', from: 34, to: 60 },
+      { regime: 'calm', from: 0, to: 18, strength: 0.8 },
+      { regime: 'drift-down', from: 18, to: 44, strength: 0.85 },
+      { regime: 'volatile', from: 44, to: 60, strength: 0.8 },
     ],
   },
 ]
@@ -119,14 +86,4 @@ export function getMarketMakerScenario(id?: string | null): MarketMakerScenario 
     if (found) return found
   }
   return marketMakerScenarios[0]
-}
-
-/**
- * Первое прохождение всегда идёт по мягкой кривой сложности. Дальше сценарий
- * выбирается случайно — игрок не должен знать заранее, как сменятся режимы.
- */
-export function pickMarketMakerScenario(attempt: number): MarketMakerScenario {
-  if (attempt === 0) return getMarketMakerScenario(MM_FIRST_ROUND_ID)
-  const pool = marketMakerScenarios.filter((scenario) => scenario.id !== MM_FIRST_ROUND_ID)
-  return pool[Math.floor(Math.random() * pool.length)]
 }

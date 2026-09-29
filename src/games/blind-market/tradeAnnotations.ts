@@ -1,10 +1,9 @@
 import { CHART_COLORS, type OverlaySegment } from '@/components/charts/TradingChart'
 import type { ChartMarker } from '@/components/charts/CandleChart'
-import { BLIND_BAR_SECONDS } from '@/data/blindMarketScenarios'
 import { exposureLabel } from '@/lib/formatting'
 import type { BlindMarketScenario } from '@/types/game'
 import type { TradeEvent, TradeLeg } from './scoring'
-import { candleMidTime } from './timeframes'
+import { candleMidTime, getTimeframe } from './timeframes'
 
 const CLOSE_COLOR = '#9b84ff'
 
@@ -79,8 +78,8 @@ export function legSegments(scenario: BlindMarketScenario, legs: TradeLeg[]): Ov
   const segments: OverlaySegment[] = []
 
   for (const leg of legs) {
-    const from = candleMidTime(scenario.candles[leg.fromIndex], BLIND_BAR_SECONDS)
-    const to = candleMidTime(scenario.candles[leg.toIndex], BLIND_BAR_SECONDS)
+    const from = candleMidTime(scenario.candles[leg.fromIndex], getTimeframe(scenario.baseTimeframe).seconds)
+    const to = candleMidTime(scenario.candles[leg.toIndex], getTimeframe(scenario.baseTimeframe).seconds)
     const color = leg.exposure > 0 ? CHART_COLORS.up : CHART_COLORS.down
 
     segments.push({

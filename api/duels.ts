@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { attachDatabasePool } from '@vercel/functions'
-import { createPostgresRoomService, createRoomPool } from '../server/postgres.ts'
-import { roomMiddleware } from '../server/roomHttp.ts'
+import { createPostgresRoomService, createRoomPool } from '../server/postgres.js'
+import { roomMiddleware } from '../server/roomHttp.js'
 
 let middleware: ReturnType<typeof roomMiddleware> | undefined
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
