@@ -6,12 +6,13 @@ import {
   MM_LOT_SIZE,
   MM_MAX_SPREAD,
   MM_MIN_SPREAD,
+  MM_TRANSACTION_COST_PER_UNIT,
   marketMakerScenarios,
 } from '@/data/marketMakerScenarios'
 import type { MarketMakerResult } from '@/types/game'
 import { MarketMakerEngine } from './engine'
 import { buildMarketPaths } from './market'
-import { marketMakerInsights, marketMakerScore, marketMakerTraits } from './scoring'
+import { marketMakerInsights, marketMakerScore, marketMakerScoreParts, marketMakerTraits } from './scoring'
 
 const scenario = marketMakerScenarios[0]
 
@@ -109,6 +110,53 @@ describe('рынок', () => {
 })
 
 describe('MarketMakerEngine', () => {
+  it('reconciles every tick and hedge against execution cash flows, including carry costs', () => {
+    const config = { ...scenario, softInventoryLimit: 2, inventoryCarryCost: 0.01 }
+    const engine = new MarketMakerEngine(config)
+    let cash = 0
+    let units = 0
+    let fees = 0
+    let tradeCount = 0
+    let carry = 0
+    let transactionCosts = 0
+    engine.narrowSpread()
+    const verify = () => {
+      const state = engine.snapshot()
+      expect(state.accounting.cash).toBeCloseTo(cash, 6)
+      expect(state.inventory * MM_LOT_SIZE).toBe(units)
+      expect(state.pnl).toBeCloseTo(cash + units * state.marketPrice - fees, 6)
+      const result = engine.buildResult()
+      expect(result.pnl).toBeCloseTo(result.spreadPnl + result.inventoryPnl - fees - carry - transactionCosts, 6)
+      expect(result.pnl).toBeCloseTo(result.realizedPnl! + result.unrealizedPnl! - fees - carry - transactionCosts, 6)
+    }
+    while (!engine.finished) {
+      const cost = Math.max(0, Math.abs(units) / MM_LOT_SIZE - 2) * 0.01 * MM_LOT_SIZE
+      cash -= cost
+      carry += cost
+      const state = engine.tick()
+      for (const trade of state.trades.slice(tradeCount)) {
+        const quantity = (trade.botSide === 'buy' ? -1 : 1) * trade.size * MM_LOT_SIZE
+        cash -= quantity * trade.price
+        const transactionCost = Math.abs(quantity) * MM_TRANSACTION_COST_PER_UNIT
+        cash -= transactionCost
+        transactionCosts += transactionCost
+        units += quantity
+      }
+      tradeCount = state.trades.length
+      verify()
+      if (!engine.finished && Math.abs(state.inventory) >= 10) {
+        fees += state.hedgeCostPreview
+        cash += units * state.marketPrice
+        units = 0
+        engine.hedge()
+        verify()
+      }
+    }
+    expect(tradeCount).toBeGreaterThan(0)
+    expect(carry).toBeGreaterThan(0)
+    expect(fees).toBeGreaterThan(0)
+  })
+
   it('стартует с симметричной котировки вокруг 100', () => {
     const engine = new MarketMakerEngine(scenario)
     expect(engine.ask - engine.bid).toBeCloseTo(MM_INITIAL_SPREAD, 6)
@@ -178,7 +226,7 @@ describe('MarketMakerEngine', () => {
       if (Math.abs(engine.snapshot().inventory) >= 12) engine.hedge()
     })
 
-    expect(result.pnl).toBeCloseTo(result.spreadPnl + result.inventoryPnl - result.hedgeCosts, 6)
+    expect(result.pnl).toBeCloseTo(result.spreadPnl + result.inventoryPnl - result.hedgeCosts - (result.transactionCosts ?? 0), 6)
     expect(result.inventoryPnl).not.toBe(0)
   })
 
@@ -237,6 +285,21 @@ describe('MarketMakerEngine', () => {
 })
 
 describe('marketMakerScore', () => {
+  it('does not reward gross spread capture in a losing round', () => {
+    const losing = baseResult({ pnl: -200, spreadPnl: 3000, inventoryPnl: -2800 })
+    expect(marketMakerScoreParts(losing).spreadCapture).toBe(0)
+  })
+
+  it('does not award additional points for a lucky directional gain', () => {
+    const flat = baseResult({ pnl: 800, inventoryPnl: 0 })
+    const lucky = { ...flat, pnl: 10800, inventoryPnl: 10000 }
+    expect(marketMakerScore(lucky)).toBe(marketMakerScore(flat))
+  })
+
+  it('does not grant a high score for sitting out with no fills', () => {
+    expect(marketMakerScore(baseResult({ pnl: 0, tradeCount: 0, spreadPnl: 0, inventoryPnl: 0 }))).toBe(0)
+  })
+
   it('остаётся в диапазоне 0–100', () => {
     expect(marketMakerScore(baseResult({ pnl: 99999, spreadPnl: 99999 }))).toBeLessThanOrEqual(100)
     expect(

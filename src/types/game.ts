@@ -243,7 +243,27 @@ export interface MMPhaseStats {
   averageQuoteLag: number
 }
 
+export interface MMAccountingDebug {
+  cash: number
+  initialCapital: number
+  inventoryUnits: number
+  averageEntry: number | null
+  markPrice: number
+  openInventoryPnl: number
+  realizedPnl: number
+  transactionCosts: number
+  hedgeCosts: number
+  carryCosts: number
+  totalPnl: number
+}
+
 export interface MarketMakerResult {
+  /** Optional for compatibility with saved rounds. */
+  accounting?: MMAccountingDebug
+  carryCosts?: number
+  transactionCosts?: number
+  realizedPnl?: number
+  unrealizedPnl?: number
   scenarioId: string
   seed: number
   pnl: number

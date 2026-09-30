@@ -6,6 +6,10 @@ export const MM_MIN_SPREAD = 0.2
 export const MM_MAX_SPREAD = 2.0
 export const MM_INITIAL_SPREAD = 0.8
 export const MM_QUOTE_STEP = 0.1
+/** Maximum quote midpoint displacement from the external market, 2%. */
+export const MM_MAX_QUOTE_OFFSET_RATIO = 0.02
+/** Fee per asset unit executed against a maker quote. */
+export const MM_TRANSACTION_COST_PER_UNIT = 0.005
 /** Одна единица inventory — лот из 100 акций. */
 export const MM_LOT_SIZE = 100
 /** Проскальзывание хеджа на единицу, в цене: порядка половины рыночного спреда. */
@@ -14,8 +18,6 @@ export const MM_HEDGE_COST_PER_UNIT = 0.25
 export const MM_HEDGE_TICKET_FEE = 75
 export const MM_SOFT_INVENTORY_LIMIT = 15
 export const MM_HARD_INVENTORY_LIMIT = 25
-/** Дисконт на ликвидность для единиц сверх жёсткого лимита, в цене. */
-export const MM_HARD_LIMIT_HAIRCUT = 0.3
 /** Через сколько тиков считается markout сделки (прокси adverse selection). */
 export const MM_MARKOUT_TICKS = 10
 
