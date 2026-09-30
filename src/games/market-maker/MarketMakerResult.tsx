@@ -17,6 +17,7 @@ import { formatMoney, formatNumber, formatPrice, formatSigned, pnlColor } from '
 import type { SharePayload } from '@/lib/sharing'
 import type { MarketMakerResult as MMResult, MMPhaseStats } from '@/types/game'
 import type { SaveOutcome } from '@/store/gameStore'
+import { AccountingDebug } from './AccountingDebug'
 import { tickToSeconds } from './market'
 import { marketMakerInsights } from './scoring'
 
@@ -73,6 +74,8 @@ export function MarketMakerResult({
         </MetricGrid>
       </div>
 
+      {import.meta.env.DEV && result.accounting && <AccountingDebug data={result.accounting} />}
+
       <PersonalBestNote
         isPersonalBest={outcome.isPersonalBest}
         pointsToBest={outcome.pointsToBest}
@@ -115,9 +118,11 @@ export function MarketMakerResult({
 
 function PnlBreakdown({ result }: { result: MMResult }) {
   const rows = [
-    { label: 'Заработано на спреде', value: result.spreadPnl },
-    { label: 'Переоценка inventory', value: result.inventoryPnl },
-    { label: 'Стоимость хеджирования', value: -result.hedgeCosts },
+    { label: 'Spread / execution', value: result.spreadPnl },
+    { label: 'Inventory MTM', value: result.inventoryPnl },
+    { label: 'Hedge', value: -result.hedgeCosts },
+    ...(result.transactionCosts ? [{ label: 'Комиссии сделок', value: -result.transactionCosts }] : []),
+    ...(result.carryCosts ? [{ label: 'Удержание позиции', value: -result.carryCosts }] : []),
   ]
 
   return (
@@ -135,14 +140,23 @@ function PnlBreakdown({ result }: { result: MMResult }) {
           </div>
         ))}
         <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-ink-700 pt-4">
-          <dt className="text-chalk-50">Итоговый PnL</dt>
+          <dt className="text-chalk-50">Итого</dt>
           <dd className={`text-2xl font-light ${pnlColor(result.pnl)}`}>{formatMoney(result.pnl)}</dd>
         </div>
       </dl>
       <p className="text-xs leading-relaxed text-chalk-500">
         Inventory на закрытии: {formatSigned(result.finalInventory)}. Открытая позиция
-        оценена по последней рыночной цене.
+        оценена по последней рыночной цене. Spread / execution — разница цены исполнения
+        и рынка в момент сделки; Inventory MTM — последующее движение цены по всем
+        позициям раунда, включая закрытые.
       </p>
+      {result.realizedPnl !== undefined && result.unrealizedPnl !== undefined && (
+        <dl className="tnum flex flex-col gap-2 border-t border-ink-700 pt-4 text-xs text-chalk-400">
+          <div className="flex justify-between gap-4"><dt>Realized · до costs</dt><dd>{formatMoney(result.realizedPnl)}</dd></div>
+          <div className="flex justify-between gap-4"><dt>Unrealized · по final mark</dt><dd>{formatMoney(result.unrealizedPnl)}</dd></div>
+          <div className="text-chalk-500">Другая разбивка того же PnL: realized + unrealized − все costs. Spread / execution — оценка исполнения относительно рынка, а не реализованная прибыль.</div>
+        </dl>
+      )}
     </section>
   )
 }

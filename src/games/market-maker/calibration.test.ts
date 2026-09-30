@@ -3,16 +3,28 @@ import { marketMakerScenarios } from '@/data/marketMakerScenarios'
 import type { MarketMakerResult, MarketMakerScenario } from '@/types/game'
 import { MarketMakerEngine } from './engine'
 
-type Strategy = 'passive' | 'follower' | 'skewHedger' | 'hedgeSpam'
+type Strategy = 'passive' | 'follower' | 'skewHedger' | 'hedgeSpam' | 'narrow' | 'wide' | 'longOnly' | 'shortOnly'
+const STRATEGIES: Strategy[] = ['passive', 'follower', 'skewHedger', 'hedgeSpam', 'narrow', 'wide', 'longOnly', 'shortOnly']
 
-const SEEDS = 20
+const SEEDS = 80
 
 function run(scenario: MarketMakerScenario, strategy: Strategy): MarketMakerResult {
   const engine = new MarketMakerEngine(scenario)
 
+  if (strategy === 'narrow' || strategy === 'wide') {
+    for (let i = 0; i < 30; i++) {
+      if (strategy === 'narrow') engine.narrowSpread()
+      else engine.widenSpread()
+    }
+  }
+
   for (let tick = 0; tick < engine.totalTicks; tick += 1) {
     engine.tick()
-    if (strategy === 'passive') continue
+    if (strategy === 'passive' || strategy === 'narrow' || strategy === 'wide') continue
+    if (strategy === 'longOnly' || strategy === 'shortOnly') {
+      for (let i = 0; i < 40; i++) engine.moveQuotes(strategy === 'longOnly' ? 1 : -1)
+      continue
+    }
 
     const state = engine.snapshot()
     const mid = (state.bid + state.ask) / 2
@@ -22,7 +34,7 @@ function run(scenario: MarketMakerScenario, strategy: Strategy): MarketMakerResu
     if (mid - target > 0.06) engine.moveQuotes(-1)
 
     if (strategy === 'skewHedger' && Math.abs(state.inventory) >= 15) engine.hedge()
-    if (strategy === 'hedgeSpam' && Math.abs(state.inventory) >= 3) engine.hedge()
+    if (strategy === 'hedgeSpam' && state.inventory !== 0) engine.hedge()
   }
 
   return engine.buildResult()
@@ -41,9 +53,29 @@ function median(
 }
 
 describe('market maker calibration', () => {
+  it('audits simple strategies across seeds', () => {
+    for (const scenario of marketMakerScenarios) {
+      const medians = {} as Record<Strategy, number>
+      for (const strategy of STRATEGIES) {
+        const rounds = Array.from({ length: SEEDS }, (_, index) => run({ ...scenario, seed: scenario.seed + index * 7919 }, strategy))
+        const sorted = rounds.map(r => r.score).sort((a, b) => a - b)
+        medians[strategy] = sorted[SEEDS / 2]
+        console.log(`${scenario.id} ${strategy}: score median=${sorted[SEEDS / 2].toFixed(1)}, p95=${sorted[Math.floor(SEEDS * .95)].toFixed(1)}, mean PnL=${(rounds.reduce((s, r) => s + r.pnl, 0) / SEEDS).toFixed(0)}`)
+        for (const round of rounds) {
+          expect(Number.isFinite(round.pnl)).toBe(true)
+          expect(round.score).toBeGreaterThanOrEqual(0)
+          expect(round.score).toBeLessThanOrEqual(100)
+        }
+      }
+      for (const strategy of ['passive', 'narrow', 'wide', 'hedgeSpam', 'longOnly', 'shortOnly'] as const) {
+        expect(medians.skewHedger, `${scenario.id}: ${strategy}`).toBeGreaterThan(medians[strategy])
+      }
+    }
+  })
+
   it('каждая стратегия даёт сделки и score в диапазоне 0–100', () => {
     for (const scenario of marketMakerScenarios) {
-      for (const strategy of ['passive', 'follower', 'skewHedger', 'hedgeSpam'] as Strategy[]) {
+      for (const strategy of STRATEGIES) {
         const result = run(scenario, strategy)
         expect(result.tradeCount).toBeGreaterThan(0)
         expect(result.score).toBeGreaterThanOrEqual(0)

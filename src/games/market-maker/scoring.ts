@@ -15,9 +15,10 @@ export interface MarketMakerScoreParts {
 const RISK_CHARGE_PER_SECOND = 40
 
 export function marketMakerScoreParts(result: MarketMakerMetrics): MarketMakerScoreParts {
-  // PnL в score учитывается с поправкой на риск, чтобы удачно пересиженная
-  // крупная позиция не обгоняла аккуратную работу со спредом.
-  const riskAdjustedPnl = result.pnl - result.secondsAboveSoftLimit * RISK_CHARGE_PER_SECOND
+  // Directional gains stay in financial PnL but do not buy market-making points.
+  // Directional losses and all execution costs still count against the score.
+  const netExecutionPnl = result.pnl - Math.max(0, result.inventoryPnl)
+  const riskAdjustedPnl = netExecutionPnl - result.secondsAboveSoftLimit * RISK_CHARGE_PER_SECOND
   const pnl = mapRange(riskAdjustedPnl, -2500, 1600, 0, 100)
 
   // Крупный inventory и долгое время над лимитом снижают оценку,
@@ -27,7 +28,8 @@ export function marketMakerScoreParts(result: MarketMakerMetrics): MarketMakerSc
     mapRange(result.secondsAboveSoftLimit, 0, 25, 100, 0) * 0.3 +
     mapRange(Math.abs(result.finalInventory), 0, MM_SOFT_INVENTORY_LIMIT, 100, 20) * 0.15
 
-  const spreadCapture = mapRange(result.spreadPnl, 0, 2400, 0, 100)
+  // Gross execution edge is not earned profit when inventory losses/fees consumed it.
+  const spreadCapture = mapRange(Math.min(result.spreadPnl, Math.max(0, netExecutionPnl)), 0, 2400, 0, 100)
 
   // Adverse selection меряем относительно заработанного спреда:
   // сколько собранного потока забрали информированные контрагенты.
@@ -40,11 +42,12 @@ export function marketMakerScoreParts(result: MarketMakerMetrics): MarketMakerSc
 /** Игровой score испытания, 0–100. */
 export function marketMakerScore(result: MarketMakerMetrics): number {
   const parts = marketMakerScoreParts(result)
+  const participation = Math.min(1, result.tradeCount / 10)
   return clamp(
-    parts.pnl * 0.5 +
+    (parts.pnl * 0.5 +
       parts.inventoryControl * 0.25 +
       parts.spreadCapture * 0.15 +
-      parts.adverseSelection * 0.1,
+      parts.adverseSelection * 0.1) * participation,
     0,
     100,
   )

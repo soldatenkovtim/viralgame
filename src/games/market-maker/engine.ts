@@ -1,6 +1,4 @@
 import {
-  MM_HARD_INVENTORY_LIMIT,
-  MM_HARD_LIMIT_HAIRCUT,
   MM_HEDGE_COST_PER_UNIT,
   MM_HEDGE_TICKET_FEE,
   MM_INITIAL_SPREAD,
@@ -9,11 +7,14 @@ import {
   MM_MAX_SPREAD,
   MM_MIN_SPREAD,
   MM_QUOTE_STEP,
+  MM_MAX_QUOTE_OFFSET_RATIO,
+  MM_TRANSACTION_COST_PER_UNIT,
   MM_SOFT_INVENTORY_LIMIT,
   MM_TICK_MS,
 } from '@/data/marketMakerScenarios'
 import { createRandom, type SeededRandom } from '@/lib/random'
 import type {
+  MMAccountingDebug,
   MarketMakerResult,
   MarketMakerScenario,
   MMPhaseStats,
@@ -23,6 +24,7 @@ import type {
 import { decideFlowOrder, INFORMED_LOOKAHEAD } from './bots'
 import { buildMarketPaths, phaseAt, ticksFor, tickToSeconds } from './market'
 import { marketMakerScore } from './scoring'
+import { MarketMakerAccount } from './accounting'
 
 /** С какого размера inventory считается, что игроку пора реагировать. */
 const RESPONSE_TRIGGER = 10
@@ -47,6 +49,7 @@ export interface MarketMakerSnapshot {
   marketPrice: number
   inventory: number
   pnl: number
+  accounting: MMAccountingDebug
   hedgeCostPreview: number
   trades: MMTrade[]
   history: QuotePoint[]
@@ -75,12 +78,15 @@ export class MarketMakerEngine {
   private tickIndex = 0
   private center: number
   private spread = MM_INITIAL_SPREAD
-  private inventory = 0
+  private readonly account = new MarketMakerAccount()
+
+  private get inventory(): number {
+    return this.account.inventory / MM_LOT_SIZE
+  }
 
   /** Все денежные величины — в деньгах, уже умноженные на размер лота. */
   private spreadPnl = 0
   private inventoryMtm = 0
-  private hedgeCosts = 0
 
   private trades: MMTrade[] = []
   private history: QuotePoint[] = []
@@ -143,14 +149,29 @@ export class MarketMakerEngine {
     return this.marketPath[this.tickIndex]
   }
 
-  /** Переоценка inventory с дисконтом за объём сверх жёсткого лимита. */
+  /** Cumulative price movement after fills, including positions closed by hedges. */
   get inventoryPnl(): number {
-    const excess = Math.max(0, Math.abs(this.inventory) - MM_HARD_INVENTORY_LIMIT)
-    return this.inventoryMtm - excess * MM_HARD_LIMIT_HAIRCUT * MM_LOT_SIZE
+    return this.inventoryMtm
   }
 
   get pnl(): number {
-    return this.spreadPnl + this.inventoryPnl - this.hedgeCosts
+    return this.account.totalPnl(this.marketPrice)
+  }
+
+  private accounting(): MMAccountingDebug {
+    return {
+      cash: this.account.cash,
+      initialCapital: this.account.initialCapital,
+      inventoryUnits: this.account.inventory,
+      averageEntry: this.account.averageEntry,
+      markPrice: this.marketPrice,
+      openInventoryPnl: this.account.openInventoryPnl(this.marketPrice),
+      realizedPnl: this.account.realizedPnl,
+      transactionCosts: this.account.transactionCosts,
+      hedgeCosts: this.account.hedgeCosts,
+      carryCosts: this.account.carryCosts,
+      totalPnl: this.pnl,
+    }
   }
 
   get finished(): boolean {
@@ -162,7 +183,9 @@ export class MarketMakerEngine {
   /** Сдвигает bid и ask одновременно. Рынок от этого не двигается. */
   moveQuotes(direction: 1 | -1): void {
     if (this.finished) return
-    this.center = round2(this.center + direction * MM_QUOTE_STEP)
+    const next = this.boundedCenter(this.center + direction * MM_QUOTE_STEP)
+    if (next === this.center) return
+    this.center = next
     this.quoteMoves += 1
     // Сдвиг против позиции — реакция на inventory: лонг сдвигает ниже, шорт — выше.
     if (Math.sign(this.inventory) === -direction) this.closeResponse()
@@ -188,10 +211,9 @@ export class MarketMakerEngine {
   hedge(): number {
     if (this.finished || this.inventory === 0) return 0
     const closed = this.inventory
-    // Inventory уже переоценён по рынку, поэтому хедж добавляет только издержки.
-    this.hedgeCosts += this.hedgeCostFor(closed)
+    // Settle the position into cash at mark; charge the hedge fee exactly once.
+    this.account.hedge(this.marketPrice, this.hedgeCostFor(closed))
     this.hedgedUnits += Math.abs(closed)
-    this.inventory = 0
     this.hedgeCount += 1
     this.closeResponse()
     return closed
@@ -211,6 +233,7 @@ export class MarketMakerEngine {
     this.tickIndex += 1
     const tick = this.tickIndex
     const market = this.marketPath[tick]
+    this.center = this.boundedCenter(this.center)
     const fairValue = this.fairValuePath[tick]
     const phaseIndex = this.flowPhaseIndex(tick)
     const regime = this.scenario.flowPhases[phaseIndex].regime
@@ -218,7 +241,7 @@ export class MarketMakerEngine {
     if (phase.pnlStart === null) phase.pnlStart = pnlBefore
 
     this.inventoryMtm += this.inventory * (market - this.marketPath[tick - 1]) * MM_LOT_SIZE
-    this.inventoryMtm -= Math.max(0, Math.abs(this.inventory) - (this.scenario.softInventoryLimit ?? MM_SOFT_INVENTORY_LIMIT)) * (this.scenario.inventoryCarryCost ?? 0) * MM_LOT_SIZE
+    this.account.chargeCarry(Math.max(0, Math.abs(this.inventory) - (this.scenario.softInventoryLimit ?? MM_SOFT_INVENTORY_LIMIT)) * (this.scenario.inventoryCarryCost ?? 0) * MM_LOT_SIZE)
     this.spreadSamples.push(this.spread)
 
     const bid = this.bid
@@ -243,7 +266,11 @@ export class MarketMakerEngine {
       // Контрагент покупает по ask → маркет-мейкер продаёт, и наоборот.
       const userDirection = order.side === 'buy' ? -1 : 1
       const before = this.inventory
-      this.inventory += userDirection * order.size
+      this.account.execute(
+        userDirection * order.size * MM_LOT_SIZE,
+        price,
+        order.size * MM_LOT_SIZE * MM_TRANSACTION_COST_PER_UNIT,
+      )
 
       // Спред считается от рыночной цены в момент сделки;
       // дальнейшее движение позиции попадает в переоценку inventory.
@@ -308,6 +335,7 @@ export class MarketMakerEngine {
       marketPrice: this.marketPrice,
       inventory: this.inventory,
       pnl: this.pnl,
+      accounting: this.accounting(),
       hedgeCostPreview: this.hedgeCostFor(this.inventory),
       trades: this.trades.slice(),
       history: this.history.slice(),
@@ -340,7 +368,12 @@ export class MarketMakerEngine {
       pnl: this.pnl,
       spreadPnl: this.spreadPnl,
       inventoryPnl: this.inventoryPnl,
-      hedgeCosts: this.hedgeCosts,
+      hedgeCosts: this.account.hedgeCosts,
+      carryCosts: this.account.carryCosts,
+      transactionCosts: this.account.transactionCosts,
+      realizedPnl: this.account.realizedPnl,
+      unrealizedPnl: this.account.openInventoryPnl(this.marketPrice),
+      accounting: this.accounting(),
       maxInventory: this.maxInventory,
       tradeCount: this.trades.length,
       averageSpread,
@@ -367,6 +400,14 @@ export class MarketMakerEngine {
   private flowPhaseIndex(tick: number): number {
     const phase = phaseAt(this.scenario.flowPhases, tick)
     return this.scenario.flowPhases.indexOf(phase)
+  }
+
+  private boundedCenter(center: number): number {
+    const offset = this.marketPrice * MM_MAX_QUOTE_OFFSET_RATIO
+    // Round the boundaries inward so cents cannot cross the displacement limit.
+    const lower = Math.ceil((this.marketPrice - offset) * 100) / 100
+    const upper = Math.floor((this.marketPrice + offset) * 100) / 100
+    return Math.min(upper, Math.max(lower, round2(center)))
   }
 
   private closeResponse(): void {

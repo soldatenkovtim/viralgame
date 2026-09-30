@@ -15,9 +15,13 @@ import {
   MM_HARD_INVENTORY_LIMIT,
   MM_SOFT_INVENTORY_LIMIT,
   MM_TICK_MS,
+  MM_MAX_QUOTE_OFFSET_RATIO,
+  MM_TRANSACTION_COST_PER_UNIT,
+  MM_LOT_SIZE,
 } from '@/data/marketMakerScenarios'
 import { formatMoney, formatPrice, formatSigned, pnlColor } from '@/lib/formatting'
 import type { MarketMakerResult, MarketMakerScenario, MMTrade } from '@/types/game'
+import { AccountingDebug } from './AccountingDebug'
 import { MarketMakerEngine, type MarketMakerSnapshot } from './engine'
 
 type Stage = 'intro' | 'running' | 'finished'
@@ -177,6 +181,7 @@ export function MarketMakerGame({
           </div>
 
           <RecentTrades trades={recentTrades} />
+          {import.meta.env.DEV && <AccountingDebug data={snapshot.accounting} />}
 
           <p className="text-xs leading-relaxed text-chalk-500">
             Справедливая цена скрыта. У тебя есть рыночная цена, собственная котировка и
@@ -285,7 +290,7 @@ function InventoryCard({ inventory, softLimit = MM_SOFT_INVENTORY_LIMIT }: { inv
         aria-hidden={!aboveSoft}
       >
         {aboveHard
-          ? 'Позиция сверх лимита переоценивается с дисконтом'
+          ? 'Позиция сверх лимита: высокий позиционный риск'
           : 'Позиционный риск растёт'}
       </p>
     </div>
@@ -358,7 +363,9 @@ function Intro({
       <ul className="flex flex-col gap-2.5 rounded-xl border border-ink-700 bg-ink-900 p-5 text-sm text-chalk-400">
         {advanced && <li>Хедж на 20% дороже. Позиция свыше 12 лотов несёт дополнительные издержки удержания.</li>}
         <li>Смещай котировку целиком или меняй ширину спреда</li>
+        <li>Середина котировки ограничена ±{MM_MAX_QUOTE_OFFSET_RATIO * 100}% от рыночной цены</li>
         <li>Inventory переоценивается по рынку в каждый момент</li>
+        <li>Комиссия сделки — {formatPrice(MM_TRANSACTION_COST_PER_UNIT * MM_LOT_SIZE)} за лот</li>
         <li>Хедж закрывает весь inventory, но стоит денег</li>
         <li className="tnum">Раунд длится {durationSeconds} секунд</li>
       </ul>
