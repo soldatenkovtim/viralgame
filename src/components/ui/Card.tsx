@@ -11,7 +11,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-xl border border-ink-700 ${muted ? 'bg-ink-950' : 'bg-ink-900'} ${className}`}
+      className={`rounded-none border border-ink-700 ${muted ? 'bg-ink-950' : 'bg-ink-900'} ${className}`}
     >
       {children}
     </div>
@@ -20,7 +20,7 @@ export function Card({
 
 export function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-chalk-500">
+    <div className="font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-chalk-500">
       {children}
     </div>
   )

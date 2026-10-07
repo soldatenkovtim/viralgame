@@ -57,16 +57,16 @@ export interface OverlaySegment {
 type HitTarget = { kind: 'stop' } | { kind: 'level'; id: string } | { kind: 'trend'; id: string }
 
 export const CHART_COLORS = {
-  up: '#2ebd85',
-  down: '#f0616d',
-  grid: '#141419',
-  border: '#1d1d24',
-  text: '#6b6b78',
+  up: '#16815a',
+  down: '#c6384a',
+  grid: '#e1e1db',
+  border: '#d4d4ce',
+  text: '#666661',
   level: '#8a8a99',
-  selected: '#a58bff',
-  trend: '#c9b8ff',
-  stop: '#f0616d',
-  entry: '#b4b4c2',
+  selected: '#7741c8',
+  trend: '#6531b2',
+  stop: '#c6384a',
+  entry: '#666661',
 }
 
 const VOLUME_UP = 'rgba(46, 189, 133, 0.38)'

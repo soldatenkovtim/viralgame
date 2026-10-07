@@ -22,10 +22,10 @@ import { MM_TICK_MS } from '@/data/marketMakerScenarios'
 import type { MMTrade } from '@/types/game'
 
 const QUOTE_COLORS = {
-  market: '#d6d6de',
-  bid: '#2ebd85',
-  ask: '#f0616d',
-  fairValue: '#a58bff',
+  market: '#3f3f42',
+  bid: '#16815a',
+  ask: '#c6384a',
+  fairValue: '#7741c8',
   informed: 'rgba(165, 139, 255, 0.11)',
   lag: 'rgba(232, 176, 75, 0.8)',
 }
@@ -86,22 +86,22 @@ export function QuoteChart({
       height,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#6b6b78',
+        textColor: '#666661',
         fontSize: 11,
         fontFamily: 'ui-monospace, SF Mono, Menlo, monospace',
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: '#141419' },
-        horzLines: { color: '#141419' },
+        vertLines: { color: '#e1e1db' },
+        horzLines: { color: '#e1e1db' },
       },
       rightPriceScale: {
-        borderColor: '#1d1d24',
+        borderColor: '#d4d4ce',
         scaleMargins: { top: 0.12, bottom: 0.12 },
       },
       timeScale: {
         visible: showTimeAxis,
-        borderColor: '#1d1d24',
+        borderColor: '#d4d4ce',
         tickMarkFormatter: (time: Time) => `${formatTickSeconds(Number(time))} с`,
       },
       localization: {

@@ -1,6 +1,8 @@
-import { ArrowRight } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { ArrowDown, ArrowUpRight } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { MarketStructure } from '@/components/home/MarketStructure'
 import { ChallengeCard } from '@/components/ui/ChallengeCard'
+import { Button } from '@/components/ui/Button'
 import { trackEvent } from '@/lib/analytics'
 import { ChallengeCounter } from '@/components/progress/ProgressDots'
 import { CHALLENGE_ORDER, useGameStore } from '@/store/gameStore'
@@ -17,83 +19,62 @@ export function HomePage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1180px] px-5 sm:px-8">
-      <section className="flex flex-col items-start gap-8 pt-16 pb-14 sm:pt-28 sm:pb-20">
-        <div className="flex items-center gap-3">
-          <span className="h-1.5 w-1.5 rounded-full bg-violet-accent" aria-hidden />
-          <span className="text-[11px] tracking-[0.22em] text-chalk-500 uppercase">
-            Прототип · внутреннее тестирование
-          </span>
-        </div>
-
-        <h1 className="max-w-4xl text-5xl leading-[0.95] font-light tracking-[-0.03em] text-chalk-50 sm:text-7xl lg:text-[88px]">
-          MARKET
-          <br />
-          TRIALS
-        </h1>
-
-        <p className="max-w-2xl text-lg leading-relaxed text-chalk-200 sm:text-xl">
-          Четыре рынка. Четыре разных испытания. Посмотрим, как ты принимаешь
-          решения, когда правильного ответа заранее нет.
-        </p>
-
-        <p className="max-w-xl text-sm leading-relaxed text-chalk-500">
-          Без регистрации. Около 12 минут. Результат не является оценкой
-          профессиональной квалификации.
-        </p>
-
-        <div className="flex flex-col items-start gap-4 pt-2 sm:flex-row sm:items-center">
-          <button
-            type="button"
-            onClick={startGame}
-            className="group inline-flex min-h-13 items-center gap-3 rounded-lg bg-violet-accent px-8 text-base font-medium text-white transition-colors hover:bg-violet-soft"
-          >
-            {completed.length > 0 ? 'Продолжить испытания' : 'Начать испытания'}
-            <ArrowRight
-              className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
-              aria-hidden
-            />
-          </button>
-
-          <ChallengeCounter />
+    <div className="exelsior-home">
+      <section className="trial-hero">
+        <div className="site-container">
+          <div className="hero-topline"><span>[ EXELSIOR / MARKET TRIALS ]</span><span>МЫШЛЕНИЕ. РЕШЕНИЯ. РЫНОК.</span></div>
+          <div className="hero-grid">
+            <div className="hero-copy">
+              <p className="micro-label mb-6 text-chalk-500">ЧЕТЫРЕ РЫНКА / ТВОЙ ПОДХОД</p>
+              <h1 className="hero-title">MARKET<br />TRIALS<span className="text-violet-accent">.</span></h1>
+              <p className="hero-manifesto">РЫНОК МЕНЯЕТСЯ. КАК РЕШИШЬ ТЫ?</p>
+              <p className="hero-description">Четыре разных испытания. Посмотрим, как ты принимаешь решения, когда правильного ответа заранее нет.</p>
+              <div className="hero-actions">
+                <Button variant="primary" size="lg" onClick={startGame}>
+                  {completed.length > 0 ? 'Продолжить испытания' : 'Начать испытания'}
+                  <ArrowUpRight className="ml-4 h-5 w-5 text-lime" aria-hidden />
+                </Button>
+                <ChallengeCounter />
+              </div>
+              <p className="hero-footnote"><span aria-hidden>[ + ]</span>Без регистрации. Около 12 минут.<br />Только ты, информация и твои решения.</p>
+            </div>
+            <MarketStructure />
+          </div>
+          <div className="hero-bottomline"><span>ИНФОРМАЦИЯ → РЕШЕНИЕ → РЕЗУЛЬТАТ</span><a href="#trials">ВЫБРАТЬ ИСПЫТАНИЕ <ArrowDown className="h-4 w-4 text-violet-accent" aria-hidden /></a></div>
         </div>
       </section>
 
-      <section className="grid gap-4 pb-20 sm:grid-cols-2 lg:grid-cols-4">
-        {CHALLENGE_ORDER.map((challenge) => (
-          <ChallengeCard
-            key={challenge}
-            challenge={challenge}
-            locked={!unlocked.includes(challenge)}
-            completed={completed.includes(challenge)}
-            bestPoints={personalBests[challenge]}
-          />
-        ))}
+      <section id="trials" className="home-section">
+        <div className="site-container">
+          <div className="section-heading"><p className="micro-label text-violet-accent">[ 01 / ИСПЫТАНИЯ ]</p><h2>Один рынок.<br className="sm:hidden" /> Разные решения.</h2><p>От первого сигнала до рыночного шока — пройди всю серию.</p></div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {CHALLENGE_ORDER.map((challenge) => <ChallengeCard key={challenge} challenge={challenge} locked={!unlocked.includes(challenge)} completed={completed.includes(challenge)} bestPoints={personalBests[challenge]} />)}
+          </div>
+        </div>
       </section>
 
-      <section className="grid gap-10 border-t border-ink-800 py-16 sm:grid-cols-3">
-        <HowItWorks
-          step="Решения, а не настройки"
-          text="Никаких 30 параметров заявки. Направление, размер, уверенность — вся сложность в самом решении."
-        />
-        <HowItWorks
-          step="Рынок развивается"
-          text="В каждом сценарии несколько точек принятия решения. Рынок двигается, и позицию приходится пересматривать."
-        />
-        <HowItWorks
-          step="Профиль сессии"
-          text="В конце собирается описание твоих решений внутри игры. Его можно отправить другому трейдеру и сравнить."
-        />
+      <section className="home-section">
+        <div className="site-container">
+          <div className="section-heading"><p className="micro-label text-violet-accent">[ 02 / КАК ЭТО РАБОТАЕТ ]</p><h2>Твой подход в действии.</h2></div>
+          <div className="trial-process">
+            <HowItWorks number="01" step="Принимай решения" text="Направление, размер, уверенность — вся сложность в самом решении." />
+            <HowItWorks number="02" step="Следи за рынком" text="Рынок развивается. Новая информация появляется, и позицию приходится пересматривать." />
+            <HowItWorks number="03" step="Собери свой профиль" text="Узнай, что твои решения говорят о твоём подходе внутри этой игровой сессии." />
+            <HowItWorks number="04" step="Сравни с другом" text="Отправь тот же рынок другому трейдеру. Посмотрите, кто и как воспользовался возможностью." />
+          </div>
+        </div>
+      </section>
+
+      <section className="site-container py-12 sm:py-16">
+        <div className="trial-invite">
+          <div><p className="micro-label mb-5">[ ОДИН РЫНОК / ДВА ТРЕЙДЕРА ]</p><h2>Одинаковые условия.<br /><span>Твой выбор.</span></h2></div>
+          <div><p>Пройди испытания самостоятельно или выбери режим дуэли и пригласи другого трейдера.</p><Link to="/play" className="invite-link">К испытаниям <ArrowUpRight className="h-5 w-5" aria-hidden /></Link></div>
+        </div>
       </section>
     </div>
   )
 }
 
-function HowItWorks({ step, text }: { step: string; text: string }) {
-  return (
-    <div className="flex flex-col gap-3">
-      <h3 className="text-base font-normal tracking-tight text-chalk-50">{step}</h3>
-      <p className="text-sm leading-relaxed text-chalk-400">{text}</p>
-    </div>
-  )
+function HowItWorks({ number, step, text }: { number: string; step: string; text: string }) {
+  return <div><div className="process-number"><span>[ {number} ]</span><span aria-hidden>↗</span></div><h3>{step}</h3><p>{text}</p></div>
 }

@@ -168,7 +168,7 @@ function Invitation({
       </div>
 
       <div className="flex flex-col gap-4">
-        <h1 className="text-4xl font-light tracking-[-0.03em] text-chalk-50 sm:text-5xl">
+        <h1 className="text-4xl font-extrabold tracking-[-0.03em] text-chalk-50 sm:text-5xl">
           Тебе отправили рынок
         </h1>
         <p className="text-lg leading-relaxed text-chalk-200">
@@ -216,7 +216,7 @@ function SharedComparison({
     <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-10 px-5 py-14 sm:px-8 sm:py-20">
       <header className="flex flex-col gap-5">
         <SectionLabel>Один рынок · два трейдера</SectionLabel>
-        <h1 className="text-4xl font-light tracking-[-0.03em] text-chalk-50 sm:text-5xl">
+        <h1 className="text-4xl font-extrabold tracking-[-0.03em] text-chalk-50 sm:text-5xl">
           Сравнение решений
         </h1>
       </header>
@@ -510,7 +510,7 @@ function buildNarrative(mine: string[], theirs: string[]): string | null {
 function BrokenLink() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-5 py-28 sm:px-8 sm:py-36">
-      <h1 className="text-3xl font-light tracking-[-0.025em] text-chalk-50 sm:text-4xl">
+      <h1 className="text-3xl font-extrabold tracking-[-0.025em] text-chalk-50 sm:text-4xl">
         Ссылка не читается
       </h1>
       <p className="text-sm leading-relaxed text-chalk-400">

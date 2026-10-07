@@ -160,3 +160,18 @@ Cross Arbitrage retains five decisions per session and the existing scoring rule
 Result records include scenario ID, mode, raw score and normalized score (currently equal). Result-page duel links preserve the exact market and challenger result; standalone two-player rooms use the same versioned Standard catalog. Unsupported older scenario links are rejected rather than silently assigned another market.
 
 Historical sources and transformation details: [data notes](src/scenarios/historical/README.md). Debug: append `?debug=1` and select a scenario in the panel; its list follows the current mode.
+
+## Оформление Exelsior
+
+Визуальный стиль перенесён из локального проекта `../exelsior`: светлая палитра,
+шрифты Geist / Geist Mono, знак бренда и SVG-композиция `MarketStructure`.
+Главная адаптирована под испытания Market Trials; правила игр и хранилище результатов
+не менялись. Исходный проект Exelsior для запуска не требуется.
+
+- Палитра и адаптивные стили: `src/index.css`. Существующие `ink` / `chalk`
+  обозначают поверхности / текст светлой темы.
+- Самостоятельные файлы шрифтов: `public/fonts`, подключения: `src/fonts.css`.
+- Шапка, меню и подвал: `src/components/layout/AppShell.tsx`.
+- Главная и иллюстрация: `src/pages/HomePage.tsx`, `src/components/home/MarketStructure.tsx`.
+- Цвета canvas-графиков заданы в `src/components/charts`; карточки экспорта —
+  в `src/components/share/ShareCard.tsx`.

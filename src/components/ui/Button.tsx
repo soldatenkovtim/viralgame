@@ -6,7 +6,7 @@ type Size = 'sm' | 'md' | 'lg'
 
 const variants: Record<Variant, string> = {
   primary:
-    'bg-violet-accent text-white hover:bg-violet-soft active:bg-violet-accent border border-violet-accent',
+    'bg-graphite text-white hover:bg-violet-accent active:bg-violet-soft border border-graphite hover:border-violet-accent',
   secondary:
     'bg-ink-850 text-chalk-50 border border-ink-600 hover:border-ink-500 hover:bg-ink-800',
   ghost:
@@ -16,13 +16,13 @@ const variants: Record<Variant, string> = {
 }
 
 const sizes: Record<Size, string> = {
-  sm: 'min-h-9 px-3 text-xs',
-  md: 'min-h-11 px-5 text-sm',
-  lg: 'min-h-13 px-7 text-base',
+  sm: 'min-h-9 px-3 text-[11px]',
+  md: 'min-h-12 px-5 text-xs',
+  lg: 'min-h-13 px-7 text-xs',
 }
 
 const base =
-  'inline-flex items-center justify-center gap-2 rounded-lg font-medium tracking-tight transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed select-none'
+  'inline-flex items-center justify-center gap-2 rounded-none font-mono font-medium uppercase tracking-wide transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed select-none'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant

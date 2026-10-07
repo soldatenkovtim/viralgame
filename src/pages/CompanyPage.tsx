@@ -18,7 +18,7 @@ function PlaceholderPage({
     <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-12 px-5 py-16 sm:px-8 sm:py-24">
       <header className="flex max-w-3xl flex-col gap-5">
         <SectionLabel>{eyebrow}</SectionLabel>
-        <h1 className="text-4xl leading-[1.05] font-light tracking-[-0.03em] text-chalk-50 sm:text-5xl">
+        <h1 className="text-4xl leading-[1.05] font-extrabold tracking-[-0.03em] text-chalk-50 sm:text-5xl">
           {title}
         </h1>
         <p className="text-base leading-relaxed text-chalk-400">{lead}</p>

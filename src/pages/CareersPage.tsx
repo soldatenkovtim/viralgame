@@ -36,7 +36,7 @@ export function CareersPage() {
         <div className="flex h-11 w-11 items-center justify-center rounded-full border border-violet-accent/40 bg-violet-dim/30">
           <Check className="h-5 w-5 text-violet-soft" aria-hidden />
         </div>
-        <h1 className="text-3xl font-light tracking-[-0.025em] text-chalk-50 sm:text-4xl">
+        <h1 className="text-3xl font-extrabold tracking-[-0.025em] text-chalk-50 sm:text-4xl">
           Готово. В рабочей версии здесь будет отправка контакта команде.
         </h1>
         <p className="text-sm leading-relaxed text-chalk-400">
@@ -53,7 +53,7 @@ export function CareersPage() {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-10 px-5 py-16 sm:px-8 sm:py-24">
       <header className="flex flex-col gap-5">
         <SectionLabel>Возможности</SectionLabel>
-        <h1 className="text-4xl font-light tracking-[-0.03em] text-chalk-50 sm:text-5xl">
+        <h1 className="text-4xl font-extrabold tracking-[-0.03em] text-chalk-50 sm:text-5xl">
           Хочешь поговорить?
         </h1>
         <p className="text-base leading-relaxed text-chalk-400">
