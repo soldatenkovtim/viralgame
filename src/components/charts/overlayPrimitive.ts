@@ -114,7 +114,7 @@ export class OverlayPrimitive implements ISeriesPrimitive<Time> {
 
         if (line.handles) {
           context.setLineDash([])
-          context.fillStyle = '#0c0c0f'
+          context.fillStyle = '#eeeee9'
           for (const [x, y] of [
             [x1, y1],
             [x2, y2],

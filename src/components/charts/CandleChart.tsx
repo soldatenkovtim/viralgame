@@ -24,11 +24,11 @@ export interface ChartMarker {
 }
 
 const CHART_COLORS = {
-  up: '#2ebd85',
-  down: '#f0616d',
-  grid: '#141419',
-  border: '#1d1d24',
-  text: '#6b6b78',
+  up: '#16815a',
+  down: '#c6384a',
+  grid: '#e1e1db',
+  border: '#d4d4ce',
+  text: '#666661',
 }
 
 /**
@@ -85,8 +85,8 @@ export function CandleChart({
       },
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { color: '#3a3a46', width: 1, style: 3, labelBackgroundColor: '#1d1d24' },
-        horzLine: { color: '#3a3a46', width: 1, style: 3, labelBackgroundColor: '#1d1d24' },
+        vertLine: { color: '#8c8c85', width: 1, style: 3, labelBackgroundColor: '#50504f' },
+        horzLine: { color: '#8c8c85', width: 1, style: 3, labelBackgroundColor: '#50504f' },
       },
       handleScroll: false,
       handleScale: false,

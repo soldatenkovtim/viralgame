@@ -45,7 +45,7 @@ export function LeaderboardPage() {
       <div className="flex gap-3" aria-label="Режим рейтинга">{(['standard', 'advanced'] as const).map(m => <button key={m} aria-pressed={mode === m} onClick={() => setMode(m)} className={`rounded-lg border px-4 py-3 text-sm ${mode === m ? 'border-violet-accent text-chalk-50' : 'border-ink-700 text-chalk-400'}`}>{m === 'standard' ? 'Стандартный' : 'Продвинутый'}</button>)}</div>
       <header className="flex flex-col gap-5">
         <SectionLabel>Тестовый рейтинг</SectionLabel>
-        <h1 className="text-4xl font-light tracking-[-0.025em] text-chalk-50 sm:text-5xl">
+        <h1 className="text-4xl font-extrabold tracking-[-0.025em] text-chalk-50 sm:text-5xl">
           Рейтинг
         </h1>
         {complete && myRank ? (

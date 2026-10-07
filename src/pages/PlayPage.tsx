@@ -35,7 +35,7 @@ export function PlayPage() {
       <section aria-labelledby="challenges-heading" className="mt-12 border-t border-ink-800 pt-10 sm:mt-14">
         <header className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex flex-col gap-3">
-            <h1 id="challenges-heading" className="text-3xl font-light tracking-[-0.02em] text-chalk-50 sm:text-4xl">{title}</h1>
+            <h1 id="challenges-heading" className="text-3xl font-extrabold tracking-[-0.02em] text-chalk-50 sm:text-4xl">{title}</h1>
             <p className="max-w-xl text-sm leading-relaxed text-chalk-400">{description}</p>
           </div>
           {mode === 'duel' ? <p className="tnum shrink-0 text-sm text-chalk-400">Дуэлей завершено: {duelHistory.length}</p>

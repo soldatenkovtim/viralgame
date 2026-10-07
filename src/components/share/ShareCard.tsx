@@ -56,7 +56,7 @@ export function ShareCard({
       height: CARD_HEIGHT,
       pixelRatio: 2,
       skipFonts: true,
-      backgroundColor: '#08080a',
+      backgroundColor: '#f5f5f1',
     })
 
     const link = document.createElement('a')
@@ -168,14 +168,14 @@ function CardArtwork({
       style={{
         width: CARD_WIDTH,
         height: CARD_HEIGHT,
-        backgroundColor: '#08080a',
-        color: '#f2f2f5',
+        backgroundColor: '#f5f5f1',
+        color: '#141416',
         padding: 72,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
         boxSizing: 'border-box',
-        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+        fontFamily: 'Geist, system-ui, -apple-system, sans-serif',
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 44 }}>
@@ -191,25 +191,25 @@ function CardArtwork({
               fontSize: 18,
               letterSpacing: '0.24em',
               textTransform: 'uppercase',
-              color: '#8b8b99',
+              color: '#50504f',
             }}
           >
             Market Trials
           </span>
           {playerName ? (
-            <span style={{ fontSize: 18, color: '#6b6b78' }}>{playerName}</span>
+            <span style={{ fontSize: 18, color: '#666661' }}>{playerName}</span>
           ) : null}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <span style={{ fontSize: 16, letterSpacing: '0.18em', color: '#9b84ff' }}>
+          <span style={{ fontSize: 16, letterSpacing: '0.18em', color: '#6531b2' }}>
             АРХЕТИП СЕССИИ
           </span>
           <span
             style={{
               fontSize: 62,
               lineHeight: 1,
-              fontWeight: 300,
+              fontWeight: 800,
               letterSpacing: '-0.02em',
               textTransform: 'uppercase',
             }}
@@ -228,7 +228,7 @@ function CardArtwork({
                   alignItems: 'baseline',
                 }}
               >
-                <span style={{ fontSize: 20, color: '#c9c9d2' }}>
+                <span style={{ fontSize: 20, color: '#3f3f42' }}>
                   {traitLabels[trait]}
                 </span>
                 <span style={{ fontSize: 28, fontWeight: 300 }}>{profile[trait]}</span>
@@ -237,7 +237,7 @@ function CardArtwork({
                 style={{
                   height: 3,
                   width: '100%',
-                  backgroundColor: '#1d1d24',
+                  backgroundColor: '#d4d4ce',
                   borderRadius: 999,
                 }}
               >
@@ -245,7 +245,7 @@ function CardArtwork({
                   style={{
                     height: 3,
                     width: `${profile[trait]}%`,
-                    backgroundColor: '#7b5cff',
+                    backgroundColor: '#7741c8',
                     borderRadius: 999,
                   }}
                 />
@@ -260,14 +260,14 @@ function CardArtwork({
           display: 'flex',
           alignItems: 'flex-end',
           justifyContent: 'space-between',
-          borderTop: '1px solid #1d1d24',
+          borderTop: '1px solid #d4d4ce',
           paddingTop: 28,
         }}
       >
-        <span style={{ fontSize: 22, color: '#8b8b99' }}>
+        <span style={{ fontSize: 22, color: '#50504f' }}>
           {TOTAL_CHALLENGES} / {TOTAL_CHALLENGES} испытаний
         </span>
-        <span style={{ fontSize: 26, color: '#f2f2f5' }}>
+        <span style={{ fontSize: 26, color: '#141416' }}>
           Какой профиль получится у тебя?
         </span>
       </div>
