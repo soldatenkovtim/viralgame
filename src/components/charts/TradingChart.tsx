@@ -1,3 +1,5 @@
+import { useTheme } from '@/lib/theme'
+import { CHART_COLORS, applyChartTheme, themedAnnotation } from './chartTheme'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   CandlestickSeries,
@@ -40,6 +42,8 @@ import {
 } from '@/games/blind-market/timeframes'
 import type { ChartAnnotations, ChartPoint, OhlcvCandle } from '@/types/game'
 
+export { CHART_COLORS } from './chartTheme'
+
 export type DrawingTool = 'none' | 'level' | 'trend' | 'stop'
 
 export type ChartDrawEvent =
@@ -56,18 +60,6 @@ export interface OverlaySegment {
 
 type HitTarget = { kind: 'stop' } | { kind: 'level'; id: string } | { kind: 'trend'; id: string }
 
-export const CHART_COLORS = {
-  up: '#16815a',
-  down: '#c6384a',
-  grid: '#e1e1db',
-  border: '#d4d4ce',
-  text: '#666661',
-  level: '#8a8a99',
-  selected: '#7741c8',
-  trend: '#6531b2',
-  stop: '#c6384a',
-  entry: '#666661',
-}
 
 const VOLUME_UP = 'rgba(46, 189, 133, 0.38)'
 const VOLUME_DOWN = 'rgba(240, 97, 109, 0.38)'
@@ -130,6 +122,7 @@ export function TradingChart(props: {
     className = 'h-[480px]',
   } = props
 
+  const theme = useTheme()
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
@@ -167,7 +160,7 @@ export function TradingChart(props: {
     const lines: OverlayLine[] = []
 
     for (const segment of current.segments ?? []) {
-      lines.push({ a: segment.a, b: segment.b, color: segment.color, width: 1.25, dashed: segment.dashed })
+      lines.push({ a: segment.a, b: segment.b, color: themedAnnotation(segment.color), width: 1.25, dashed: segment.dashed })
     }
 
     const trend = current.annotations.trendLine
@@ -586,7 +579,7 @@ export function TradingChart(props: {
     }
 
     priceLinesRef.current = lines
-  }, [annotations.levels, selectedId, entry, stopPrice])
+  }, [annotations.levels, selectedId, entry, stopPrice, theme])
 
   useEffect(() => {
     candleRef.current?.applyOptions({ title: lastPriceTitle })
@@ -595,7 +588,7 @@ export function TradingChart(props: {
   useEffect(() => {
     refreshOverlay()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [annotations.trendLine, selectedId, segments])
+  }, [annotations.trendLine, selectedId, segments, theme])
 
   useEffect(() => {
     if (tool !== 'trend') {
@@ -616,14 +609,18 @@ export function TradingChart(props: {
         time: bucketStart(candles[marker.candleIndex].time, origin, frame.seconds) as Time,
         position: marker.position,
         shape: marker.shape,
-        color: marker.color,
+        color: themedAnnotation(marker.color),
         text: marker.text,
         size: 1,
       }))
       .sort((a, b) => (a.time as number) - (b.time as number))
 
     plugin.setMarkers(mapped)
-  }, [markers, candles, visibleCount, origin, frame.seconds])
+  }, [markers, candles, visibleCount, origin, frame.seconds, theme])
+
+  useEffect(() => {
+    if (chartRef.current) applyChartTheme(chartRef.current, candleRef.current)
+  }, [theme])
 
   const hovered = hover ? bars[hover.index] : undefined
   const previous = hover && hover.index > 0 ? bars[hover.index - 1] : undefined

@@ -10,6 +10,7 @@ import type {
   SeriesType,
   Time,
 } from 'lightweight-charts'
+import { CHART_COLORS } from './chartTheme'
 import type { ChartPoint } from '@/types/game'
 
 export interface OverlayLine {
@@ -114,7 +115,7 @@ export class OverlayPrimitive implements ISeriesPrimitive<Time> {
 
         if (line.handles) {
           context.setLineDash([])
-          context.fillStyle = '#eeeee9'
+          context.fillStyle = CHART_COLORS.surface
           for (const [x, y] of [
             [x1, y1],
             [x2, y2],

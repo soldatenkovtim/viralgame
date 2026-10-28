@@ -30,7 +30,7 @@ export function PlayPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1180px] px-5 py-10 sm:px-8 sm:py-14">
+    <div className="site-container page-layout">
       <ModeSelector />
       <section aria-labelledby="challenges-heading" className="mt-12 border-t border-ink-800 pt-10 sm:mt-14">
         <header className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">

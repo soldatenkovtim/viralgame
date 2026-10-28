@@ -19,10 +19,10 @@ export function HomePage() {
   }
 
   return (
-    <div className="exelsior-home">
+    <div className="market-trials-home">
       <section className="trial-hero">
         <div className="site-container">
-          <div className="hero-topline"><span>[ EXELSIOR / MARKET TRIALS ]</span><span>МЫШЛЕНИЕ. РЕШЕНИЯ. РЫНОК.</span></div>
+          <div className="hero-topline"><span>[ MARKET TRIALS ]</span><span>МЫШЛЕНИЕ. РЕШЕНИЯ. РЫНОК.</span></div>
           <div className="hero-grid">
             <div className="hero-copy">
               <p className="micro-label mb-6 text-chalk-500">ЧЕТЫРЕ РЫНКА / ТВОЙ ПОДХОД</p>
@@ -32,11 +32,14 @@ export function HomePage() {
               <div className="hero-actions">
                 <Button variant="primary" size="lg" onClick={startGame}>
                   {completed.length > 0 ? 'Продолжить испытания' : 'Начать испытания'}
-                  <ArrowUpRight className="ml-4 h-5 w-5 text-lime" aria-hidden />
+                  <ArrowUpRight className="h-5 w-5" aria-hidden />
                 </Button>
                 <ChallengeCounter />
               </div>
-              <p className="hero-footnote"><span aria-hidden>[ + ]</span>Без регистрации. Около 12 минут.<br />Только ты, информация и твои решения.</p>
+              <p className="hero-footnote">
+                <span className="footnote-marker" aria-hidden="true">[ + ]</span>
+                <span>Без регистрации. Около 12 минут.<br />Только ты, информация и твои решения.</span>
+              </p>
             </div>
             <MarketStructure />
           </div>
@@ -47,7 +50,7 @@ export function HomePage() {
       <section id="trials" className="home-section">
         <div className="site-container">
           <div className="section-heading"><p className="micro-label text-violet-accent">[ 01 / ИСПЫТАНИЯ ]</p><h2>Один рынок.<br className="sm:hidden" /> Разные решения.</h2><p>От первого сигнала до рыночного шока — пройди всю серию.</p></div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
             {CHALLENGE_ORDER.map((challenge) => <ChallengeCard key={challenge} challenge={challenge} locked={!unlocked.includes(challenge)} completed={completed.includes(challenge)} bestPoints={personalBests[challenge]} />)}
           </div>
         </div>
@@ -65,7 +68,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="site-container py-12 sm:py-16">
+      <section className="site-container home-invite">
         <div className="trial-invite">
           <div><p className="micro-label mb-5">[ ОДИН РЫНОК / ДВА ТРЕЙДЕРА ]</p><h2>Одинаковые условия.<br /><span>Твой выбор.</span></h2></div>
           <div><p>Пройди испытания самостоятельно или выбери режим дуэли и пригласи другого трейдера.</p><Link to="/play" className="invite-link">К испытаниям <ArrowUpRight className="h-5 w-5" aria-hidden /></Link></div>

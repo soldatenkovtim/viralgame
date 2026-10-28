@@ -161,17 +161,22 @@ Result records include scenario ID, mode, raw score and normalized score (curren
 
 Historical sources and transformation details: [data notes](src/scenarios/historical/README.md). Debug: append `?debug=1` and select a scenario in the panel; its list follows the current mode.
 
-## Оформление Exelsior
+## Оформление Market Trials
 
-Визуальный стиль перенесён из локального проекта `../exelsior`: светлая палитра,
-шрифты Geist / Geist Mono, знак бренда и SVG-композиция `MarketStructure`.
-Главная адаптирована под испытания Market Trials; правила игр и хранилище результатов
-не менялись. Исходный проект Exelsior для запуска не требуется.
+Общая система оформления: шрифты Geist / Geist Mono,
+контейнер до 1600px, адаптивные отступы, типографика, светлая и тёмная палитры,
+анимированная SVG-композиция. Все ресурсы находятся внутри проекта.
 
-- Палитра и адаптивные стили: `src/index.css`. Существующие `ink` / `chalk`
-  обозначают поверхности / текст светлой темы.
-- Самостоятельные файлы шрифтов: `public/fonts`, подключения: `src/fonts.css`.
-- Шапка, меню и подвал: `src/components/layout/AppShell.tsx`.
+- Палитра и интервалы: `src/index.css`. Имена `ink` / `chalk` обозначают поверхности / текст
+  и автоматически меняются вместе с темой.
+- Панель предпросмотра темы внизу страницы (только в режиме разработки): системная, светлая, тёмная. Настройка хранится в
+  `localStorage` под ключом `market-trials-theme`; системная тема следует настройкам ОС.
+- Инициализация до первого отображения: `index.html`; синхронизация темы:
+  `src/lib/theme.ts`; элемент управления: `src/components/layout/ThemePanel.tsx`.
+- Шапка скрывается при прокрутке вниз и возвращается при прокрутке вверх.
+  Открытое меню и клавиатурный фокус удерживают её видимой. Шапка, меню и подвал: `src/components/layout/AppShell.tsx`.
 - Главная и иллюстрация: `src/pages/HomePage.tsx`, `src/components/home/MarketStructure.tsx`.
-- Цвета canvas-графиков заданы в `src/components/charts`; карточки экспорта —
-  в `src/components/share/ShareCard.tsx`.
+- Canvas-графики используют CSS-палитру через `src/components/charts/chartTheme.ts`
+  и обновляют цвета без пересоздания графика или сброса масштаба.
+- Экспортируемая карточка `src/components/share/ShareCard.tsx` сохраняет светлое оформление
+  независимо от темы интерфейса.

@@ -1,0 +1,35 @@
+/* Static SVG attributes remain the default, including reduced-motion mode. */
+@media (prefers-reduced-motion: no-preference) {
+  .cubeLift { animation: cubeLift 9s ease-in-out infinite; }
+  .cubeSecond { animation-delay: -3s; }
+  .cubeThird { animation-delay: -6s; }
+  .pageAccent { animation: accentBreathe 10s ease-in-out infinite; }
+  .secondaryAccent { animation: accentBreathe 12s ease-in-out -4s infinite; }
+}
+
+.cubeLift { --cube-lift: -22px; }
+
+@keyframes accentBreathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .82; }
+}
+
+@keyframes cubeLift {
+  0%, 10%, 70%, 100% { transform: translateY(0); }
+  40% { transform: translateY(var(--cube-lift)); }
+}
+
+@media (max-width: 767px) {
+  .cubeLift { --cube-lift: -14px; }
+  .cubeSecond { animation: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pageAccent,
+  .secondaryAccent,
+  .cubeLift {
+    animation: none;
+    transform: none;
+    opacity: 1;
+  }
+}
