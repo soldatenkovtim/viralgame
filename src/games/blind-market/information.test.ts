@@ -9,6 +9,15 @@ it('calculates Pearson correlation from paired returns', () => {
   expect(pearsonCorrelation([-1, 0, 1], [1, -2, 1])).toBeCloseTo(0)
 })
 
+it.each([-1, 1])('shows unsigned zero for a small benchmark move in direction %s', direction => {
+  const scenario = blindMarketScenarios[0]
+  const smallMove = benchmark.map((c, i) => ({ ...c, close: 100 + direction * i * 0.00001 }))
+  const original = structuredClone(smallMove)
+  const info = buildBlindInformation(scenario.candles, scenario.checkpoints[0], smallMove, scenario.info.sector, scenario.baseTimeframe)
+  expect(info.marketContext).toMatch(/^S&P 500: 0,0% за 20 торговых интервалов\./)
+  expect(smallMove).toEqual(original)
+})
+
 describe.each(blindMarketScenarios)('$id pre-entry information', scenario => {
   const count = scenario.checkpoints[0]
   const cutoff = scenario.candles[count - 1].time

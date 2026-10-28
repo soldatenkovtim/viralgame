@@ -1,8 +1,9 @@
+import { ChallengeIntro } from '@/components/challenge/ChallengeIntro'
+import { ChallengeIllustration } from '@/components/challenge/ChallengeIllustration'
 import type { ChallengeContext } from '@/modes/config'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Ban, TrendingDown } from 'lucide-react'
+import { Ban, TrendingDown } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { SectionLabel } from '@/components/ui/Card'
 import { sessionScenarios } from '@/data/crossArbitrageScenarios'
 import { trackEvent } from '@/lib/analytics'
 import { formatNumber, formatPrice, pnlColor } from '@/lib/formatting'
@@ -34,6 +35,7 @@ const FEEDBACK_MS = 1500
 const TICK_MS = 200
 
 export function CrossArbitrageGame({
+  context,
   session,
   timerDisabled = false,
   onComplete,
@@ -143,7 +145,21 @@ export function CrossArbitrageGame({
   }, [rounds, scenarios.length, session, stage, startRound])
 
   if (stage === 'intro') {
-    return <Intro seconds={scenarios[0].durationSeconds} marketCount={scenarios.length} onStart={() => { trackEvent('scenario_started', { challengeType: 'cross-arbitrage', scenarioId: session.id, mode: session.mode }); startRound(0) }} />
+    const seconds = scenarios.map(item => item.durationSeconds || ARB_DECISION_SECONDS)
+    const venues = scenarios.map(item => item.quotes.length)
+    const range = (values: number[]) => Math.min(...values) === Math.max(...values) ? String(values[0]) : `${Math.min(...values)}–${Math.max(...values)}`
+    return <ChallengeIntro number="04" title={<>Кросс-<br />арбитраж</>}
+      subtitle="Один актив. Разные цены. Ограниченное время."
+      description="Найдите ценовое расхождение между площадками, оцените комиссии и глубину исполнения и примите решение. Не каждое расхождение становится выгодной сделкой."
+      stats={[
+        { value: scenarios.length, label: 'рынков подряд' },
+        { value: timerDisabled ? 'Без лимита' : `${range(seconds)} с`, label: 'на каждый рынок' },
+        { value: range(venues), label: 'торговые площадки' },
+      ]}
+      note="Капитал уже размещён на площадках. Переводы между ними не учитываются. Вы можете отказаться от сделки."
+      cta="Открыть площадки" visual={<ChallengeIllustration kind="cross-arbitrage" />}
+      mode={context?.mode ?? session.mode ?? 'standard'} state={stage}
+      onStart={() => { trackEvent('scenario_started', { challengeType: 'cross-arbitrage', scenarioId: session.id, mode: session.mode }); startRound(0) }} />
   }
 
   const remaining = Math.max(0, Math.ceil((limitMs - elapsedMs) / 1000))
@@ -233,40 +249,6 @@ export function CrossArbitrageGame({
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-function Intro({ seconds, marketCount, onStart }: { seconds: number; marketCount: number; onStart: () => void }) {
-  return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-5 py-20 sm:px-8 sm:py-28">
-      <div className="flex flex-col gap-4">
-        <SectionLabel>Испытание 04</SectionLabel>
-        <h1 className="text-4xl font-light tracking-[-0.025em] text-chalk-50 sm:text-5xl">
-          Кросс-арбитраж
-        </h1>
-      </div>
-
-      <p className="text-lg leading-relaxed font-medium text-chalk-50">
-        Один актив торгуется на нескольких площадках. Найдите расхождение, которое остаётся прибыльным после комиссий и исполнения.
-      </p>
-      <p className="text-base leading-relaxed font-medium text-chalk-200">
-        Покупка идёт по Ask. Продажа — по Bid. Не каждое расхождение является сделкой.
-      </p>
-
-      <p className="text-sm leading-relaxed text-chalk-400">
-        Считайте, что капитал уже размещён на всех площадках. Переводы между ними не учитываются.
-        Объём сверх лучшей котировки исполняется по следующим уровням, показанным в таблице.
-      </p>
-      <p className="text-xs leading-relaxed text-chalk-500">
-        {marketCount} рынков подряд, на каждый — {seconds} секунд. Если время
-        закончится, сделка просто не откроется — это не проигрыш.
-      </p>
-
-      <Button variant="primary" size="lg" className="self-start" onClick={onStart}>
-        Начать
-        <ArrowRight className="h-4 w-4" aria-hidden />
-      </Button>
     </div>
   )
 }

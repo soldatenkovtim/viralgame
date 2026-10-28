@@ -1,3 +1,5 @@
+import { ChallengeIntro } from '@/components/challenge/ChallengeIntro'
+import { ChallengeIllustration } from '@/components/challenge/ChallengeIllustration'
 import { trackEvent } from '@/lib/analytics'
 import type { ChallengeContext } from '@/modes/config'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
@@ -9,15 +11,11 @@ import {
   Shield,
 } from 'lucide-react'
 import { QuoteChart, QuoteLegend } from '@/components/charts/QuoteChart'
-import { Button } from '@/components/ui/Button'
 import { SectionLabel } from '@/components/ui/Card'
 import {
   MM_HARD_INVENTORY_LIMIT,
   MM_SOFT_INVENTORY_LIMIT,
   MM_TICK_MS,
-  MM_MAX_QUOTE_OFFSET_RATIO,
-  MM_TRANSACTION_COST_PER_UNIT,
-  MM_LOT_SIZE,
 } from '@/data/marketMakerScenarios'
 import { formatMoney, formatPrice, formatSigned, pnlColor } from '@/lib/formatting'
 import type { MarketMakerResult, MarketMakerScenario, MMTrade } from '@/types/game'
@@ -29,6 +27,7 @@ type Stage = 'intro' | 'running' | 'finished'
 const RECENT_TRADES = 8
 
 export function MarketMakerGame({
+  context,
   scenario,
   onComplete,
 }: {
@@ -107,7 +106,18 @@ export function MarketMakerGame({
   }, [stage, act, handleHedge])
 
   if (stage === 'intro') {
-    return <Intro advanced={scenario.mode === 'advanced'} onStart={() => { trackEvent('scenario_started', { challengeType: 'market-maker', scenarioId: scenario.id, mode: scenario.mode }); setStage('running') }} durationSeconds={scenario.durationSeconds} />
+    return <ChallengeIntro number="02" title={<>Маркет-<br />мейкер</>}
+      subtitle="Каждая котировка — новое решение."
+      description="Управляйте котировками и спредом в меняющихся рыночных условиях. Следите за потоком заявок и оценивайте последствия своих решений."
+      stats={[
+        { value: `${scenario.durationSeconds} с`, label: 'раунд' },
+        { value: 'Bid / Ask', label: 'две стороны котировки' },
+        { value: `${scenario.softInventoryLimit ?? MM_SOFT_INVENTORY_LIMIT}`, label: 'лотов до повышенного риска' },
+      ]}
+      note={scenario.mode === 'advanced' ? 'Хедж дороже, а позиция сверх лимита несёт дополнительные издержки удержания.' : 'Спред приносит доход, накопленная позиция — рыночный риск. Хеджирование имеет стоимость.'}
+      cta="Открыть котировку" visual={<ChallengeIllustration kind="market-maker" />}
+      mode={context?.mode ?? scenario.mode ?? 'standard'} state={stage}
+      onStart={() => { trackEvent('scenario_started', { challengeType: 'market-maker', scenarioId: scenario.id, mode: scenario.mode }); setStage('running') }} />
   }
 
   if (!snapshot) return null
@@ -327,53 +337,6 @@ function RecentTrades({ trades }: { trades: MMTrade[] }) {
       <p className="mt-auto pt-2 text-[11px] leading-snug text-chalk-500">
         Выделены сделки, которые увеличили inventory.
       </p>
-    </div>
-  )
-}
-
-function Intro({
-  advanced,
-  onStart,
-  durationSeconds,
-}: {
-  advanced: boolean
-  onStart: () => void
-  durationSeconds: number
-}) {
-  return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-5 py-20 sm:px-8 sm:py-28">
-      <div className="flex flex-col gap-4">
-        <SectionLabel>Испытание 02</SectionLabel>
-        <h1 className="text-4xl font-light tracking-[-0.025em] text-chalk-50 sm:text-5xl">
-          Маркет-мейкер
-        </h1>
-      </div>
-
-      <div className="flex flex-col gap-4 text-base leading-relaxed text-chalk-200">
-        <p>
-          Вы выставляете двустороннюю котировку вокруг рынка. Справедливая цена скрыта —
-          её выдают только рыночная цена и поток сделок.
-        </p>
-        <p>
-          Узкий спред приносит больше сделок, широкий — защищает. Заработок — спред, риск —
-          накопленный inventory.
-        </p>
-      </div>
-
-      <ul className="flex flex-col gap-2.5 rounded-xl border border-ink-700 bg-ink-900 p-5 text-sm text-chalk-400">
-        {advanced && <li>Хедж на 20% дороже. Позиция свыше 12 лотов несёт дополнительные издержки удержания.</li>}
-        <li>Смещайте котировку целиком или меняйте ширину спреда</li>
-        <li>Середина котировки ограничена ±{MM_MAX_QUOTE_OFFSET_RATIO * 100}% от рыночной цены</li>
-        <li>Inventory переоценивается по рынку в каждый момент</li>
-        <li>Комиссия сделки — {formatPrice(MM_TRANSACTION_COST_PER_UNIT * MM_LOT_SIZE)} за лот</li>
-        <li>Хедж закрывает весь inventory, но стоит денег</li>
-        <li className="tnum">Раунд длится {durationSeconds} секунд</li>
-      </ul>
-
-      <Button variant="primary" size="lg" className="self-start" onClick={onStart}>
-        Открыть котировку
-        <ArrowRight className="h-4 w-4" aria-hidden />
-      </Button>
     </div>
   )
 }

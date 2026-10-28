@@ -1,0 +1,118 @@
+.blind-info {
+  background: var(--color-graphite);
+  color: var(--color-white);
+  --info-accent: color-mix(in srgb, var(--color-violet-accent), white 20%);
+}
+.blind-info-content { padding-block: clamp(32px, 4vw, 56px) var(--section-space); }
+.blind-info-heading { margin-bottom: 28px; }
+.blind-info-eyebrow {
+  margin-bottom: 18px;
+  font: var(--text-label)/1.7 var(--font-mono);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--info-accent);
+}
+.blind-info .blind-info-title {
+  display: grid;
+  max-width: 1040px;
+  font-size: clamp(30px, 3.2vw, 48px);
+  line-height: 1.08;
+  overflow-wrap: normal;
+}
+/* Both labels reserve the original responsive heading height. */
+.blind-info-title > span { grid-area: 1 / 1; }
+.blind-info-title-inactive { visibility: hidden; }
+.blind-info-description {
+  max-width: 850px;
+  margin-top: 20px;
+  font-size: var(--text-content);
+  line-height: var(--leading-body);
+  color: color-mix(in srgb, white 70%, transparent);
+}
+.blind-info-instructions {
+  margin-top: 10px;
+  font-size: var(--text-helper);
+  line-height: var(--leading-body);
+  color: color-mix(in srgb, white 60%, transparent);
+}
+.blind-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 16px;
+}
+.blind-info-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 18px;
+  min-width: 0;
+  min-height: 156px;
+  padding: 24px;
+  text-align: left;
+  color: inherit;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, white 22%, transparent);
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+}
+.blind-info-card:not(:disabled):hover {
+  border-color: color-mix(in srgb, var(--info-accent) 65%, transparent);
+  background: color-mix(in srgb, white 3%, transparent);
+}
+.blind-info-card-header { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
+.blind-info-card-title { display: flex; align-items: baseline; gap: 14px; min-width: 0; }
+.blind-info-card-number { font: var(--text-label)/1.5 var(--font-mono); color: color-mix(in srgb, white 45%, transparent); }
+.blind-info-card-name { font-size: 19px; line-height: 1.3; font-weight: 700; letter-spacing: -.025em; text-transform: uppercase; }
+.blind-info-card-description { font-size: var(--text-secondary); line-height: var(--leading-body); color: color-mix(in srgb, white 65%, transparent); }
+.blind-info-indicator {
+  display: grid;
+  place-items: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border: 1px solid color-mix(in srgb, white 35%, transparent);
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+.blind-info-revealed {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  font: 10px/1.5 var(--font-mono);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--info-accent);
+}
+.blind-info-card[data-revealed="true"] {
+  cursor: default;
+  border-color: var(--info-accent);
+  background: color-mix(in srgb, var(--info-accent) 7%, transparent);
+}
+.blind-info-card[data-revealed="true"] .blind-info-card-description { color: color-mix(in srgb, white 85%, transparent); }
+.blind-info-card[data-revealed="true"] .blind-info-card-number { color: var(--info-accent); }
+.blind-info-card:disabled:not([data-revealed="true"]) { cursor: not-allowed; color: color-mix(in srgb, white 55%, transparent); border-color: color-mix(in srgb, white 12%, transparent); }
+.blind-info-card:disabled:not([data-revealed="true"]) .blind-info-card-description { color: color-mix(in srgb, white 45%, transparent); }
+.blind-info-actions { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 24px; padding-top: 24px; border-top: 1px solid color-mix(in srgb, white 18%, transparent); }
+.blind-info-count { font: var(--text-label)/1.6 var(--font-mono); letter-spacing: .04em; text-transform: uppercase; font-variant-numeric: tabular-nums; color: color-mix(in srgb, white 65%, transparent); }
+.blind-info-count span { display: inline-block; min-width: 1ch; color: var(--info-accent); }
+.blind-info .blind-info-cta { min-height: 56px; gap: 36px; background: var(--info-accent); border-color: var(--info-accent); color: var(--color-graphite); }
+.blind-info .blind-info-cta svg { color: inherit; }
+.blind-info .blind-info-cta:hover:not(:disabled) { background: var(--color-white); border-color: var(--color-white); color: var(--color-graphite); }
+.blind-info-card:focus-visible, .blind-info-cta:focus-visible { outline: 2px solid var(--color-white); outline-offset: 4px; }
+@media (max-width: 767px) {
+  .blind-info-card { padding: 20px; gap: 16px; }
+  .blind-info-card-name { font-size: 17px; }
+  .blind-info-card-title { gap: 10px; }
+}
+@media (max-width: 639px) {
+  .blind-info-title-break { display: none; }
+  .blind-info .blind-info-title { font-size: clamp(27px, 7.5vw, 38px); }
+  .blind-info-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .blind-info-card { min-height: 144px; }
+  .blind-info-card-header { gap: 14px; }
+  .blind-info-actions { align-items: stretch; flex-direction: column; gap: 18px; margin-top: 20px; padding-top: 20px; }
+  .blind-info-cta { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .blind-info-card, .blind-info-indicator, .blind-info-cta { transition: none; }
+}

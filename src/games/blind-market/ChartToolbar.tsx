@@ -76,7 +76,7 @@ export function DrawingToolbar({
         disabled={levelsFull}
         title={
           levelsFull
-            ? `Максимум ${MAX_LEVELS} уровня — удали лишний`
+            ? `Максимум ${MAX_LEVELS} уровня — удалите лишний`
             : 'Горизонтальный уровень: клик по графику'
         }
         onClick={() => onTool(tool === 'level' ? 'none' : 'level')}
@@ -91,7 +91,7 @@ export function DrawingToolbar({
       <ToolButton
         active={tool === 'trend'}
         disabled={trendFull}
-        title={trendFull ? 'Трендовая линия уже есть — удали её, чтобы нарисовать новую' : 'Трендовая линия: два клика по графику'}
+        title={trendFull ? 'Трендовая линия уже есть — удалите её, чтобы нарисовать новую' : 'Трендовая линия: два клика по графику'}
         onClick={() => onTool(tool === 'trend' ? 'none' : 'trend')}
       >
         <Slash className="h-3.5 w-3.5" aria-hidden />

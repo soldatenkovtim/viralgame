@@ -48,6 +48,7 @@ function phaseNumberOf(stage: MarketShockStage): number {
 }
 
 export function MarketShockGame({
+  context,
   scenario,
   timerDisabled = false,
   onComplete,
@@ -182,7 +183,8 @@ export function MarketShockGame({
     return (
       <MarketShockIntro
         scenario={scenario}
-        pnlPercent={pnlPercent}
+        mode={context?.mode ?? scenario.mode ?? 'standard'}
+        timerDisabled={timerDisabled}
         onStart={() => { trackEvent('scenario_started', { challengeType: 'black-swan', scenarioId: scenario.id, mode: scenario.mode }); setStage('context') }}
       />
     )
