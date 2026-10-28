@@ -1,21 +1,20 @@
+import { ChallengeIntro } from '@/components/challenge/ChallengeIntro'
+import { ChallengeIllustration } from '@/components/challenge/ChallengeIllustration'
 import { trackEvent } from '@/lib/analytics'
 import { difficultyFor } from '@/modes/config'
 import { useCountdown } from '@/hooks/useCountdown'
 import type { ChallengeContext } from '@/modes/config'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ArrowRight, EyeOff, X } from 'lucide-react'
+import { EyeOff, X } from 'lucide-react'
 import {
   TradingChart,
   type ChartDrawEvent,
   type DrawingTool,
 } from '@/components/charts/TradingChart'
 import { Button } from '@/components/ui/Button'
-import { ChoiceButton, PillButton } from '@/components/ui/ChoiceButton'
 import { ConfidenceSlider } from '@/components/ui/ConfidenceSlider'
-import { SectionLabel } from '@/components/ui/Card'
 import { useReveal } from '@/hooks/useReveal'
 import {
-  exposureLabel,
   formatMoney,
   formatPercent,
   formatPrice,
@@ -32,7 +31,11 @@ import type {
   ChartAnnotations,
 } from '@/types/game'
 import { DrawingToolbar, MAX_LEVELS, TimeframeSwitch } from './ChartToolbar'
-import { InfoSelector, InfoStrip, MAX_INFO_SLOTS } from './InfoSelector'
+import { MAX_INFO_SLOTS } from './InfoSelector'
+import { BlindMarketInfo } from './BlindMarketInfo'
+import { DecisionChoice, DecisionHint, RevealedInformation, TerminalSidebar } from './BlindMarketTerminal'
+import './BlindMarketTerminal.css'
+import { formatPositionLabel, formatPositionSize, formatTerminalReturn } from './terminalFormatting'
 import {
   actionLabels,
   applyAction,
@@ -62,6 +65,7 @@ function round2(value: number): number {
 }
 
 export function BlindMarketGame({
+  context,
   scenario,
   onComplete,
 }: {
@@ -340,42 +344,22 @@ export function BlindMarketGame({
       stopPrice: currentExposure !== 0 ? stopPrice ?? undefined : undefined, timeMs: difficulty.timerSeconds * 1000 }) })
 
   if (stage === 'intro') {
-    return <Intro advanced={advanced} onStart={() => { trackEvent('scenario_started', { challengeType: 'blind-market', scenarioId: scenario.id, mode: scenario.mode }); if (advanced) startDecision(); else setStage('info') }} />
+    return <ChallengeIntro number="01" title={<>Слепой<br />рынок</>}
+      subtitle="Примите решение, не зная, что перед вами."
+      description="Вы увидите реальную рыночную ситуацию, но название актива и дата будут скрыты. Анализируйте график, принимайте решения и наблюдайте за развитием событий."
+      stats={[
+        { value: scenario.checkpoints.length, label: 'решения' },
+        { value: advanced ? `${difficulty.timerSeconds} с` : '2–3 мин', label: advanced ? 'на решение' : 'продолжительность' },
+        { value: CAPITAL.toLocaleString('ru-RU'), label: 'стартовый капитал' },
+      ]}
+      cta="Открыть рынок" visual={<ChallengeIllustration kind="blind-market" />}
+      mode={context?.mode ?? scenario.mode ?? 'standard'} state={stage}
+      onStart={() => { trackEvent('scenario_started', { challengeType: 'blind-market', scenarioId: scenario.id, mode: scenario.mode }); if (advanced) startDecision(); else setStage('info') }} />
   }
 
   if (stage === 'info') {
     return (
-      <div className="mx-auto w-full max-w-3xl px-5 py-14 sm:px-8">
-        <div className="flex flex-col gap-3">
-          <SectionLabel>Перед входом</SectionLabel>
-          <h2 className="text-3xl font-light tracking-[-0.02em] text-chalk-50 sm:text-4xl">
-            Что вам важно знать?
-          </h2>
-          <p className="text-sm leading-relaxed text-chalk-400">
-            Объём будет виден прямо на графике. Из остального вы можете открыть только
-            два блока — другие останутся закрытыми на весь сценарий.
-          </p>
-        </div>
-
-        <div className="mt-8">
-          <InfoSelector scenario={scenario} selected={selectedInfo} onSelect={selectInfo} />
-        </div>
-
-        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <span className="tnum text-sm text-chalk-500">
-            Выбрано {selectedInfo.length} из {MAX_INFO_SLOTS}
-          </span>
-          <Button
-            variant="primary"
-            size="lg"
-            disabled={selectedInfo.length < MAX_INFO_SLOTS}
-            onClick={startDecision}
-          >
-            Открыть рынок
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </Button>
-        </div>
-      </div>
+      <BlindMarketInfo scenario={scenario} selected={selectedInfo} onSelect={selectInfo} onStart={startDecision} />
     )
   }
 
@@ -407,32 +391,41 @@ export function BlindMarketGame({
     />
   )
 
+  const positionPanel = (
+    <PositionPanel
+      exposure={currentExposure}
+      pnl={timeline.pnl}
+      hasResult={decisions.some(decision => decision.exposure !== 0)}
+      entryPrice={entryLine?.price ?? null}
+      stopPrice={currentExposure !== 0 ? stopPrice : null}
+      currentPrice={currentPrice}
+    />
+  )
+
   return (
-    <div className="mx-auto w-full max-w-[1680px] px-4 py-5 sm:px-6 lg:py-6">
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="site-container blind-terminal">
+      <header className="blind-terminal-topline">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="flex items-center gap-2 text-sm text-chalk-400">
+          <span className="blind-terminal-identity">
             <EyeOff className="h-4 w-4 text-chalk-500" aria-hidden />
             Актив и дата скрыты
           </span>
-          {!advanced && <InfoStrip scenario={scenario} selected={selectedInfo} />}
-          {advanced && stage === 'decision' && <span role="timer" className="text-sm text-violet-soft">{remaining} с · по истечении — без изменения позиции</span>}
+          {advanced && stage === 'decision' && <span role="timer" className="blind-terminal-timer">{remaining} с · по истечении — без изменения позиции</span>}
         </div>
         <DecisionSteps
           current={checkpointIndex}
           total={scenario.checkpoints.length}
-          finished={stage === 'finished'}
+          confirmed={stage === 'revealing' || stage === 'finished'}
         />
       </header>
+      {!advanced && <RevealedInformation scenario={scenario} selected={selectedInfo} />}
 
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(270px,27%)]">
-        <section className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-800 px-3 py-2 sm:px-4">
-            <div className="flex items-center gap-4">
-              <div className="flex items-baseline gap-2">
-                <span className="tnum text-xl font-light text-chalk-50">
-                  {formatPrice(currentPrice)}
-                </span>
+      <div className="blind-terminal-workspace">
+        <section className="blind-terminal-chart">
+          <div className="blind-terminal-chart-toolbar">
+            <div className="blind-terminal-price-tools">
+              <div className="blind-terminal-price">
+                <strong>{formatPrice(currentPrice)}</strong>
                 <span className={`tnum text-xs ${pnlColor(dayChange)}`}>
                   {formatPercent(dayChange, 2)} за 24ч
                 </span>
@@ -484,34 +477,30 @@ export function BlindMarketGame({
             onMoveStop={(price) => setStopPrice(clampStop(price, stopSide))}
           />
 
-          <p className="hidden border-t border-ink-800 px-4 py-2 text-[11px] text-chalk-500 md:block">
+          <p className="blind-terminal-chart-help">
             Колесо — масштаб · перетаскивание — сдвиг · Esc — отменить инструмент · Delete —
             удалить выбранное
           </p>
         </section>
 
-        <aside className="flex flex-col gap-4 md:sticky md:top-4 md:self-start">
-          <PositionPanel
-            exposure={currentExposure}
-            pnl={timeline.pnl}
-            entryPrice={entryLine?.price ?? null}
-            stopPrice={currentExposure !== 0 ? stopPrice : null}
-            currentPrice={currentPrice}
-          />
-
+        <TerminalSidebar>
           {stage === 'revealing' || stage === 'finished' ? (
-            <div className="flex flex-col gap-3 rounded-xl border border-ink-700 bg-ink-900 p-5">
-              <p className="text-sm text-chalk-200">
-                {stage === 'finished' ? 'Сессия завершена' : 'Рынок идёт дальше…'}
-              </p>
-              <RevealProgress scenario={scenario} checkpointIndex={checkpointIndex} visible={visible} />
-              <p className="text-xs leading-relaxed text-chalk-500">
-                Разметку можно продолжать править — она сохранится до конца сценария.
-              </p>
-            </div>
+            <>
+              {positionPanel}
+              <div className="blind-terminal-reveal">
+                <p className="text-sm text-chalk-200">
+                  {stage === 'finished' ? 'Сессия завершена' : 'Рынок идёт дальше…'}
+                </p>
+                <RevealProgress scenario={scenario} checkpointIndex={checkpointIndex} visible={visible} />
+                <p className="text-xs leading-relaxed text-chalk-500">
+                  Разметку можно продолжать править — она сохранится до конца сценария.
+                </p>
+              </div>
+            </>
           ) : entryMode ? (
             <EntryControls
-              title={checkpointIndex === 0 ? 'Что вы делаете?' : 'Вы вне рынка. Что дальше?'}
+              positionPanel={positionPanel}
+              lastDecision={checkpointIndex === scenario.checkpoints.length - 1}
               notice={
                 lastStopHit
                   ? `Стоп сработал по ${formatPrice(lastStopHit.price)} — позиция закрыта.`
@@ -528,6 +517,8 @@ export function BlindMarketGame({
             />
           ) : (
             <FollowUpControls
+              positionPanel={positionPanel}
+              lastDecision={checkpointIndex === scenario.checkpoints.length - 1}
               actions={getFollowUpActions(currentExposure)}
               selected={action}
               confidence={confidence}
@@ -540,73 +531,28 @@ export function BlindMarketGame({
               onSubmit={submit}
             />
           )}
-        </aside>
+        </TerminalSidebar>
       </div>
     </div>
   )
 }
 
-function Intro({ advanced, onStart }: { advanced: boolean; onStart: () => void }) {
-  return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-5 py-20 sm:px-8 sm:py-28">
-      <div className="flex flex-col gap-4">
-        <SectionLabel>Испытание 01</SectionLabel>
-        <h1 className="text-4xl font-light tracking-[-0.025em] text-chalk-50 sm:text-5xl">
-          Слепой рынок
-        </h1>
-      </div>
-
-      <div className="flex flex-col gap-4 text-base leading-relaxed text-chalk-200">
-        <p>{advanced ? 'Перед вами синтетический рынок с ложными сигналами и неоднозначными движениями.' : 'Перед вами реальный рыночный паттерн, но мы скрыли актив и дату.'}</p>
-        <p>
-          Короткая сессия: три решения по мере развития ситуации. График рабочий — можно
-          менять таймфрейм, размечать уровни и ставить стоп.
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-2 rounded-xl border border-ink-700 bg-ink-900 p-5 text-sm text-chalk-400">
-        <span className="tnum">Капитал: {CAPITAL.toLocaleString('ru-RU')}</span>
-        <span>{advanced ? 'Три точки принятия решения, по 13 секунд после появления рынка' : 'Три точки принятия решения, 2–3 минуты'}</span>
-        <span>Минутные и часовые таймфреймы, дневной контекст и объём на графике</span>
-        <span>{advanced ? 'Оцените движение и объём на графике без текстовых подсказок' : 'Два дополнительных блока информации на выбор'}</span>
-      </div>
-
-      <Button variant="primary" size="lg" className="self-start" onClick={onStart}>
-        Открыть рынок
-        <ArrowRight className="h-4 w-4" aria-hidden />
-      </Button>
-    </div>
-  )
-}
-
-function DecisionSteps({
-  current,
-  total,
-  finished,
-}: {
+function DecisionSteps({ current, total, confirmed }: {
   current: number
   total: number
-  finished: boolean
+  confirmed: boolean
 }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-1.5" aria-hidden>
+    <div className="blind-terminal-progress" aria-live="polite">
+      <span className="blind-terminal-progress-label">
+        Решение <strong>{String(Math.min(current + 1, total)).padStart(2, '0')}</strong> / {String(total).padStart(2, '0')}
+      </span>
+      <div className="blind-terminal-steps" aria-hidden>
         {Array.from({ length: total }, (_, index) => (
-          <span
-            key={index}
-            className={`h-1.5 w-6 rounded-full ${
-              finished || index < current
-                ? 'bg-violet-accent'
-                : index === current
-                  ? 'bg-violet-accent/50'
-                  : 'bg-ink-700'
-            }`}
-          />
+          <span key={index} data-state={index < current || (index === current && confirmed)
+            ? 'complete' : index === current ? 'current' : 'future'} />
         ))}
       </div>
-      <span className="tnum text-sm text-chalk-500">
-        Решение {Math.min(current + 1, total)} из {total}
-      </span>
     </div>
   )
 }
@@ -647,10 +593,11 @@ function PanelStat({
   valueClassName?: string
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1">
-      <span className="text-[11px] tracking-[0.14em] text-chalk-500 uppercase">{label}</span>
-      <span className={`tnum truncate text-sm ${valueClassName}`}>{value}</span>
-      {hint ? <span className="tnum text-[11px] text-chalk-500">{hint}</span> : null}
+    <div className="blind-terminal-stat">
+      <dt>{label}</dt>
+      <dd className={valueClassName}>{value}
+        {hint ? <small>{hint}</small> : null}
+      </dd>
     </div>
   )
 }
@@ -658,26 +605,32 @@ function PanelStat({
 function PositionPanel({
   exposure,
   pnl,
+  hasResult,
   entryPrice,
   stopPrice,
   currentPrice,
 }: {
   exposure: number
   pnl: number
+  hasResult: boolean
   entryPrice: number | null
   stopPrice: number | null
   currentPrice: number
 }) {
   return (
-    <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-ink-700 bg-ink-900 px-5 py-4">
-      <PanelStat label="Позиция" value={exposureLabel(exposure)} />
+    <section className="blind-terminal-position" aria-label="Ваша позиция">
+      <div className="blind-terminal-panel-heading">
+        <h2>Ваша позиция</h2>
+        <span className="blind-terminal-position-status">{directionLabels[exposure > 0 ? 'long' : exposure < 0 ? 'short' : 'flat']}</span>
+      </div>
+      <dl className="blind-terminal-position-stats">
       <PanelStat
-        label="Результат"
-        value={formatPercent((pnl / CAPITAL) * 100)}
-        hint={formatMoney(pnl)}
-        valueClassName={pnlColor(pnl)}
+        label="Результат · от капитала"
+        value={hasResult ? formatTerminalReturn((pnl / CAPITAL) * 100) : '—'}
+        hint={hasResult ? formatMoney(pnl, Math.round(pnl) !== 0) : undefined}
+        valueClassName={hasResult ? pnlColor(pnl) : 'text-chalk-500'}
       />
-      <PanelStat label="Вход" value={entryPrice !== null ? formatPrice(entryPrice) : '—'} />
+      <PanelStat label="Цена входа" value={entryPrice !== null ? formatPrice(entryPrice) : '—'} />
       <PanelStat
         label="Стоп"
         value={stopPrice !== null ? formatPrice(stopPrice) : '—'}
@@ -688,7 +641,9 @@ function PositionPanel({
         }
         valueClassName={stopPrice !== null ? 'text-market-down' : 'text-chalk-500'}
       />
-    </div>
+      <PanelStat label="Размер позиции" value={exposure !== 0 ? formatPositionSize(exposure) : '—'} />
+      </dl>
+    </section>
   )
 }
 
@@ -759,7 +714,8 @@ function StopControl({
 }
 
 function EntryControls({
-  title,
+  positionPanel,
+  lastDecision,
   notice,
   direction,
   size,
@@ -770,7 +726,8 @@ function EntryControls({
   onConfidence,
   onSubmit,
 }: {
-  title: string
+  positionPanel: ReactNode
+  lastDecision: boolean
   notice: string | null
   direction: BlindDirection | null
   size: number | null
@@ -785,66 +742,74 @@ function EntryControls({
   const ready = direction !== null && (!needsSize || size !== null)
 
   return (
-    <div className="flex flex-col gap-5 rounded-xl border border-ink-700 bg-ink-900 p-5">
-      <div className="flex flex-col gap-3">
-        <h2 className="text-lg font-normal tracking-tight text-chalk-50">{title}</h2>
-        {notice ? (
-          <p className="rounded-lg border border-market-down/30 bg-market-down/5 px-3 py-2 text-xs text-chalk-200">
-            {notice}
-          </p>
-        ) : null}
-        <div className="grid gap-2">
-          <ChoiceButton
-            compact
-            label={directionLabels.long}
-            tone="up"
-            selected={direction === 'long'}
-            onClick={() => onDirection('long')}
-          />
-          <ChoiceButton
-            compact
-            label={directionLabels.short}
-            tone="down"
-            selected={direction === 'short'}
-            onClick={() => onDirection('short')}
-          />
-          <ChoiceButton
-            compact
-            label={directionLabels.flat}
-            selected={direction === 'flat'}
-            onClick={() => onDirection('flat')}
-          />
-        </div>
-      </div>
-
-      {needsSize ? (
-        <div className="flex animate-fade-up flex-col gap-3 border-t border-ink-800 pt-4">
-          <h3 className="text-sm text-chalk-400">Размер позиции</h3>
-          <div className="grid grid-cols-3 gap-2">
-            {POSITION_SIZES.map((value) => (
-              <PillButton key={value} selected={size === value} onClick={() => onSize(value)}>
-                {value * 100}%
-              </PillButton>
-            ))}
+    <div className="blind-terminal-decision">
+      <div className="blind-terminal-fields">
+        {positionPanel}
+        <div className="blind-terminal-decision-options flex flex-col gap-2">
+          <DecisionHeading />
+          {notice ? (
+            <p className="rounded-lg border border-market-down/30 bg-market-down/5 px-3 py-2 text-xs text-chalk-200">
+              {notice}
+            </p>
+          ) : null}
+          <div className="grid gap-2">
+            <DecisionChoice
+              label={directionLabels.long}
+              hint="Открыть длинную позицию"
+              selected={direction === 'long'}
+              onClick={() => onDirection('long')}
+            />
+            <DecisionChoice
+              label={directionLabels.short}
+              hint="Открыть короткую позицию"
+              selected={direction === 'short'}
+              onClick={() => onDirection('short')}
+            />
+            <DecisionChoice
+              label={directionLabels.flat}
+              hint="Не открывать позицию"
+              selected={direction === 'flat'}
+              onClick={() => onDirection('flat')}
+            />
           </div>
-          {stopControl}
         </div>
-      ) : null}
 
-      {direction ? (
-        <div className="animate-fade-up border-t border-ink-800 pt-4">
-          <ConfidenceSlider value={confidence} onChange={onConfidence} />
-        </div>
-      ) : null}
+        {needsSize ? (
+          <div className="blind-terminal-parameters flex animate-fade-up flex-col gap-2 border-t border-ink-800 pt-3">
+            <h3 className="text-sm text-chalk-400">Размер позиции</h3>
+            <div className="blind-terminal-sizes" role="group" aria-label="Размер позиции">
+              {POSITION_SIZES.map((value) => (
+                <button type="button" key={value} aria-pressed={size === value} onClick={() => onSize(value)}>
+                  {formatPositionSize(value)}
+                </button>
+              ))}
+            </div>
+            {stopControl}
+          </div>
+        ) : null}
 
-      <Button variant="primary" size="md" fullWidth disabled={!ready} onClick={onSubmit}>
-        Подтвердить решение
-      </Button>
+        {direction ? (
+          <div className="animate-fade-up border-t border-ink-800 pt-3">
+            <ConfidenceSlider value={confidence} onChange={onConfidence} />
+          </div>
+        ) : null}
+
+      </div>
+      <div className="blind-terminal-submit">
+        <Button className="blind-terminal-confirm" variant="primary" size="md" fullWidth disabled={!ready} aria-describedby={needsSize && size === null ? 'blind-size-required' : undefined} onClick={onSubmit}>
+          Подтвердить решение
+        </Button>
+        {needsSize && size === null
+          ? <p id="blind-size-required" className="blind-terminal-required" role="status">Выберите размер позиции.</p>
+          : <DecisionHint lastDecision={lastDecision} />}
+      </div>
     </div>
   )
 }
 
 function FollowUpControls({
+  positionPanel,
+  lastDecision,
   actions,
   selected,
   confidence,
@@ -854,6 +819,8 @@ function FollowUpControls({
   onConfidence,
   onSubmit,
 }: {
+  positionPanel: ReactNode
+  lastDecision: boolean
   actions: BlindFollowUpAction[]
   selected: BlindFollowUpAction | null
   confidence: number
@@ -864,48 +831,57 @@ function FollowUpControls({
   onSubmit: () => void
 }) {
   return (
-    <div className="flex flex-col gap-5 rounded-xl border border-ink-700 bg-ink-900 p-5">
-      <div className="flex flex-col gap-3">
-        <h2 className="text-lg font-normal tracking-tight text-chalk-50">
-          Рынок изменился. Что дальше?
-        </h2>
-        <div className="grid gap-2">
-          {actions.map((item) => (
-            <ChoiceButton
-              key={item}
-              compact
-              label={actionLabels[item]}
-              hint={hintForAction(item, exposure)}
-              selected={selected === item}
-              disabled={item === 'increase' && Math.abs(exposure) >= 1}
-              onClick={() => onSelect(item)}
-            />
-          ))}
+    <div className="blind-terminal-decision">
+      <div className="blind-terminal-fields">
+        {positionPanel}
+        <div className="blind-terminal-decision-options flex flex-col gap-2">
+          <DecisionHeading />
+          <div className="grid gap-2">
+            {actions.map((item) => (
+              <DecisionChoice
+                key={item}
+                label={actionLabels[item]}
+                hint={hintForAction(item, exposure)}
+                selected={selected === item}
+                disabled={item === 'increase' && Math.abs(exposure) >= 1}
+                onClick={() => onSelect(item)}
+              />
+            ))}
+          </div>
         </div>
+
+        {stopControl ? (
+          <div className="animate-fade-up border-t border-ink-800 pt-3">{stopControl}</div>
+        ) : null}
+
+        {selected ? (
+          <div className="animate-fade-up border-t border-ink-800 pt-3">
+            <ConfidenceSlider value={confidence} onChange={onConfidence} />
+          </div>
+        ) : null}
+
       </div>
-
-      {stopControl ? (
-        <div className="animate-fade-up border-t border-ink-800 pt-4">{stopControl}</div>
-      ) : null}
-
-      {selected ? (
-        <div className="animate-fade-up border-t border-ink-800 pt-4">
-          <ConfidenceSlider value={confidence} onChange={onConfidence} />
-        </div>
-      ) : null}
-
-      <Button variant="primary" size="md" fullWidth disabled={!selected} onClick={onSubmit}>
-        Подтвердить решение
-      </Button>
+      <div className="blind-terminal-submit">
+        <Button className="blind-terminal-confirm" variant="primary" size="md" fullWidth disabled={!selected} onClick={onSubmit}>
+          Подтвердить решение
+        </Button>
+        <DecisionHint lastDecision={lastDecision} />
+      </div>
     </div>
   )
 }
 
+function DecisionHeading() {
+  return <div>
+    <h2>Ваше решение</h2>
+    <p className="blind-terminal-decision-intro">Оцените рыночную ситуацию и выберите действие.</p>
+  </div>
+}
+
 /** Подсказка показывает результат действия, а не объясняет правила. */
 function hintForAction(action: BlindFollowUpAction, exposure: number): string | undefined {
-  if (action === 'hold') return undefined
   if (action === 'increase' && Math.abs(exposure) >= 1) return 'Позиция уже 100%'
-  return `Станет: ${exposureLabel(applyAction(exposure, action))}`
+  return `Станет: ${formatPositionLabel(applyAction(exposure, action))}`
 }
 
 function buildResult(

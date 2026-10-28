@@ -1,11 +1,12 @@
 import type { TimeframeId } from './timeframes'
 import type { BlindMarketScenario, OhlcvCandle } from '@/types/game'
+import { formatPercent } from '@/lib/formatting'
 
 const WINDOW = 20
 const mean = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length
 const returns = (prices: number[]) => prices.slice(1).map((price, i) => price / prices[i] - 1)
 const number = (value: number, digits = 1) => value.toLocaleString('ru-RU', { minimumFractionDigits: digits, maximumFractionDigits: digits })
-const signedPercent = (value: number) => `${value >= 0 ? '+' : '−'}${number(Math.abs(value) * 100)}%`
+const signedPercent = (value: number) => formatPercent(value * 100).replace('-', '−')
 
 export function pearsonCorrelation(a: number[], b: number[]): number {
   if (a.length !== b.length || a.length < 2) throw new Error('Correlation requires aligned observations')

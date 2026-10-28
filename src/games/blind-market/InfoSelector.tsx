@@ -1,8 +1,8 @@
-import { Lock } from 'lucide-react'
+import { useId } from 'react'
 import type { BlindInfoKey, BlindMarketScenario } from '@/types/game'
 
 /** Объём не выбирается отдельно: он всегда виден гистограммой под свечами. */
-export const INFO_KEYS: BlindInfoKey[] = [
+export const INFO_KEYS: Exclude<BlindInfoKey, 'volume'>[] = [
   'volatility',
   'correlation',
   'marketContext',
@@ -19,6 +19,13 @@ export const infoLabels: Record<BlindInfoKey, string> = {
 
 export const MAX_INFO_SLOTS = 2
 
+const infoDescriptions: Record<Exclude<BlindInfoKey, 'volume'>, string> = {
+  volatility: 'Характер и интенсивность изменения цены.',
+  correlation: 'Связь движения актива с общим рынком.',
+  marketContext: 'Движение рынка и актива в доступной истории.',
+  sector: 'Отрасль или область деятельности актива.',
+}
+
 /**
  * Выбор источников информации — самостоятельное игровое решение.
  * Важно не только что игрок сделает, но и что он считает важным знать.
@@ -32,11 +39,12 @@ export function InfoSelector({
   selected: BlindInfoKey[]
   onSelect: (key: BlindInfoKey) => void
 }) {
+  const id = useId()
   const full = selected.length >= MAX_INFO_SLOTS
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {INFO_KEYS.map((key) => {
+    <div className="blind-info-grid">
+      {INFO_KEYS.map((key, index) => {
         const isSelected = selected.includes(key)
         const isLocked = isSelected || full
 
@@ -44,27 +52,24 @@ export function InfoSelector({
           <button
             key={key}
             type="button"
+            aria-label={isSelected ? `${infoLabels[key]} — раскрыто` : infoLabels[key]}
+            aria-describedby={`${id}-${key}`}
+            data-revealed={isSelected}
             disabled={isLocked}
             onClick={() => onSelect(key)}
-            className={`flex min-h-24 flex-col items-start justify-between gap-3 rounded-xl border p-5 text-left transition-colors duration-150 ${
-              isSelected
-                ? 'cursor-default border-violet-accent bg-violet-accent/8'
-                : isLocked
-                  ? 'cursor-not-allowed border-ink-800 bg-ink-950 opacity-40'
-                  : 'border-ink-700 bg-ink-900 hover:border-ink-500'
-            }`}
+            className="blind-info-card"
           >
-            <span className="flex w-full items-center justify-between gap-2">
-              <span className="text-sm text-chalk-200">{infoLabels[key]}</span>
-              {isLocked && !isSelected ? (
-                <Lock className="h-3.5 w-3.5 shrink-0 text-chalk-500" aria-hidden />
-              ) : null}
+            <span className="blind-info-card-header">
+              <span className="blind-info-card-title">
+                <span className="blind-info-card-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                <span className="blind-info-card-name">{infoLabels[key]}</span>
+              </span>
+              {isSelected
+                ? <span className="blind-info-revealed" aria-hidden="true">Раскрыто</span>
+                : <span className="blind-info-indicator" aria-hidden="true" />}
             </span>
-
-            <span
-              className={`tnum text-base font-light ${isSelected ? 'text-chalk-50' : 'text-chalk-500'}`}
-            >
-              {isSelected ? scenario.info[key] : '— — —'}
+            <span id={`${id}-${key}`} className="blind-info-card-description">
+              {isSelected ? scenario.info[key] : infoDescriptions[key]}
             </span>
           </button>
         )
