@@ -29,7 +29,7 @@ export function createPostgresRoomService(pool: Pool): RoomService {
     async get(id, token = '') {
       await initialize()
       const result = await pool.query<{ data: StoredRoom }>('SELECT data FROM market_trials_rooms WHERE id = $1', [id])
-      if (!result.rows[0]) throw new ApiError(404, 'Дуэль не найдена. Проверь ссылку или создай новую.')
+      if (!result.rows[0]) throw new ApiError(404, 'Дуэль не найдена. Проверьте ссылку или создайте новую.')
       return roomView(result.rows[0].data, token)
     },
     async act(id, token, action, body = {}) {
@@ -39,7 +39,7 @@ export function createPostgresRoomService(pool: Pool): RoomService {
         await client.query('BEGIN')
         // One row lock serializes simultaneous joins and finishes across all instances.
         const result = await client.query<{ data: StoredRoom }>('SELECT data FROM market_trials_rooms WHERE id = $1 FOR UPDATE', [id])
-        if (!result.rows[0]) throw new ApiError(404, 'Дуэль не найдена. Проверь ссылку или создай новую.')
+        if (!result.rows[0]) throw new ApiError(404, 'Дуэль не найдена. Проверьте ссылку или создайте новую.')
         const room = updateRoom(result.rows[0].data, token, action, body)
         await client.query('UPDATE market_trials_rooms SET data = $2::jsonb WHERE id = $1', [id, JSON.stringify(room)])
         await client.query('COMMIT')

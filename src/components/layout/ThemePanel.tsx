@@ -9,7 +9,7 @@ const themes = [
 ] as const
 
 /** Local theme preview, kept outside the site navigation. */
-export function ThemePanel() {
+export function ThemePanel({ inline = false }: { inline?: boolean }) {
   const theme = useThemePreference()
   const panel = useRef<HTMLDetailsElement>(null)
   const trigger = useRef<HTMLElement>(null)
@@ -35,7 +35,7 @@ export function ThemePanel() {
   }, [])
 
   return (
-    <details ref={panel} className={styles.panel}>
+    <details ref={panel} className={`${styles.panel}${inline ? ` ${styles.inline}` : ''}`}>
       <summary ref={trigger} className={styles.trigger} aria-label="Тема сайта: отладка"><span aria-hidden="true">◐</span> Тема</summary>
       <fieldset className={styles.options}>
         <legend>Тема сайта</legend>

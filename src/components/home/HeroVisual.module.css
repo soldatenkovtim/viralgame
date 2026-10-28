@@ -1,0 +1,17 @@
+.visual { width: 100%; max-width: 599.0625px; min-width: 0; justify-self: end; align-self: start; position: relative; }
+.stage { width: 100%; aspect-ratio: 620 / 540; position: relative; isolation: isolate; }
+.poster, .canvas, .media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+/* Match exelsior's illustration footprint without cropping the simulation. */
+.simulation { width: 111%; margin-left: -5%; aspect-ratio: 620 / 560; }
+.simulation > .poster, .simulation > .canvas { height: 96.4286%; }
+.canvas { opacity: 0; }
+/* Once painted, the transparent canvas replaces the fallback. */
+.canvas[data-ready="true"] { opacity: 1; }
+.stage:has(.canvas[data-ready="true"]) .poster { visibility: hidden; }
+@media (max-width: 767px) {
+  .visual { max-width: 470px; justify-self: center; margin: 28px auto 0; }
+  .simulation { width: 100%; margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .media { visibility: hidden; }
+}

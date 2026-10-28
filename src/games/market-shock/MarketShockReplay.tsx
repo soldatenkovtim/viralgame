@@ -149,7 +149,7 @@ function ExposureStrip({
         <span>Экспозиция по ходу сценария</span>
         <span className="flex flex-wrap gap-x-4 gap-y-1">
           <Legend color={CHART_COLORS.entry} label="ENTRY — средняя цена" dashed />
-          {result.levels.length ? <Legend color={CHART_COLORS.level} label="Твои уровни" /> : null}
+          {result.levels.length ? <Legend color={CHART_COLORS.level} label="Ваши уровни" /> : null}
         </span>
       </div>
       <div className="flex h-9 w-full gap-0.5 overflow-hidden rounded-md">

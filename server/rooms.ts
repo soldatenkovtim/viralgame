@@ -12,7 +12,7 @@ export function createRoomService(filename: string) {
   const save = (room: StoredRoom) => db.prepare('INSERT OR REPLACE INTO rooms (id, data) VALUES (?, ?)').run(room.id, JSON.stringify(room))
   const read = (id: string): StoredRoom => {
     const row = db.prepare('SELECT data FROM rooms WHERE id = ?').get(id)
-    if (!row) throw new ApiError(404, 'Дуэль не найдена. Проверь ссылку или создай новую.')
+    if (!row) throw new ApiError(404, 'Дуэль не найдена. Проверьте ссылку или создайте новую.')
     return JSON.parse(row.data as string)
   }
   return {

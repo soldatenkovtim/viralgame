@@ -248,14 +248,14 @@ function Intro({ seconds, marketCount, onStart }: { seconds: number; marketCount
       </div>
 
       <p className="text-lg leading-relaxed font-medium text-chalk-50">
-        Один актив торгуется на нескольких площадках. Найди расхождение, которое остаётся прибыльным после комиссий и исполнения.
+        Один актив торгуется на нескольких площадках. Найдите расхождение, которое остаётся прибыльным после комиссий и исполнения.
       </p>
       <p className="text-base leading-relaxed font-medium text-chalk-200">
         Покупка идёт по Ask. Продажа — по Bid. Не каждое расхождение является сделкой.
       </p>
 
       <p className="text-sm leading-relaxed text-chalk-400">
-        Считай, что капитал уже размещён на всех площадках. Переводы между ними не учитываются.
+        Считайте, что капитал уже размещён на всех площадках. Переводы между ними не учитываются.
         Объём сверх лучшей котировки исполняется по следующим уровням, показанным в таблице.
       </p>
       <p className="text-xs leading-relaxed text-chalk-500">
@@ -364,7 +364,7 @@ function QuoteBoard({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-ink-800 px-4 py-2.5 text-xs text-chalk-500 sm:px-6">
-        <span>Bid — площадка купит у тебя. Ask — ты купишь у площадки.</span>
+        <span>Bid — площадка купит у вас. Ask — вы купите у площадки.</span>
         {converging ? (
           <span className="flex animate-fade items-center gap-1.5 text-market-down">
             <TrendingDown className="h-3.5 w-3.5" aria-hidden />

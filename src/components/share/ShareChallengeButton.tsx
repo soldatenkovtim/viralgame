@@ -24,7 +24,7 @@ function LegacyShareButton({ payload }: { payload: SharePayload }) {
   const [state, setState] = useState<'idle' | 'shared' | 'copied'>('idle')
   const url = buildShareUrl(payload)
   const title = challengeShareTitles[payload.t]
-  const text = `Прошёл сценарий «${title}» в Market Trials. Пройди тот же рынок и сравним решения.`
+  const text = `Прошёл сценарий «${title}» в игре «Рыночный вызов». Пройдите тот же рынок и сравним решения.`
 
   const handleShare = async () => {
     trackEvent('challenge_shared', {
@@ -33,7 +33,7 @@ function LegacyShareButton({ payload }: { payload: SharePayload }) {
       seed: payload.d,
     })
 
-    const outcome = await shareOrCopy({ title: 'Market Trials', text, url })
+    const outcome = await shareOrCopy({ title: 'Рыночный вызов', text, url })
     if (outcome === 'shared') setState('shared')
     if (outcome === 'copied') setState('copied')
     if (outcome !== 'failed') window.setTimeout(() => setState('idle'), 2600)

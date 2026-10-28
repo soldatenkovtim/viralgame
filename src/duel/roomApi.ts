@@ -22,7 +22,7 @@ async function request<T>(path: string, token: string, body?: unknown): Promise<
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     signal: AbortSignal.timeout(10000),
   })
-  if (!response.headers.get('content-type')?.includes('application/json')) throw new Error('Сервер дуэлей недоступен. Запусти приложение вместе с сервером.')
+  if (!response.headers.get('content-type')?.includes('application/json')) throw new Error('Сервер дуэлей недоступен. Запустите приложение вместе с сервером.')
   const data = await response.json()
   if (!response.ok) throw new Error(data.error || 'Не удалось связаться с сервером дуэлей.')
   return data as T
@@ -52,4 +52,4 @@ export async function finishRoom(room: RoomView, result: DuelPlayerResult) {
   return next
 }
 export function roomPath(id: string) { return `/duel/room/${id}` }
-export function errorText(error: unknown) { return error instanceof Error ? error.message : 'Не удалось подключиться. Попробуй ещё раз.' }
+export function errorText(error: unknown) { return error instanceof Error ? error.message : 'Не удалось подключиться. Попробуйте ещё раз.' }

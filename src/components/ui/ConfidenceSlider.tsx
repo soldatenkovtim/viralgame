@@ -1,7 +1,7 @@
 export function ConfidenceSlider({
   value,
   onChange,
-  label = 'Насколько ты уверен?',
+  label = 'Насколько вы уверены?',
 }: {
   value: number
   onChange: (value: number) => void

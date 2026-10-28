@@ -29,7 +29,7 @@ export function ComparisonTable({
       <div className="grid grid-cols-[1fr_1fr_1fr] gap-4 border-b border-ink-800 px-6 py-4">
         <SectionLabel>Решение</SectionLabel>
         <div className="text-[11px] font-medium tracking-[0.18em] text-violet-soft uppercase">
-          Ты
+          Вы
         </div>
         <div className="text-[11px] font-medium tracking-[0.18em] text-chalk-500 uppercase">
           {theirName}
@@ -81,7 +81,7 @@ export function GhostTimeline({
               {entry.moment}
             </span>
             <div className="flex flex-col gap-1.5">
-              <GhostRow color="violet" name="ты" value={entry.mine} />
+              <GhostRow color="violet" name="вы" value={entry.mine} />
               <GhostRow
                 color={diverged ? 'chalk' : 'chalk'}
                 name={theirName}

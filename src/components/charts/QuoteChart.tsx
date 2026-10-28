@@ -267,10 +267,10 @@ export function QuoteLegend({ replay = false }: { replay?: boolean }) {
         Рыночная цена
       </LegendItem>
       <LegendItem swatch={<span className="block w-4 border-t border-market-up" />}>
-        Твой bid
+        Ваш bid
       </LegendItem>
       <LegendItem swatch={<span className="block w-4 border-t border-market-down" />}>
-        Твой ask
+        Ваш ask
       </LegendItem>
       <LegendItem swatch={<span className="block h-2 w-2 rounded-full bg-chalk-400" />}>
         Сделка

@@ -118,7 +118,7 @@ export function MarketMakerGame({
   return (
     <div className="mx-auto w-full max-w-[1180px] px-5 py-8 sm:px-8 sm:py-12">
       <header className="mb-6 flex items-center justify-between gap-6">
-        <span className="text-sm text-chalk-400">Ты котируешь рынок</span>
+        <span className="text-sm text-chalk-400">Вы котируете рынок</span>
         <div className="flex items-center gap-4">
           <span className="tnum text-sm text-chalk-200">{snapshot.secondsLeft} с</span>
           <div className="h-1 w-28 overflow-hidden rounded-full bg-ink-700 sm:w-48">
@@ -184,7 +184,7 @@ export function MarketMakerGame({
           {import.meta.env.DEV && <AccountingDebug data={snapshot.accounting} />}
 
           <p className="text-xs leading-relaxed text-chalk-500">
-            Справедливая цена скрыта. У тебя есть рыночная цена, собственная котировка и
+            Справедливая цена скрыта. У вас есть рыночная цена, собственная котировка и
             поток сделок. Клавиши: ← → сдвиг, ↓ ↑ спред, H — хедж.
           </p>
         </aside>
@@ -351,7 +351,7 @@ function Intro({
 
       <div className="flex flex-col gap-4 text-base leading-relaxed text-chalk-200">
         <p>
-          Ты выставляешь двустороннюю котировку вокруг рынка. Справедливая цена скрыта —
+          Вы выставляете двустороннюю котировку вокруг рынка. Справедливая цена скрыта —
           её выдают только рыночная цена и поток сделок.
         </p>
         <p>
@@ -362,7 +362,7 @@ function Intro({
 
       <ul className="flex flex-col gap-2.5 rounded-xl border border-ink-700 bg-ink-900 p-5 text-sm text-chalk-400">
         {advanced && <li>Хедж на 20% дороже. Позиция свыше 12 лотов несёт дополнительные издержки удержания.</li>}
-        <li>Смещай котировку целиком или меняй ширину спреда</li>
+        <li>Смещайте котировку целиком или меняйте ширину спреда</li>
         <li>Середина котировки ограничена ±{MM_MAX_QUOTE_OFFSET_RATIO * 100}% от рыночной цены</li>
         <li>Inventory переоценивается по рынку в каждый момент</li>
         <li>Комиссия сделки — {formatPrice(MM_TRANSACTION_COST_PER_UNIT * MM_LOT_SIZE)} за лот</li>

@@ -68,20 +68,20 @@ function RoomSession({ id }: { id: string }) {
       seed: room.seed, createdAt: room.createdAt, challengerResult: room.results[room.role === 'host' ? 'guest' : 'host'] }} yours={room.results[room.role]} />
   </>
   if (started && mine === 'playing' && !pending) return <>
-    <div className="mx-auto max-w-5xl px-5 pt-5 text-sm text-chalk-400" role="status">Дуэль · Соперник: {status[other]}{connectionError && ' · Связь прервана. Продолжай — результат сохраним и отправим после восстановления.'}</div>
+    <div className="mx-auto max-w-5xl px-5 pt-5 text-sm text-chalk-400" role="status">{challengeTitles[room.challengeType]} · Дуэль · Соперник: {status[other]}{connectionError && ' · Связь прервана. Продолжайте — результат сохраним и отправим после восстановления.'}</div>
     <DuelGame market={room} onComplete={finish} />
   </>
   return <section className="mx-auto flex max-w-2xl flex-col gap-6 px-5 py-12 text-chalk-200">
     <Link to="/play" className="text-sm text-chalk-400">← К испытаниям</Link>
     <p className="text-sm text-violet-soft">Дуэль · {challengeTitles[room.challengeType]}</p>
-    <h1 className="text-3xl text-chalk-50">{mine === 'finished' ? 'Твой результат сохранён' : room.role ? 'Комната на двоих' : 'Друг приглашает тебя в дуэль'}</h1>
+    <h1 className="text-3xl text-chalk-50">{mine === 'finished' ? 'Ваш результат сохранён' : room.role ? 'Комната на двоих' : 'Друг приглашает вас в дуэль'}</h1>
     <p>{mine === 'finished' ? 'Ждём завершения соперника. Сравнение появится здесь автоматически. Можно закрыть страницу и вернуться позже.' : 'У вас один и тот же рынок и независимые решения. Можно начать сразу, не дожидаясь друг друга. Результаты откроются после завершения обоих.'}</p>
     <div className="grid grid-cols-2 gap-4">
-      <div className="rounded-xl border border-ink-700 p-5"><p className="text-chalk-50">{room.role === 'host' ? 'Ты' : 'Создатель'}</p><p className="mt-2 text-sm text-chalk-400">{status[room.host]}</p></div>
-      <div className="rounded-xl border border-ink-700 p-5"><p className="text-chalk-50">{room.role === 'guest' ? 'Ты' : 'Друг'}</p><p className="mt-2 text-sm text-chalk-400">{status[room.guest]}</p></div>
+      <div className="rounded-xl border border-ink-700 p-5"><p className="text-chalk-50">{room.role === 'host' ? 'Вы' : 'Создатель'}</p><p className="mt-2 text-sm text-chalk-400">{status[room.host]}</p></div>
+      <div className="rounded-xl border border-ink-700 p-5"><p className="text-chalk-50">{room.role === 'guest' ? 'Вы' : 'Друг'}</p><p className="mt-2 text-sm text-chalk-400">{status[room.guest]}</p></div>
     </div>
     {(error || connectionError) && <p role="alert" className="text-sm text-market-down">{error || connectionError}</p>}
-    {pending ? <div className="flex flex-col gap-3"><p>Прохождение сохранено на этом устройстве. Отправь результат в комнату для сравнения.</p><Button disabled={busy} onClick={() => void sendResult(pending)}>{busy ? 'Сохраняем результат…' : 'Отправить результат'}</Button></div>
+    {pending ? <div className="flex flex-col gap-3"><p>Прохождение сохранено на этом устройстве. Отправьте результат в комнату для сравнения.</p><Button disabled={busy} onClick={() => void sendResult(pending)}>{busy ? 'Сохраняем результат…' : 'Отправить результат'}</Button></div>
       : !room.role ? <Button variant="primary" disabled={busy || room.guest !== 'invited'} onClick={async () => {
         setBusy(true); setError('')
         try { const next = await joinRoom(id, room.challengeType); setRoom(previous => mergeRoom(previous, next)) } catch (error) { setError(errorText(error)) } finally { setBusy(false) }
@@ -92,11 +92,11 @@ function RoomSession({ id }: { id: string }) {
       }}>{busy ? 'Подключаемся…' : mine === 'playing' ? 'Начать своё прохождение заново' : 'Начать своё прохождение'}</Button>
       {mine === 'playing' && <p className="text-sm text-chalk-400">Незавершённая попытка начнётся с начала на том же рынке. На игру друга это не повлияет.</p>}</div>}
     {room.role === 'host' && <div className="flex flex-col gap-3 rounded-xl border border-ink-700 p-5">
-      <h2 className="text-lg text-chalk-50">Пригласи друга</h2>
-      <p className="text-sm text-chalk-400">Отправь эту ссылку. Она открывает место второго игрока.</p>
+      <h2 className="text-lg text-chalk-50">Пригласите друга</h2>
+      <p className="text-sm text-chalk-400">Отправьте эту ссылку. Она открывает место второго игрока.</p>
       <input aria-label="Ссылка для друга" readOnly value={invite} onFocus={event => event.target.select()} className="w-full rounded border border-ink-700 bg-ink-950 p-3 text-sm" />
-      <Button onClick={async () => { try { await navigator.clipboard.writeText(invite); setCopied(true) } catch { setCopied(false); setError('Скопируй ссылку из поля выше.') } }}>{copied ? 'Ссылка скопирована' : 'Скопировать приглашение'}</Button>
-      {origin !== window.location.origin && <p className="text-xs text-chalk-400">Для теста в общей Wi-Fi сети. Оставь сервер на компьютере включённым.</p>}
+      <Button onClick={async () => { try { await navigator.clipboard.writeText(invite); setCopied(true) } catch { setCopied(false); setError('Скопируйте ссылку из поля выше.') } }}>{copied ? 'Ссылка скопирована' : 'Скопировать приглашение'}</Button>
+      {origin !== window.location.origin && <p className="text-xs text-chalk-400">Для теста в общей Wi-Fi сети. Оставьте сервер на компьютере включённым.</p>}
     </div>}
   </section>
 }

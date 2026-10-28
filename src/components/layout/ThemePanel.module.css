@@ -43,3 +43,8 @@
 .options label { display: flex; clear: both; align-items: center; gap: 10px; min-height: 40px; cursor: pointer; }
 .options input { accent-color: var(--accent); width: 16px; height: 16px; }
 .options p { margin-top: 10px; color: var(--muted); font-size: 11px; }
+
+/* On the home page the debug control occupies real footer space, even when open. */
+.inline { position: relative; inset: auto; z-index: auto; flex-basis: 100%; }
+.inline .trigger { width: max-content; }
+.inline .options { position: static; margin-top: 12px; max-width: 100%; }

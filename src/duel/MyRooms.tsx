@@ -15,7 +15,7 @@ export function MyRooms() {
   }, [])
   if (!rooms.length) return null
   return <section className="mb-8 rounded-xl border border-ink-700 p-5">
-    <h2 className="mb-4 text-lg text-chalk-50">Твои дуэли</h2>
+    <h2 className="mb-4 text-lg text-chalk-50">Ваши дуэли</h2>
     <div className="flex flex-col gap-3">{rooms.map(room => <Link key={room.id} to={roomPath(room.id)} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-ink-850 px-4 py-3 text-sm text-chalk-200 hover:text-violet-soft">
       <span>{challengeTitles[room.challengeType]} · {new Date(room.createdAt).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
       <span>{room.results ? 'Смотреть сравнение →' : room[room.role!] === 'finished' ? 'Ожидаем соперника →' : 'Вернуться в комнату →'}</span>

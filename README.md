@@ -1,4 +1,4 @@
-# MARKET TRIALS
+# Рыночный вызов
 
 Браузерный прототип игровой платформы для алготрейдинговой компании.
 
@@ -161,7 +161,7 @@ Result records include scenario ID, mode, raw score and normalized score (curren
 
 Historical sources and transformation details: [data notes](src/scenarios/historical/README.md). Debug: append `?debug=1` and select a scenario in the panel; its list follows the current mode.
 
-## Оформление Market Trials
+## Оформление «Рыночного вызова»
 
 Общая система оформления: шрифты Geist / Geist Mono,
 контейнер до 1600px, адаптивные отступы, типографика, светлая и тёмная палитры,

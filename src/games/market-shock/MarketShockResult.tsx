@@ -231,7 +231,7 @@ function CrowdByPhase({
                     <div className="flex items-baseline justify-between text-sm">
                       <span className={own ? 'text-chalk-50' : 'text-chalk-400'}>
                         {actionLabels[action]}
-                        {own ? <span className="ml-2 text-xs text-violet-soft">ты</span> : null}
+                        {own ? <span className="ml-2 text-xs text-violet-soft">вы</span> : null}
                       </span>
                       <span className="tnum text-chalk-200">{crowd[action]}%</span>
                     </div>

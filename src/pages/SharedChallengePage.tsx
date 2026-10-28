@@ -169,10 +169,10 @@ function Invitation({
 
       <div className="flex flex-col gap-4">
         <h1 className="text-4xl font-extrabold tracking-[-0.03em] text-chalk-50 sm:text-5xl">
-          Тебе отправили рынок
+          Вам отправили рынок
         </h1>
         <p className="text-lg leading-relaxed text-chalk-200">
-          Пройди тот же сценарий и сравни решения.
+          Пройдите тот же сценарий и сравните решения.
         </p>
       </div>
 
@@ -300,7 +300,7 @@ function buildComparison(payload: SharePayload, result: AnyResult): ComparisonVi
       })),
     ]
 
-    // Маркеры обоих игроков на одном графике: круг — ты, квадрат — другой игрок.
+    // Маркеры обоих игроков на одном графике: круг — вы, квадрат — другой игрок.
     const markers: ChartMarker[] = []
     blind.decisions.forEach((_, index) => {
       markers.push({
@@ -308,7 +308,7 @@ function buildComparison(payload: SharePayload, result: AnyResult): ComparisonVi
         position: 'belowBar',
         shape: 'circle',
         color: '#7b5cff',
-        text: `ты: ${myLabels[index]}`,
+        text: `вы: ${myLabels[index]}`,
       })
     })
     payload.a.forEach((label, index) => {
@@ -457,13 +457,13 @@ function buildArbitrageComparison(
   if (myLabels.every((label, index) => label === payload.a[index])) {
     sentences.push('Вы собрали одни и те же маршруты с тем же размером — рынок читался одинаково.')
   } else if (arb.tradeCount < theirTrades && myReturn > theirReturn) {
-    sentences.push('Ты совершил меньше сделок, но сохранил больший чистый edge.')
+    sentences.push('Вы совершили меньше сделок, но сохранили больший чистый edge.')
   } else if (arb.tradeCount > theirTrades && myReturn > theirReturn) {
-    sentences.push('Ты открыл больше сделок, и дополнительные сделки пережили комиссии.')
+    sentences.push('Вы открыли больше сделок, и дополнительные сделки пережили комиссии.')
   } else if (arb.tradeCount > theirTrades && myReturn < theirReturn) {
-    sentences.push('Ты торговал чаще, но часть лишних сделок ушла на комиссии.')
+    sentences.push('Вы торговали чаще, но часть лишних сделок ушла на комиссии.')
   } else if (arb.falseTrades < theirFalse) {
-    sentences.push('Ты реже входил в сделки, которые после комиссий уходили в минус.')
+    sentences.push('Вы реже входили в сделки, которые после комиссий уходили в минус.')
   } else if (arb.falseTrades > theirFalse) {
     sentences.push('Разница в результате — в сделках, где комиссии оказались выше расхождения.')
   } else if (myReturn !== theirReturn) {
@@ -474,7 +474,7 @@ function buildArbitrageComparison(
     const myShare = Math.round((myCaptured / available) * 100)
     const theirShare = Math.round((theirCaptured / available) * 100)
     sentences.push(
-      `Из доступного в этих рынках edge ты собрал ${myShare}%, другой игрок — ${theirShare}%.`,
+      `Из доступного в этих рынках edge вы собрали ${myShare}%, другой игрок — ${theirShare}%.`,
     )
   }
 

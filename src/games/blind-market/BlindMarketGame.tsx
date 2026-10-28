@@ -349,10 +349,10 @@ export function BlindMarketGame({
         <div className="flex flex-col gap-3">
           <SectionLabel>Перед входом</SectionLabel>
           <h2 className="text-3xl font-light tracking-[-0.02em] text-chalk-50 sm:text-4xl">
-            Что тебе важно знать?
+            Что вам важно знать?
           </h2>
           <p className="text-sm leading-relaxed text-chalk-400">
-            Объём будет виден прямо на графике. Из остального ты можешь открыть только
+            Объём будет виден прямо на графике. Из остального вы можете открыть только
             два блока — другие останутся закрытыми на весь сценарий.
           </p>
         </div>
@@ -381,14 +381,14 @@ export function BlindMarketGame({
 
   const chartHint =
     tool === 'level'
-      ? 'Кликни по графику, чтобы поставить уровень'
+      ? 'Кликните по графику, чтобы поставить уровень'
       : tool === 'trend'
-        ? 'Кликни две точки, чтобы провести трендовую линию'
+        ? 'Кликните две точки, чтобы провести трендовую линию'
         : tool === 'stop'
           ? (stopError ??
             (stopSide > 0
-              ? 'Кликни ниже текущей цены, чтобы поставить стоп'
-              : 'Кликни выше текущей цены, чтобы поставить стоп'))
+              ? 'Кликните ниже текущей цены, чтобы поставить стоп'
+              : 'Кликните выше текущей цены, чтобы поставить стоп'))
           : null
 
   const stopControl = (
@@ -511,7 +511,7 @@ export function BlindMarketGame({
             </div>
           ) : entryMode ? (
             <EntryControls
-              title={checkpointIndex === 0 ? 'Что ты делаешь?' : 'Ты вне рынка. Что дальше?'}
+              title={checkpointIndex === 0 ? 'Что вы делаете?' : 'Вы вне рынка. Что дальше?'}
               notice={
                 lastStopHit
                   ? `Стоп сработал по ${formatPrice(lastStopHit.price)} — позиция закрыта.`
@@ -557,7 +557,7 @@ function Intro({ advanced, onStart }: { advanced: boolean; onStart: () => void }
       </div>
 
       <div className="flex flex-col gap-4 text-base leading-relaxed text-chalk-200">
-        <p>{advanced ? 'Перед тобой синтетический рынок с ложными сигналами и неоднозначными движениями.' : 'Перед тобой реальный рыночный паттерн, но мы скрыли актив и дату.'}</p>
+        <p>{advanced ? 'Перед вами синтетический рынок с ложными сигналами и неоднозначными движениями.' : 'Перед вами реальный рыночный паттерн, но мы скрыли актив и дату.'}</p>
         <p>
           Короткая сессия: три решения по мере развития ситуации. График рабочий — можно
           менять таймфрейм, размечать уровни и ставить стоп.
@@ -568,7 +568,7 @@ function Intro({ advanced, onStart }: { advanced: boolean; onStart: () => void }
         <span className="tnum">Капитал: {CAPITAL.toLocaleString('ru-RU')}</span>
         <span>{advanced ? 'Три точки принятия решения, по 13 секунд после появления рынка' : 'Три точки принятия решения, 2–3 минуты'}</span>
         <span>Минутные и часовые таймфреймы, дневной контекст и объём на графике</span>
-        <span>{advanced ? 'Оцени движение и объём на графике без текстовых подсказок' : 'Два дополнительных блока информации на выбор'}</span>
+        <span>{advanced ? 'Оцените движение и объём на графике без текстовых подсказок' : 'Два дополнительных блока информации на выбор'}</span>
       </div>
 
       <Button variant="primary" size="lg" className="self-start" onClick={onStart}>
@@ -723,9 +723,9 @@ function StopControl({
             : 'border-ink-600 text-chalk-200 hover:border-market-down/60'
         }`}
       >
-        <span>{placing ? 'Кликни по графику…' : 'Поставить стоп на графике'}</span>
+        <span>{placing ? 'Кликните по графику…' : 'Поставить стоп на графике'}</span>
         <span className="text-xs text-chalk-500">
-          {placing ? 'Нажми ещё раз, чтобы отменить' : 'Необязательно'}
+          {placing ? 'Нажмите ещё раз, чтобы отменить' : 'Необязательно'}
         </span>
       </button>
     )

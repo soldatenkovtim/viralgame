@@ -96,10 +96,10 @@ export function BlindReplay({
         <LegendItem color="#9b84ff" label="Сокращение и выход" dot />
         <LegendItem color={CHART_COLORS.stop} label="Стоп" dashed />
         {annotations.levels.length ? (
-          <LegendItem color={CHART_COLORS.level} label="Твои уровни" />
+          <LegendItem color={CHART_COLORS.level} label="Ваши уровни" />
         ) : null}
         {annotations.trendLine ? (
-          <LegendItem color={CHART_COLORS.trend} label="Твоя трендовая линия" />
+          <LegendItem color={CHART_COLORS.trend} label="Ваша трендовая линия" />
         ) : null}
       </div>
     </section>

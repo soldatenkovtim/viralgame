@@ -27,7 +27,7 @@ export function MarketShockIntro({
       </div>
 
       <p className="text-base leading-relaxed text-chalk-200">
-        Тебе передали уже открытую позицию. Сначала оцени рынок, затем управляй позицией по мере
+        Вам передали уже открытую позицию. Сначала оцените рынок, затем управляйте позицией по мере
         развития ситуации.
       </p>
 
@@ -42,7 +42,7 @@ export function MarketShockIntro({
 
       <p className="text-xs leading-relaxed text-chalk-500">
         Рынок будет развиваться в три этапа. На каждое решение — {scenario.mode === 'advanced' ? 13 : DECISION_SECONDS} секунд; отсчёт
-        начнётся только после того, как ты изучишь график. PnL считается в процентах от капитала.
+        начнётся только после того, как вы изучите график. PnL считается в процентах от капитала.
       </p>
 
       <Button variant="primary" size="lg" className="self-start" onClick={onStart}>

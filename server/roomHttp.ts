@@ -36,7 +36,7 @@ export function roomMiddleware(service: RoomService) {
     } catch (error) {
       res.statusCode = error instanceof ApiError ? error.status : 500
       if (!(error instanceof ApiError)) console.error('Duel API request failed')
-      res.end(JSON.stringify({ error: error instanceof ApiError ? error.message : 'Сервер временно недоступен. Попробуй ещё раз.' }))
+      res.end(JSON.stringify({ error: error instanceof ApiError ? error.message : 'Сервер временно недоступен. Попробуйте ещё раз.' }))
     }
   }
 }
