@@ -2,7 +2,6 @@ import { ArrowUpRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { HeroVisual } from '@/components/home/HeroVisual'
 import { TrialsSection } from '@/components/home/TrialsSection'
-import { LeaderboardSection } from '@/components/home/LeaderboardSection'
 import { ProgressSection } from '@/components/home/ProgressSection'
 import { gameEntry } from '@/lib/gameEntry'
 import { Button } from '@/components/ui/Button'
@@ -27,7 +26,7 @@ export function HomePage() {
             <div className="hero-copy">
               <h1 className="hero-title">РЫНОЧНЫЙ<br />ВЫЗОВ<span className="text-violet-accent">.</span></h1>
               <p className="hero-manifesto">РЫНОК МЕНЯЕТСЯ. КАК РЕШИТЕ ВЫ?</p>
-              <p className="hero-description">Четыре испытания. Непредсказуемые рыночные ситуации. Проверьте свои решения, набирайте очки и поборитесь за первое место в рейтинге.</p>
+              <p className="hero-description">Четыре испытания. Непредсказуемые рыночные ситуации. Проверьте свои решения, набирайте очки и сравнивайте свои подходы к рынку.</p>
               <div className="hero-actions">
                 <Button variant="primary" size="lg" onClick={startGame}>
                   ПРИНЯТЬ ВЫЗОВ
@@ -42,7 +41,6 @@ export function HomePage() {
       </section>
 
       <TrialsSection />
-      <LeaderboardSection />
       <ProgressSection />
 
     </div>
