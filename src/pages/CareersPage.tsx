@@ -54,10 +54,10 @@ export function CareersPage() {
       <header className="flex flex-col gap-5">
         <SectionLabel>Возможности</SectionLabel>
         <h1 className="text-4xl font-extrabold tracking-[-0.03em] text-chalk-50 sm:text-5xl">
-          Хочешь поговорить?
+          Хотите поговорить?
         </h1>
         <p className="text-base leading-relaxed text-chalk-400">
-          Расскажи коротко о себе. Мы читаем всё, что приходит, и отвечаем тем, чей
+          Расскажите коротко о себе. Мы читаем всё, что приходит, и отвечаем тем, чей
           опыт близок к тому, чем мы занимаемся.
         </p>
       </header>
@@ -85,7 +85,7 @@ export function CareersPage() {
           />
         </Field>
 
-        <Field label="Чем занимаешься">
+        <Field label="Чем занимаетесь">
           <select
             name="focus"
             value={focus}
@@ -107,7 +107,7 @@ export function CareersPage() {
           </select>
         </Field>
 
-        <Field label="Расскажи коротко о своём опыте">
+        <Field label="Расскажите коротко о своём опыте">
           <textarea
             name="experience"
             rows={5}

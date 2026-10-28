@@ -172,7 +172,7 @@ function AssetReveal({ scenario }: { scenario: BlindMarketScenario }) {
     <section className="flex flex-col gap-5 rounded-xl border border-violet-accent/40 bg-violet-accent/5 p-6 sm:flex-row sm:items-start sm:justify-between sm:gap-10 sm:p-8">
       <div className="flex shrink-0 flex-col gap-2">
         <span className="text-[11px] tracking-[0.14em] text-chalk-500 uppercase">
-          Ты торговал
+          Вы торговали
         </span>
         <span className="text-3xl font-light tracking-[-0.02em] text-chalk-50 sm:text-4xl">
           {asset.name}

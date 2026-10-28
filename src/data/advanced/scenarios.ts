@@ -47,7 +47,7 @@ export const advancedArbitrageScenarios: CrossArbitrageScenario[] = crossArbitra
           thirdBid: q.bid * 0.992, thirdAsk: q.ask * 1.008,
           thirdBidLiquidity: 100, thirdAskLiquidity: 100,
         })),
-    revealText: 'Сравни все маршруты: комиссии и глубина могут сделать меньший размер выгоднее. Котировки менялись каждые 1,75 секунды.' }
+    revealText: 'Сравните все маршруты: комиссии и глубина могут сделать меньший размер выгоднее. Котировки менялись каждые 1,75 секунды.' }
 })
 export const advancedArbitrageSessions = crossArbitrageSessions.map((s, i) => ({
   ...s, id: `advanced_${s.id}`, seed: 850001 + i, mode: 'advanced' as const,

@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react'
-import { ArrowRight, Check, RotateCcw } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, Check, RotateCcw } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { CompanyCta } from '@/components/layout/CompanyCta'
 import { TraitBars } from '@/components/results/TraitBars'
@@ -8,7 +8,7 @@ import { Button, LinkButton } from '@/components/ui/Button'
 import { Disclaimer, SectionLabel } from '@/components/ui/Card'
 import { trackEvent } from '@/lib/analytics'
 import { formatNumber } from '@/lib/formatting'
-import { archetypeTagline, buildTradingProfile } from '@/lib/profile'
+import { archetypeTagline, buildDescription, buildTradingProfile } from '@/lib/profile'
 import { CHALLENGE_ORDER, challengeTitles, useGameStore } from '@/store/gameStore'
 
 export function ProfilePage() {
@@ -28,7 +28,13 @@ export function ProfilePage() {
 
   // Профиль по умолчанию — последнее полное прохождение серии.
   const profile = useMemo(() => {
-    if (storedProfile) return storedProfile
+    // Формулировки обновляются и для ранее сохранённых результатов.
+    if (storedProfile) return { ...storedProfile, description: buildDescription({
+      blindMarket: blindMarketResult,
+      marketMaker: marketMakerResult,
+      blackSwan: blackSwanResult,
+      crossArbitrage: crossArbitrageResult,
+    }) }
     if (!complete) return null
     return buildTradingProfile({
       blindMarket: blindMarketResult,
@@ -68,16 +74,16 @@ export function ProfilePage() {
         <div className="flex items-center gap-3">
           <span className="h-1.5 w-1.5 rounded-full bg-violet-accent" aria-hidden />
           <span className="text-[11px] tracking-[0.22em] text-violet-soft uppercase">
-            Market Trials Complete
+            Рыночный вызов — испытания завершены
           </span>
         </div>
 
         <h1 className="max-w-3xl text-4xl leading-[1.05] font-extrabold tracking-[-0.03em] text-chalk-50 sm:text-5xl">
-          Твой профиль в этой игровой сессии
+          Ваш профиль в этой игровой сессии
         </h1>
 
         <p className="max-w-2xl text-sm leading-relaxed text-chalk-400">
-          Он описывает твои решения внутри Market Trials и не является
+          Он описывает ваши решения в игре «Рыночный вызов» и не является
           профессиональной оценкой.
         </p>
 
@@ -149,8 +155,8 @@ export function ProfilePage() {
           Пройти серию заново
         </Button>
         <LinkButton to="/leaderboard" variant="secondary" size="lg">
-          Посмотреть рейтинг
-          <ArrowRight className="h-4 w-4" aria-hidden />
+          Смотреть рейтинг
+          <ArrowUpRight className="h-4 w-4" aria-hidden />
         </LinkButton>
       </div>
 

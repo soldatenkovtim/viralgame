@@ -19,7 +19,7 @@ function build(id: string, asset: MarketShockScenario['asset'], candles: OhlcvCa
       liquidityChange: 0, // OHLCV does not contain order-book liquidity; UI labels it unavailable.
       volumeMultiplier: mean(bars.map(c => c.volume)) / mean(history.map(c => c.volume)),
       priceChange: (candles[end - 1].close / candles[start - 1].close - 1) * 100,
-      marketDescription: 'Сравни движение цены и объём с доступной историей.', availableActions: ['close', 'hedge', 'hold', 'increase'] }
+      marketDescription: 'Сравните движение цены и объём с доступной историей.', availableActions: ['close', 'hedge', 'hold', 'increase'] }
   }) as MarketShockScenario['phases']
   const startTime = new Date(candles[0].time * 1000).toISOString()
   const endTime = new Date(candles.at(-1)!.time * 1000).toISOString()
@@ -28,7 +28,7 @@ function build(id: string, asset: MarketShockScenario['asset'], candles: OhlcvCa
     revealPeriod: `${startTime.slice(0, 10)} — ${endTime.slice(0, 10)}`, revealEvent: event, revealDescription: description,
     synthetic: false, baseTimeframe: '15m', primaryTimeframe: '15m', contextTimeframe: '1h', availableTimeframes: ['15m', '1h', '4h', '1d'], candles,
     initialVisibleIndex, phaseCheckpoints, initialPosition: { direction: 'long', exposure: 0.6, entryPrice: candles[initialVisibleIndex - 1].close },
-    context: { volatility: 'Оцени по графику', liquidity: 'нет данных стакана', volumeMultiplier: 1 },
+    context: { volatility: 'Оцените по графику', liquidity: 'нет данных стакана', volumeMultiplier: 1 },
     phases, crowd: [], startTime, endTime, internalTags: [pattern], sourceUrl: `https://finance.yahoo.com/quote/${encodeURIComponent(asset.ticker)}/history/` }
 }
 export const marketShockScenarios: MarketShockScenario[] = [

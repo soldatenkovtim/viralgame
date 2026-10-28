@@ -97,7 +97,7 @@ describe('Дуэль: точный сценарий и ограниченный 
     duel.challengerResult.decisions.forEach(d => { d.label = 'СКРЫТОЕ РЕШЕНИЕ' })
     const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [`/duel/${type}?data=${encodeDuel(duel)}`] },
       createElement(Routes, null, createElement(Route, { path: '/duel/:challengeType', element: createElement(DuelLanding) }))))
-    expect(html).toContain('Тебе бросили вызов')
+    expect(html).toContain('Вам бросили вызов')
     expect(html).toContain('Принять вызов')
     expect(html).not.toContain('9876')
     expect(html).not.toContain('СКРЫТОЕ РЕШЕНИЕ')

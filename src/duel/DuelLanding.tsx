@@ -31,8 +31,8 @@ function DuelRun({ payload }: { payload: DuelPayload }) {
   }
   if (result) return <DuelComparison payload={payload} yours={result} />
   if (!started) return <main className="mx-auto flex max-w-2xl flex-col gap-6 px-5 py-20 text-chalk-200">
-    <h1 className="text-4xl text-chalk-50">Тебе бросили вызов</h1>
-    <p>Вы получите один и тот же рынок. Результат другого трейдера откроется только после твоего прохождения.</p>
+    <h1 className="text-4xl text-chalk-50">Вам бросили вызов</h1>
+    <p>Вы получите один и тот же рынок. Результат другого трейдера откроется только после вашего прохождения.</p>
     <p>Испытание: {challengeTitles[payload.challengeType]}</p><p>Режим: Дуэль</p>
     <Button variant="primary" onClick={() => { setStarted(true); trackEvent('duel_started', { challengeType: payload.challengeType, seed: payload.seed }) }}>Принять вызов</Button>
   </main>

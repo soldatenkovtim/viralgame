@@ -33,7 +33,7 @@ export function ShareCard({
   const [shared, setShared] = useState(false)
 
   const shareUrl = buildProfileShareUrl(profile.archetype)
-  const shareText = `Мой профиль в Market Trials — ${profile.archetype}. Какой профиль получится у тебя?`
+  const shareText = `Мой профиль в игре «Рыночный вызов» — ${profile.archetype}. Какой профиль получится у вас?`
 
   useEffect(() => {
     const frame = frameRef.current
@@ -60,7 +60,7 @@ export function ShareCard({
     })
 
     const link = document.createElement('a')
-    link.download = 'market-trials.png'
+    link.download = 'Рыночный вызов.png'
     link.href = dataUrl
     link.click()
 
@@ -77,7 +77,7 @@ export function ShareCard({
   const handleShare = async () => {
     trackEvent('challenge_shared', { channel: 'profile', archetype: profile.archetype })
     const outcome = await shareOrCopy({
-      title: 'Market Trials',
+      title: 'Рыночный вызов',
       text: shareText,
       url: shareUrl,
     })
@@ -194,7 +194,7 @@ function CardArtwork({
               color: '#50504f',
             }}
           >
-            Market Trials
+            Рыночный вызов
           </span>
           {playerName ? (
             <span style={{ fontSize: 18, color: '#666661' }}>{playerName}</span>
@@ -268,7 +268,7 @@ function CardArtwork({
           {TOTAL_CHALLENGES} / {TOTAL_CHALLENGES} испытаний
         </span>
         <span style={{ fontSize: 26, color: '#141416' }}>
-          Какой профиль получится у тебя?
+          Какой профиль получится у вас?
         </span>
       </div>
     </div>

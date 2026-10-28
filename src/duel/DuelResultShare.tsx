@@ -15,10 +15,10 @@ export function DuelShareButton({ result, original }: { result?: ResultPayload; 
   if (result || original) return <div className="flex flex-col gap-3">
     <Button variant="secondary" onClick={async () => {
       const payload = result ? createDuel(result) : original!
-      const outcome = await shareOrCopy({ title: 'Market Trials', text: 'Пройди тот же рынок и сравним решения.', url: duelUrl(payload) })
+      const outcome = await shareOrCopy({ title: 'Рыночный вызов', text: 'Пройдите тот же рынок и сравним решения.', url: duelUrl(payload) })
       if (outcome !== 'failed') { setShared(true); trackEvent('duel_created', { challengeType: payload.challengeType, scenarioId: payload.scenarioId }) }
     }}>{shared ? 'Ссылка готова' : 'Бросить вызов на этом рынке'}</Button>
-    <p className="text-sm text-chalk-400">Друг получит этот же сценарий. Твой результат откроется после его прохождения.</p>
+    <p className="text-sm text-chalk-400">Друг получит этот же сценарий. Ваш результат откроется после его прохождения.</p>
   </div>
   return null
 }

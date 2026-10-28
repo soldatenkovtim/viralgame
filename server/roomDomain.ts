@@ -56,7 +56,7 @@ export function updateRoom(room: StoredRoom, token: string, action: string, body
   if (action === 'join') {
     if (!/^[A-Za-z0-9_-]{32,64}$/.test(token)) throw new ApiError(400, 'Неверный ключ игрока.')
     if (!role) {
-      if (room.guestToken) throw new ApiError(409, 'В этой дуэли уже два игрока. Открой её в браузере, в котором присоединился, или создай новую.')
+      if (room.guestToken) throw new ApiError(409, 'В этой дуэли уже два игрока. Откройте её в браузере, в котором присоединились, или создайте новую.')
       room.guestToken = token; room.guest = 'ready'; role = 'guest'
     }
   }
@@ -65,7 +65,7 @@ export function updateRoom(room: StoredRoom, token: string, action: string, body
     if (room[role] !== 'finished') room[role] = 'playing'
   } else if (action === 'finish') {
     if (body.scenarioId !== room.scenarioId || body.seed !== room.seed || !validResult(body.result, room.challengeType)) throw new ApiError(400, 'Результат не соответствует рынку дуэли.')
-    if (room[role] === 'ready') throw new ApiError(409, 'Сначала начни испытание.')
+    if (room[role] === 'ready') throw new ApiError(409, 'Сначала начните испытание.')
     if (room[role] !== 'finished') {
       room[`${role}Result`] = body.result
       room[role] = 'finished' satisfies PlayerStatus

@@ -33,8 +33,8 @@ export function blindMarketAchievement(result: BlindMarketResult): Achievement |
     if (distance <= 0.02) {
       candidates.push({
         id: 'caught-reversal',
-        title: 'Поймал разворот',
-        description: 'Ты открыл позицию в пределах 2% от локального экстремума.',
+        title: 'Разворот пойман',
+        description: 'Вы открыли позицию в пределах 2% от локального экстремума.',
       })
     }
   }
@@ -46,8 +46,8 @@ export function blindMarketAchievement(result: BlindMarketResult): Achievement |
   if (goodFlat) {
     candidates.push({
       id: 'stayed-out',
-      title: 'Не трогал рынок',
-      description: 'Ты выбрал «Вне рынка» там, где движения почти не было.',
+      title: 'Вне рынка',
+      description: 'Вы выбрали «Вне рынка» там, где движения почти не было.',
     })
   }
 
@@ -55,7 +55,7 @@ export function blindMarketAchievement(result: BlindMarketResult): Achievement |
     candidates.push({
       id: 'clean-run',
       title: 'Без просадки',
-      description: 'Твоя позиция ни разу не ушла заметно против тебя.',
+      description: 'Ваша позиция ни разу не ушла заметно против вас.',
     })
   }
 
@@ -69,7 +69,7 @@ export function marketMakerAchievement(result: MarketMakerResult): Achievement |
     candidates.push({
       id: 'calm-inventory',
       title: 'Спокойный инвентарь',
-      description: 'Твоя позиция ни разу не превысила заданный уровень риска.',
+      description: 'Ваша позиция ни разу не превысила заданный уровень риска.',
     })
   }
 
@@ -77,8 +77,8 @@ export function marketMakerAchievement(result: MarketMakerResult): Achievement |
   if (informed.length > 0 && informed.every((phase) => phase.pnlChange > 0)) {
     candidates.push({
       id: 'survived-toxic',
-      title: 'Пережил токсичный поток',
-      description: 'Ты прошёл фазу информированного потока с положительным PnL.',
+      title: 'Токсичный поток пройден',
+      description: 'Вы прошли фазу информированного потока с положительным PnL.',
     })
   }
 
@@ -93,8 +93,8 @@ export function marketMakerAchievement(result: MarketMakerResult): Achievement |
   if (result.tradeCount >= 25) {
     candidates.push({
       id: 'flow-magnet',
-      title: 'Собрал поток',
-      description: 'Твоя котировка была в рынке почти всё время раунда.',
+      title: 'Поток собран',
+      description: 'Ваша котировка была в рынке почти всё время раунда.',
     })
   }
 
@@ -113,15 +113,15 @@ export function marketShockAchievement(result: MarketShockResult): Achievement |
     candidates.push({
       id: 'early-exit',
       title: 'Ранний выход',
-      description: 'Ты сократил позицию до основной части рыночного движения.',
+      description: 'Вы сократили позицию до основной части рыночного движения.',
     })
   }
 
   if (result.pnlPercent > 0) {
     candidates.push({
       id: 'through-the-storm',
-      title: 'Прошёл шторм',
-      description: 'Ты закончил сценарий в плюсе, несмотря на рыночный шок.',
+      title: 'Шторм пройден',
+      description: 'Вы закончили сценарий в плюсе, несмотря на рыночный шок.',
     })
   }
 
@@ -129,7 +129,7 @@ export function marketShockAchievement(result: MarketShockResult): Achievement |
     candidates.push({
       id: 'marked-levels',
       title: 'По своей разметке',
-      description: 'Ты отметил уровни на этапе контекста и менял позицию по ходу сценария.',
+      description: 'Вы отметили уровни на этапе контекста и меняли позицию по ходу сценария.',
     })
   }
 
@@ -137,7 +137,7 @@ export function marketShockAchievement(result: MarketShockResult): Achievement |
     candidates.push({
       id: 'shallow-drawdown',
       title: 'Мелкая просадка',
-      description: 'Твоя просадка осталась ниже 4% на всём сценарии.',
+      description: 'Ваша просадка осталась ниже 4% на всём сценарии.',
     })
   }
 
@@ -161,7 +161,7 @@ export function crossArbitrageAchievement(result: CrossArbitrageResult): Achieve
     candidates.push({
       id: 'no-fuss',
       title: 'Без суеты',
-      description: 'Ты не открывал сделки в рынках без исполнимой возможности.',
+      description: 'Вы не открывали сделки в рынках без исполнимой возможности.',
     })
   }
 
@@ -176,7 +176,7 @@ export function crossArbitrageAchievement(result: CrossArbitrageResult): Achieve
     candidates.push({
       id: 'window-closing',
       title: 'Окно закрывается',
-      description: 'Ты нашёл возможность менее чем за 5 секунд до схождения котировок.',
+      description: 'Вы нашли возможность менее чем за 5 секунд до схождения котировок.',
     })
   }
 
@@ -188,7 +188,7 @@ export function crossArbitrageAchievement(result: CrossArbitrageResult): Achieve
     candidates.push({
       id: 'best-route',
       title: 'Лучший маршрут',
-      description: 'Во всех прибыльных рынках ты выбрал оптимальную пару площадок.',
+      description: 'Во всех прибыльных рынках вы выбрали оптимальную пару площадок.',
     })
   }
 

@@ -22,7 +22,7 @@ export function CreateRoom({ challengeType }: { challengeType: ChallengeType }) 
   return <section className="mx-auto flex max-w-2xl flex-col gap-6 px-5 py-12 text-chalk-200">
     <p className="text-sm text-violet-soft">Дуэль · {challengeTitles[challengeType]}</p>
     <h1 className="text-3xl text-chalk-50">Новый рынок для вас двоих</h1>
-    <p>Создай комнату, отправь ссылку другу и начни играть. Каждый проходит испытание со своего устройства — можно одновременно или в разное время.</p>
+    <p>Создайте комнату, отправьте ссылку другу и начните играть. Каждый проходит испытание со своего устройства — можно одновременно или в разное время.</p>
     <p className="text-sm text-chalk-400">Оба начинаете с нуля. Сравнение решений откроется обоим, когда вы завершите испытание.</p>
     <CreateRoomButton challengeType={challengeType} />
   </section>

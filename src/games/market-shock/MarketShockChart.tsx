@@ -166,7 +166,7 @@ export function MarketShockChart({
         mutedAfter={mutedAfter}
         editable={editable}
         showDates={showDates}
-        hint={tool === 'level' ? 'Кликни по графику, чтобы поставить уровень' : null}
+        hint={tool === 'level' ? 'Кликните по графику, чтобы поставить уровень' : null}
         onDraw={handleDraw}
         onSelect={setSelectedId}
         onMoveLevel={moveLevel}

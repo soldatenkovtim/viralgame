@@ -4,11 +4,11 @@ import { challengeNumbers, challengeRoutes, challengeTitles } from '@/store/game
 import type { ChallengeType } from '@/types/game'
 
 export const challengeDescriptions: Record<ChallengeType, string> = {
-  'blind-market': 'Прими решение, не зная ни тикера, ни даты.',
-  'market-maker': 'Котируй рынок и попробуй понять, кто торгует против тебя.',
-  'black-swan': 'Ты уже в позиции. Рынок внезапно меняется.',
+  'blind-market': 'Примите решение, не зная ни тикера, ни даты.',
+  'market-maker': 'Котируйте рынок и попробуйте понять, кто торгует против вас.',
+  'black-swan': 'Вы уже в позиции. Рынок внезапно меняется.',
   'cross-arbitrage':
-    'Один актив, несколько площадок. Найди исполнимый edge и не дай объёму съесть прибыль.',
+    'Один актив, несколько площадок. Найдите исполнимый edge и не дайте объёму съесть прибыль.',
 }
 
 export const challengeDurations: Record<ChallengeType, string> = {
@@ -45,7 +45,9 @@ export function ChallengeCard({
         ) : <ArrowUpRight className="h-5 w-5 text-violet-accent" aria-hidden />}
       </div>
 
-      <div className="mt-8 mb-6 flex flex-col gap-2">
+      <TrialSignal challenge={challenge} />
+
+      <div className="mt-5 mb-6 flex flex-col gap-2">
         <h3 className="text-xl font-bold tracking-tight text-chalk-50">
           {challengeTitles[challenge]}
         </h3>
@@ -56,7 +58,7 @@ export function ChallengeCard({
 
       <div className="mt-auto flex min-h-15 flex-wrap content-start items-start justify-between gap-2 border-t border-ink-800 pt-4">
         <span className="text-xs text-chalk-500">
-          {locked ? 'Откроется после предыдущего' : challengeDurations[challenge]}
+          {challengeDurations[challenge]}
         </span>
         {bestPoints !== undefined ? (
           <span className="tnum text-xs text-chalk-400">
@@ -64,26 +66,36 @@ export function ChallengeCard({
           </span>
         ) : null}
       </div>
+      <span className="challenge-action">{locked ? 'Выбрать режим' : completed ? 'Пройти ещё раз' : 'Начать испытание'}<ArrowUpRight size={18} aria-hidden /></span>
+      {locked && <span className="mt-2 text-xs leading-relaxed text-chalk-500">Стандартный — после предыдущего. Дуэль доступна.</span>}
     </>
   )
 
   const shell =
     'challenge-card flex h-full flex-col border border-t-2 p-6 transition-colors duration-200'
 
-  if (locked) {
-    return (
-      <div className={`${shell} border-ink-800 bg-ink-950`} aria-disabled>
-        {content}
-      </div>
-    )
-  }
-
   return (
     <Link
       to={challengeRoutes[challenge]}
+      data-challenge={challenge}
+      aria-label={`${challengeTitles[challenge]} — выбрать режим`}
       className={`${shell} border-ink-700 border-t-chalk-50 bg-ink-950 hover:border-violet-accent hover:bg-ink-900`}
     >
       {content}
     </Link>
   )
+}
+
+/** Abstract market signals; decorative, never presented as live prices. */
+function TrialSignal({ challenge }: { challenge: ChallengeType }) {
+  const paths: Record<ChallengeType, string[]> = {
+    'blind-market': ['M0 52 L24 52 L38 42 L60 48 L78 25 L96 33 L118 12 L138 22 L160 9 L180 18 L210 4'],
+    'market-maker': ['M0 18 H36 V26 H78 V34 H118 V42 H160 V50 H210', 'M0 58 H36 V50 H78 V42 H118 V34 H160 V26 H210'],
+    'black-swan': ['M0 24 L30 20 L60 25 L84 18 L104 22 L116 65 L132 48 L145 58 L165 42 L183 47 L210 35'],
+    'cross-arbitrage': ['M0 38 L40 22 L80 38 L120 22 L160 38 L210 22', 'M0 50 L40 34 L80 50 L120 34 L160 50 L210 34'],
+  }
+  return <div className="trial-signal" aria-hidden><svg viewBox="0 0 210 72" fill="none" preserveAspectRatio="none">
+    <path d="M0 18 H210 M0 36 H210 M0 54 H210 M42 0 V72 M84 0 V72 M126 0 V72 M168 0 V72" className="signal-grid" />
+    {paths[challenge].map((path, index) => <path key={path} d={path} className={index ? 'signal-secondary' : 'signal-primary'} />)}
+  </svg><span>{challenge === 'blind-market' ? 'SIGNAL / UNKNOWN' : challenge === 'market-maker' ? 'BID / ASK' : challenge === 'black-swan' ? 'RISK / REACTION' : 'SPREAD / EXECUTION'}</span></div>
 }

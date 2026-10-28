@@ -11,7 +11,7 @@ export function ScenarioReplay({ challengeType, scenarioId }: { challengeType: C
   const completed = pool.filter(s => progress.completedScenarioIds.includes(s.id)).length
   const remaining = pool.length - completed
   return <div className="mx-auto mb-12 max-w-5xl flex flex-col items-start gap-3 rounded-xl border border-ink-700 p-5 text-sm text-chalk-400">
-    <p>Ты прошёл {completed} из {pool.length} сценариев этого испытания.</p>
+    <p>Вы прошли {completed} из {pool.length} сценариев этого испытания.</p>
     <p>{remaining ? `Доступно ещё ${remaining} сценария` : 'Все сценарии этого испытания пройдены'}</p>
     <Button variant="secondary" onClick={() => {
       trackEvent('alternate_scenario_clicked', { challengeType, scenarioId, mode })

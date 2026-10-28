@@ -114,12 +114,12 @@ export function marketMakerInsights(result: MarketMakerResult): string[] {
   if (keptNarrow) {
     candidates.push({
       priority: 5,
-      text: 'Ты долго сохранял узкий спред после того, как поток стал направленным.',
+      text: 'Вы долго сохраняли узкий спред после того, как поток стал направленным.',
     })
   } else if (widened) {
     candidates.push({
       priority: 4,
-      text: 'Когда поток стал направленным, ты расширил спред и стал реже отдавать котировку.',
+      text: 'Когда поток стал направленным, вы расширили спред и стали реже отдавать котировку.',
     })
   }
 
@@ -127,7 +127,7 @@ export function marketMakerInsights(result: MarketMakerResult): string[] {
   if (lagging) {
     candidates.push({
       priority: 3,
-      text: 'Во время направленного движения середина твоей котировки заметно отставала от справедливой цены.',
+      text: 'Во время направленного движения середина вашей котировки заметно отставала от справедливой цены.',
     })
   }
 
@@ -135,7 +135,7 @@ export function marketMakerInsights(result: MarketMakerResult): string[] {
     if (result.inventoryResponseSeconds <= 3) {
       candidates.push({
         priority: 4,
-        text: 'После роста inventory ты быстро сместил котировки и сократил позиционный риск.',
+        text: 'После роста inventory вы быстро сместили котировки и сократили позиционный риск.',
       })
     } else if (result.inventoryResponseSeconds >= 8) {
       candidates.push({
@@ -150,7 +150,7 @@ export function marketMakerInsights(result: MarketMakerResult): string[] {
   if (spreadDominates) {
     candidates.push({
       priority: 2,
-      text: 'Большая часть твоего PnL пришла от spread capture, а не от движения inventory.',
+      text: 'Большая часть вашего PnL пришла от spread capture, а не от движения inventory.',
     })
   } else if (inventoryDominates) {
     candidates.push({
@@ -165,19 +165,19 @@ export function marketMakerInsights(result: MarketMakerResult): string[] {
   if (result.hedgeCount >= 4) {
     candidates.push({
       priority: 3,
-      text: 'Ты часто хеджировал позицию, снижая риск ценой дополнительных издержек.',
+      text: 'Вы часто хеджировали позицию, снижая риск ценой дополнительных издержек.',
     })
   } else if (result.hedgeCount === 0 && result.maxInventory > MM_SOFT_INVENTORY_LIMIT) {
     candidates.push({
       priority: 3,
-      text: 'Ты не использовал хедж, и позиционный риск всё время оставался на твоём балансе.',
+      text: 'Вы не использовали хедж, и позиционный риск всё время оставался на вашем балансе.',
     })
   }
 
   if (!candidates.length) {
     candidates.push({
       priority: 1,
-      text: 'Ты держал котировку рядом с рынком и удерживал inventory в умеренных границах.',
+      text: 'Вы держали котировку рядом с рынком и удерживали inventory в умеренных границах.',
     })
   }
 

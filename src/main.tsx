@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from '@/app/App'
 import './index.css'
+import './components/home/HomeTypography.css'
 import { initializeTheme } from '@/lib/theme'
 
 initializeTheme()

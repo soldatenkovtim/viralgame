@@ -1,0 +1,97 @@
+/* Typography from exelsior/app/globals.css, scoped to the home page and its shell.
+   Hero → .hero-title; section headings → .section-heading;
+   challenge cards → .resource-item; controls → .cyber-button.
+   Gameplay and result pages keep their own functional UI styles. */
+.market-trials-home, .trial-header-home, .home-footer {
+  --font-sans: 'Geist', Arial, sans-serif;
+  --font-mono: 'Geist Mono', 'Courier New', monospace;
+  font-family: var(--font-sans);
+  font-feature-settings: normal;
+}
+
+.market-trials-home .hero-title {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: var(--club-hero-font-size);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -.065em;
+  text-transform: uppercase;
+}
+.market-trials-home .hero-manifesto {
+  font: 600 13px/1.5 var(--font-mono);
+  letter-spacing: .01em;
+}
+.market-trials-home .hero-description,
+.market-trials-home .section-heading > p:not(.progress-storage) {
+  font: 400 var(--text-body)/var(--leading-body) var(--font-sans);
+  color: var(--secondary);
+}
+.market-trials-home .section-heading > p { max-width: 660px; }
+.market-trials-home .section-heading h2 {
+  font-size: clamp(1.8rem, 3.2vw, 2.6rem);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -.045em;
+  text-transform: uppercase;
+}
+.market-trials-home .hero-actions button,
+.market-trials-home .content-link,
+.market-trials-home .challenge-action {
+  font: 500 var(--text-cta)/1.5 var(--font-mono);
+  letter-spacing: .015em;
+  text-transform: uppercase;
+}
+.market-trials-home .hero-actions button { padding-block: 12px; }
+.market-trials-home .hero-footnote {
+  font: 400 var(--text-secondary)/var(--leading-body) var(--font-mono);
+}
+
+.market-trials-home .challenge-card h3 {
+  min-height: 40px;
+  color: var(--accent);
+  font: 600 13px/1.6 var(--font-mono);
+  letter-spacing: -.025em;
+  text-transform: uppercase;
+}
+.market-trials-home .challenge-card p {
+  font: 400 var(--text-content)/var(--leading-body) var(--font-sans);
+  color: var(--secondary);
+}
+.market-trials-home .challenge-card .text-xs,
+.market-trials-home .challenge-card > div:first-child > span,
+.market-trials-home .trial-signal span,
+.market-trials-home .data-strip,
+.market-trials-home .progress-ledger li > :first-child,
+.market-trials-home .progress-score,
+.market-trials-home .ranking-person small {
+  font: 400 var(--text-label)/1.6 var(--font-mono);
+  letter-spacing: normal;
+}
+.market-trials-home .ranking-person h3 {
+  font: 600 21px/1.3 var(--font-sans);
+  letter-spacing: -.04em;
+}
+.market-trials-home .ranking-person p,
+.market-trials-home .ranking-empty p,
+.market-trials-home .progress-storage,
+.market-trials-home .progress-ledger li {
+  font: 400 var(--text-secondary)/var(--leading-body) var(--font-sans);
+}
+.market-trials-home .data-note {
+  font: 400 var(--text-helper)/var(--leading-body) var(--font-sans);
+}
+.market-trials-home .home-section > .site-container > section h2 {
+  font: 600 21px/1.3 var(--font-sans);
+  letter-spacing: -.04em;
+}
+.market-trials-home .home-section > .site-container > section a {
+  font: 400 var(--text-secondary)/var(--leading-body) var(--font-sans);
+}
+.home-footer nav {
+  font: 400 var(--text-secondary)/var(--leading-body) var(--font-sans);
+}
+.home-footer p { font: 400 var(--text-helper)/var(--leading-body) var(--font-sans); }
+.home-footer .trial-brand { font-size: 13px; }
+.trial-header-home .trial-brand { font-size: 14px; }
+@media (max-width: 1199px) { .trial-header-home .trial-brand { font-size: 12px; } }
+@media (max-width: 1023px) { .trial-header-home .trial-brand { font-size: 14px; } }

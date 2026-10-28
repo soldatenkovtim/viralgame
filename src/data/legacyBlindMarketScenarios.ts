@@ -16,7 +16,7 @@ function build(id: string, ticker: string, name: string, assetClass: 'equity' | 
     endTime: new Date(candles.at(-1)!.time * 1000).toISOString(), baseTimeframe: '1d', availableTimeframes: ['1d', '1w'],
     candles, checkpoints,
     asset: { ticker, name, assetClass, exchange: assetClass === 'crypto' ? 'USD · сводные данные' : 'NASDAQ' },
-    reveal: { title: `Это был рынок ${name}`, period, description: 'Ты принимал решения на реальном историческом участке рынка. Цены и объёмы сохранены из исторического набора OHLCV.' },
+    reveal: { title: `Это был рынок ${name}`, period, description: 'Вы принимали решения на реальном историческом участке рынка. Цены и объёмы сохранены из исторического набора OHLCV.' },
     info: buildBlindInformation(candles, checkpoints[0], benchmark, sector),
     crowd: [], internalTags: [tag], sourceUrl: `https://finance.yahoo.com/quote/${ticker}/history/`,
   }

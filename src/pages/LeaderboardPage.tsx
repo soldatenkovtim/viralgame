@@ -25,11 +25,11 @@ export function LeaderboardPage() {
       buildLeaderboard(
         complete
           ? {
-              nickname: playerName || 'ты',
+              nickname: playerName || 'вы',
               score,
               archetype: mode === 'advanced' ? 'Продвинутый режим' : profile?.archetype ?? 'Системный трейдер',
             }
-          : null, mode,
+          : null,
       ),
     [complete, playerName, score, profile, mode],
   )
@@ -44,17 +44,18 @@ export function LeaderboardPage() {
     <div className="site-container page-layout flex flex-col">
       <div className="flex gap-3" aria-label="Режим рейтинга">{(['standard', 'advanced'] as const).map(m => <button key={m} aria-pressed={mode === m} onClick={() => setMode(m)} className={`rounded-lg border px-4 py-3 text-sm ${mode === m ? 'border-violet-accent text-chalk-50' : 'border-ink-700 text-chalk-400'}`}>{m === 'standard' ? 'Стандартный' : 'Продвинутый'}</button>)}</div>
       <header className="flex flex-col gap-5">
-        <SectionLabel>Тестовый рейтинг</SectionLabel>
+        <SectionLabel>Рейтинг участников</SectionLabel>
         <h1 className="text-4xl font-extrabold tracking-[-0.025em] text-chalk-50 sm:text-5xl">
-          Рейтинг
+          Рейтинг участников
         </h1>
-        {complete && myRank ? (
+        <p className="text-sm text-chalk-400">Сравните свои результаты с другими участниками и поборитесь за место среди лидеров.</p>
+        {complete ? (
           <p className="tnum text-sm text-chalk-200">
-            Твоё место: {myRank} из {rows.length} · {formatNumber(score)} очков
+            Ваш результат: {formatNumber(score)} очков · сохранён на этом устройстве
           </p>
         ) : (
           <p className="text-sm text-chalk-400">
-            Пройди все четыре испытания, чтобы попасть в таблицу.
+            Пройдите все четыре испытания, чтобы попасть в таблицу.
           </p>
         )}
       </header>
@@ -63,13 +64,14 @@ export function LeaderboardPage() {
         <table className="w-full min-w-[560px] border-collapse">
           <thead>
             <tr className="border-b border-ink-700 text-left">
-              <Th className="w-16">#</Th>
+              <Th className="w-16">Место</Th>
               <Th>Ник</Th>
               <Th>Архетип</Th>
               <Th className="text-right">Очки</Th>
             </tr>
           </thead>
           <tbody>
+            {rows.length === 0 && <tr><td colSpan={4} className="py-12 text-center text-sm text-chalk-400">Пока нет завершённой серии в этом режиме.</td></tr>}
             {rows.map((row) => (
               <tr
                 key={`${row.rank}-${row.nickname}`}
@@ -77,14 +79,14 @@ export function LeaderboardPage() {
                   row.isCurrentUser ? 'bg-violet-dim/30' : 'hover:bg-ink-900'
                 }`}
               >
-                <Td className="tnum text-chalk-500">{row.rank}</Td>
+                <Td className="tnum text-chalk-500">{row.rank ?? '—'}</Td>
                 <Td
                   className={row.isCurrentUser ? 'text-violet-soft' : 'text-chalk-50'}
                 >
                   {row.nickname}
                   {row.isCurrentUser ? (
                     <span className="ml-2 text-[11px] tracking-wider text-chalk-500 uppercase">
-                      это ты
+                      это вы
                     </span>
                   ) : null}
                 </Td>
@@ -100,8 +102,8 @@ export function LeaderboardPage() {
 
       <div className="flex flex-col gap-4 border-t border-ink-800 pt-8 sm:flex-row sm:items-center sm:justify-between">
         <Disclaimer>
-          Тестовый рейтинг — данные других участников смоделированы. Score является
-          игровой величиной и не отражает результаты реальной торговли.
+          Общий рейтинг пока не подключён: доступны только ваши локальные результаты,
+          без места среди других участников. Очки — игровая величина. Для сравнения с другим игроком выберите дуэль.
         </Disclaimer>
         <LinkButton to={complete ? '/profile' : '/play'} variant="secondary" size="lg">
           {complete ? 'Вернуться к профилю' : 'К испытаниям'}
