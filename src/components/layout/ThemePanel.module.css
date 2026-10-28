@@ -1,0 +1,45 @@
+.panel {
+  position: fixed;
+  bottom: 18px;
+  left: 72px;
+  z-index: 100;
+  color: var(--foreground);
+  font: 13px/1.5 Arial, sans-serif;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: 0 2px 12px #0002;
+  cursor: pointer;
+}
+
+.trigger::-webkit-details-marker { display: none; }
+.trigger > span { font-size: 20px; }
+.trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+.options {
+  position: absolute;
+  bottom: 50px;
+  left: 0;
+  width: 220px;
+  max-width: calc(100vw - 88px);
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 8px 30px #0003;
+}
+
+.options legend { float: left; width: 100%; margin-bottom: 10px; font-weight: 600; }
+.options label { display: flex; clear: both; align-items: center; gap: 10px; min-height: 40px; cursor: pointer; }
+.options input { accent-color: var(--accent); width: 16px; height: 16px; }
+.options p { margin-top: 10px; color: var(--muted); font-size: 11px; }

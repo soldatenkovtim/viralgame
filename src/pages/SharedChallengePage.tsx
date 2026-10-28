@@ -213,7 +213,7 @@ function SharedComparison({
   )
 
   return (
-    <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-10 px-5 py-14 sm:px-8 sm:py-20">
+    <div className="site-container page-layout flex flex-col">
       <header className="flex flex-col gap-5">
         <SectionLabel>Один рынок · два трейдера</SectionLabel>
         <h1 className="text-4xl font-extrabold tracking-[-0.03em] text-chalk-50 sm:text-5xl">

@@ -41,7 +41,7 @@ export function LeaderboardPage() {
   }, [complete, myRank])
 
   return (
-    <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-10 px-5 py-14 sm:px-8 sm:py-20">
+    <div className="site-container page-layout flex flex-col">
       <div className="flex gap-3" aria-label="Режим рейтинга">{(['standard', 'advanced'] as const).map(m => <button key={m} aria-pressed={mode === m} onClick={() => setMode(m)} className={`rounded-lg border px-4 py-3 text-sm ${mode === m ? 'border-violet-accent text-chalk-50' : 'border-ink-700 text-chalk-400'}`}>{m === 'standard' ? 'Стандартный' : 'Продвинутый'}</button>)}</div>
       <header className="flex flex-col gap-5">
         <SectionLabel>Тестовый рейтинг</SectionLabel>

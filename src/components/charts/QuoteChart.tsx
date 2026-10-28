@@ -1,3 +1,5 @@
+import { useTheme } from '@/lib/theme'
+import { CHART_COLORS, applyChartTheme } from './chartTheme'
 import { useEffect, useRef, type ReactNode } from 'react'
 import {
   AreaSeries,
@@ -22,10 +24,10 @@ import { MM_TICK_MS } from '@/data/marketMakerScenarios'
 import type { MMTrade } from '@/types/game'
 
 const QUOTE_COLORS = {
-  market: '#3f3f42',
-  bid: '#16815a',
-  ask: '#c6384a',
-  fairValue: '#7741c8',
+  get market() { return CHART_COLORS.market },
+  get bid() { return CHART_COLORS.up },
+  get ask() { return CHART_COLORS.down },
+  get fairValue() { return CHART_COLORS.selected },
   informed: 'rgba(165, 139, 255, 0.11)',
   lag: 'rgba(232, 176, 75, 0.8)',
 }
@@ -64,6 +66,7 @@ export function QuoteChart({
   informedTicks?: Set<number>
   showTimeAxis?: boolean
 }) {
+  const theme = useTheme()
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<{
@@ -86,22 +89,22 @@ export function QuoteChart({
       height,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: '#666661',
+        textColor: CHART_COLORS.text,
         fontSize: 11,
         fontFamily: 'ui-monospace, SF Mono, Menlo, monospace',
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: '#e1e1db' },
-        horzLines: { color: '#e1e1db' },
+        vertLines: { color: CHART_COLORS.grid },
+        horzLines: { color: CHART_COLORS.grid },
       },
       rightPriceScale: {
-        borderColor: '#d4d4ce',
+        borderColor: CHART_COLORS.border,
         scaleMargins: { top: 0.12, bottom: 0.12 },
       },
       timeScale: {
         visible: showTimeAxis,
-        borderColor: '#d4d4ce',
+        borderColor: CHART_COLORS.border,
         tickMarkFormatter: (time: Time) => `${formatTickSeconds(Number(time))} с`,
       },
       localization: {
@@ -237,7 +240,17 @@ export function QuoteChart({
 
     series.askMarkers.setMarkers(askMarkers)
     series.bidMarkers.setMarkers(bidMarkers)
-  }, [trades, points])
+  }, [trades, points, theme])
+
+  useEffect(() => {
+    if (chartRef.current) applyChartTheme(chartRef.current)
+    const series = seriesRef.current
+    if (!series) return
+    series.market.applyOptions({ color: QUOTE_COLORS.market })
+    series.bid.applyOptions({ color: QUOTE_COLORS.bid })
+    series.ask.applyOptions({ color: QUOTE_COLORS.ask })
+    series.fair.applyOptions({ color: QUOTE_COLORS.fairValue })
+  }, [theme, height, showTimeAxis])
 
   return <div ref={containerRef} className="w-full" style={{ height }} />
 }

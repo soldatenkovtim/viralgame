@@ -6,9 +6,9 @@ type Size = 'sm' | 'md' | 'lg'
 
 const variants: Record<Variant, string> = {
   primary:
-    'bg-graphite text-white hover:bg-violet-accent active:bg-violet-soft border border-graphite hover:border-violet-accent',
+    'button-primary',
   secondary:
-    'bg-ink-850 text-chalk-50 border border-ink-600 hover:border-ink-500 hover:bg-ink-800',
+    'button-secondary',
   ghost:
     'bg-transparent text-chalk-400 border border-transparent hover:text-chalk-50 hover:bg-ink-850',
   danger:
@@ -17,8 +17,8 @@ const variants: Record<Variant, string> = {
 
 const sizes: Record<Size, string> = {
   sm: 'min-h-9 px-3 text-[11px]',
-  md: 'min-h-12 px-5 text-xs',
-  lg: 'min-h-13 px-7 text-xs',
+  md: 'min-h-12 px-5 text-[15px]',
+  lg: 'min-h-12 px-5 text-[15px]',
 }
 
 const base =

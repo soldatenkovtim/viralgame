@@ -63,7 +63,7 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-12 px-5 py-14 sm:px-8 sm:py-20">
+    <div className="site-container page-layout flex flex-col">
       <header className="flex flex-col gap-5">
         <div className="flex items-center gap-3">
           <span className="h-1.5 w-1.5 rounded-full bg-violet-accent" aria-hidden />

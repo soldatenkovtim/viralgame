@@ -31,7 +31,7 @@ export function ChallengeCard({
 }) {
   const content = (
     <>
-      <div className="flex items-start justify-between">
+      <div className="flex min-h-5 items-center justify-between">
         <span className="tnum font-mono text-xs tracking-[0.1em] text-chalk-500">
           {challengeNumbers[challenge]}
         </span>
@@ -54,7 +54,7 @@ export function ChallengeCard({
         </p>
       </div>
 
-      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-ink-800 pt-4">
+      <div className="mt-auto flex min-h-15 flex-wrap content-start items-start justify-between gap-2 border-t border-ink-800 pt-4">
         <span className="text-xs text-chalk-500">
           {locked ? 'Откроется после предыдущего' : challengeDurations[challenge]}
         </span>
@@ -81,7 +81,7 @@ export function ChallengeCard({
   return (
     <Link
       to={challengeRoutes[challenge]}
-      className={`${shell} border-ink-700 border-t-graphite bg-ink-950 hover:border-violet-accent hover:bg-ink-900`}
+      className={`${shell} border-ink-700 border-t-chalk-50 bg-ink-950 hover:border-violet-accent hover:bg-ink-900`}
     >
       {content}
     </Link>

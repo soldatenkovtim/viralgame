@@ -1,3 +1,5 @@
+import { useTheme } from '@/lib/theme'
+import { CHART_COLORS, applyChartTheme, themedAnnotation } from './chartTheme'
 import { useEffect, useRef } from 'react'
 import {
   CandlestickSeries,
@@ -23,13 +25,6 @@ export interface ChartMarker {
   text: string
 }
 
-const CHART_COLORS = {
-  up: '#16815a',
-  down: '#c6384a',
-  grid: '#e1e1db',
-  border: '#d4d4ce',
-  text: '#666661',
-}
 
 /**
  * Свечной график с постепенным раскрытием.
@@ -48,6 +43,7 @@ export function CandleChart({
   markers?: ChartMarker[]
   height?: number
 }) {
+  const theme = useTheme()
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
@@ -155,13 +151,17 @@ export function CandleChart({
         time: candles[marker.candleIndex].time as Time,
         position: marker.position,
         shape: marker.shape,
-        color: marker.color,
+        color: themedAnnotation(marker.color),
         text: marker.text,
         size: 1,
       }))
 
     plugin.setMarkers(mapped)
-  }, [markers, candles])
+  }, [markers, candles, theme])
+
+  useEffect(() => {
+    if (chartRef.current) applyChartTheme(chartRef.current, seriesRef.current)
+  }, [theme, height])
 
   return <div ref={containerRef} className="w-full" style={{ height }} />
 }
