@@ -37,7 +37,7 @@ export function AppShell() {
 function SiteFooter({ home }: { home: boolean }) {
   if (home) return <footer className="trial-footer home-footer"><div className="site-container">
     <Brand />
-    <nav aria-label="Об игре">{FOOTER_LINKS.map(item => <Link key={item.to} to={item.to}>{item.label}</Link>)}</nav>
+    <nav aria-label="Об игре">{FOOTER_LINKS.filter(item => item.to !== '/leaderboard').map(item => <Link key={item.to} to={item.to}>{item.label}</Link>)}</nav>
     <nav aria-label="Компания"><Link to="/company">Компания</Link><Link to="/team">Команда</Link><Link to="/careers">Возможности</Link></nav>
     <p>Прототип · внутреннее тестирование. Результат описывает решения в игре и не является оценкой профессиональной квалификации.</p>
     {import.meta.env.DEV && <ThemePanel inline />}

@@ -6,6 +6,7 @@ import { ChallengeGate } from '@/components/layout/ChallengeGate'
 import { useDebugParams } from '@/hooks/useDebug'
 import type { ChallengeType } from '@/types/game'
 import { CreateRoom } from '@/duel/CreateRoom'
+import { trialModeState } from '@/components/home/trialState'
 import type { GameMode } from './config'
 const labels: Record<GameMode, string> = { standard: 'Стандартный', advanced: 'Продвинутый', duel: 'Дуэль' }
 const descriptions: Record<GameMode, string> = {
@@ -52,8 +53,12 @@ export function ModeBoundary({ children }: { children: ReactNode }) {
 }
 
 function ChallengeEntry({ challenge, children }: { challenge: ChallengeType; children: ReactNode }) {
-  const [started, setStarted] = useState(false)
-  const mode = useGameStore(state => state.selectedMode)
+  const location = useLocation()
+  const state = useGameStore()
+  const mode = state.selectedMode
+  // Cards already selected a mode. Keep the same access checks for direct entry.
+  const [started, setStarted] = useState(() => location.state?.trialMode === mode
+    && trialModeState(state, challenge, mode).available)
   const debug = useDebugParams()
   if (started || debug.enabled) {
     return mode === 'duel' ? <CreateRoom challengeType={challenge} />
