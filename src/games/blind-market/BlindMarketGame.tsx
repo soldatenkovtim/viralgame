@@ -33,7 +33,7 @@ import type {
 import { DrawingToolbar, MAX_LEVELS, TimeframeSwitch } from './ChartToolbar'
 import { MAX_INFO_SLOTS } from './InfoSelector'
 import { BlindMarketInfo } from './BlindMarketInfo'
-import { DecisionChoice, DecisionHint, RevealedInformation, TerminalSidebar } from './BlindMarketTerminal'
+import { DecisionChoice, DecisionHint, RevealedInformation, TerminalDisclosure, TerminalSidebar, TerminalSubmit } from './BlindMarketTerminal'
 import './BlindMarketTerminal.css'
 import { formatPositionLabel, formatPositionSize, formatTerminalReturn } from './terminalFormatting'
 import {
@@ -523,9 +523,7 @@ export function BlindMarketGame({
               selected={action}
               confidence={confidence}
               exposure={currentExposure}
-              stopControl={
-                action !== null && applyAction(currentExposure, action) !== 0 ? stopControl : null
-              }
+              stopControl={stopControl}
               onSelect={chooseAction}
               onConfidence={setConfidence}
               onSubmit={submit}
@@ -774,8 +772,8 @@ function EntryControls({
           </div>
         </div>
 
-        {needsSize ? (
-          <div className="blind-terminal-parameters flex animate-fade-up flex-col gap-2 border-t border-ink-800 pt-3">
+        <TerminalDisclosure open={needsSize}>
+          <div className="blind-terminal-parameters flex flex-col gap-2 border-t border-ink-800 pt-3">
             <h3 className="text-sm text-chalk-400">Размер позиции</h3>
             <div className="blind-terminal-sizes" role="group" aria-label="Размер позиции">
               {POSITION_SIZES.map((value) => (
@@ -786,23 +784,23 @@ function EntryControls({
             </div>
             {stopControl}
           </div>
-        ) : null}
+        </TerminalDisclosure>
 
-        {direction ? (
-          <div className="animate-fade-up border-t border-ink-800 pt-3">
+        <TerminalDisclosure open={direction !== null}>
+          <div className="border-t border-ink-800 pt-3">
             <ConfidenceSlider value={confidence} onChange={onConfidence} />
           </div>
-        ) : null}
+        </TerminalDisclosure>
 
       </div>
-      <div className="blind-terminal-submit">
+      <TerminalSubmit>
         <Button className="blind-terminal-confirm" variant="primary" size="md" fullWidth disabled={!ready} aria-describedby={needsSize && size === null ? 'blind-size-required' : undefined} onClick={onSubmit}>
           Подтвердить решение
         </Button>
         {needsSize && size === null
           ? <p id="blind-size-required" className="blind-terminal-required" role="status">Выберите размер позиции.</p>
           : <DecisionHint lastDecision={lastDecision} />}
-      </div>
+      </TerminalSubmit>
     </div>
   )
 }
@@ -850,23 +848,23 @@ function FollowUpControls({
           </div>
         </div>
 
-        {stopControl ? (
-          <div className="animate-fade-up border-t border-ink-800 pt-3">{stopControl}</div>
-        ) : null}
+        <TerminalDisclosure open={selected !== null && applyAction(exposure, selected) !== 0}>
+          <div className="border-t border-ink-800 pt-3">{stopControl}</div>
+        </TerminalDisclosure>
 
-        {selected ? (
-          <div className="animate-fade-up border-t border-ink-800 pt-3">
+        <TerminalDisclosure open={selected !== null}>
+          <div className="border-t border-ink-800 pt-3">
             <ConfidenceSlider value={confidence} onChange={onConfidence} />
           </div>
-        ) : null}
+        </TerminalDisclosure>
 
       </div>
-      <div className="blind-terminal-submit">
+      <TerminalSubmit>
         <Button className="blind-terminal-confirm" variant="primary" size="md" fullWidth disabled={!selected} onClick={onSubmit}>
           Подтвердить решение
         </Button>
         <DecisionHint lastDecision={lastDecision} />
-      </div>
+      </TerminalSubmit>
     </div>
   )
 }

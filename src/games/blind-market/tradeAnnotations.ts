@@ -7,7 +7,7 @@ import { candleMidTime, getTimeframe } from './timeframes'
 
 const CLOSE_COLOR = '#9b84ff'
 
-export function tradeMarkers(events: TradeEvent[]): ChartMarker[] {
+export function tradeMarkers(events: TradeEvent[], positionLabel = exposureLabel): ChartMarker[] {
   return events.map((event) => {
     const sideColor = event.exposure > 0 ? CHART_COLORS.up : CHART_COLORS.down
     const long = event.exposure > 0
@@ -19,7 +19,7 @@ export function tradeMarkers(events: TradeEvent[]): ChartMarker[] {
           position: long ? 'belowBar' : 'aboveBar',
           shape: long ? 'arrowUp' : 'arrowDown',
           color: sideColor,
-          text: `Вход · ${exposureLabel(event.exposure)}`,
+          text: `Вход · ${positionLabel(event.exposure)}`,
         }
       case 'increase':
         return {
@@ -27,7 +27,7 @@ export function tradeMarkers(events: TradeEvent[]): ChartMarker[] {
           position: long ? 'belowBar' : 'aboveBar',
           shape: long ? 'arrowUp' : 'arrowDown',
           color: sideColor,
-          text: `Добавил · ${exposureLabel(event.exposure)}`,
+          text: `Добавил · ${positionLabel(event.exposure)}`,
         }
       case 'reduce':
         return {
@@ -35,7 +35,7 @@ export function tradeMarkers(events: TradeEvent[]): ChartMarker[] {
           position: long ? 'aboveBar' : 'belowBar',
           shape: 'circle',
           color: CLOSE_COLOR,
-          text: `Сократил · ${exposureLabel(event.exposure)}`,
+          text: `Сократил · ${positionLabel(event.exposure)}`,
         }
       case 'flip':
         return {
@@ -43,7 +43,7 @@ export function tradeMarkers(events: TradeEvent[]): ChartMarker[] {
           position: long ? 'belowBar' : 'aboveBar',
           shape: long ? 'arrowUp' : 'arrowDown',
           color: sideColor,
-          text: `Переворот · ${exposureLabel(event.exposure)}`,
+          text: `Переворот · ${positionLabel(event.exposure)}`,
         }
       case 'close':
         return {

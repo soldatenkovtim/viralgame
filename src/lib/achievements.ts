@@ -1,4 +1,6 @@
-import { getBlindScenario } from '@/data/blindMarketScenarios'
+import { findScenarioById } from '@/modes/scenarios'
+import type { ScenarioMode } from '@/scenario-engine/scenarioTypes'
+import { formatResultPercent, isFiniteMarketReturn, marketMovement } from '@/games/blind-market/resultAnalysis'
 import type {
   Achievement,
   BlindMarketResult,
@@ -17,45 +19,52 @@ function pickOne(candidates: Achievement[]): Achievement | null {
   return candidates[Math.floor(Math.random() * candidates.length)]
 }
 
-export function blindMarketAchievement(result: BlindMarketResult): Achievement | null {
-  const scenario = getBlindScenario(result.scenarioId)
+export function blindMarketAchievement(result: BlindMarketResult, mode?: ScenarioMode): Achievement | null {
+  const scenario = findScenarioById('blind-market', result.scenarioId, mode)
   const candidates: Achievement[] = []
 
-  const firstDecision = result.decisions[0]
-  if (firstDecision && firstDecision.exposure !== 0) {
-    const revealed = scenario.candles.slice(scenario.checkpoints[0])
+  const firstDecision = result.decisions?.[0]
+  if (scenario && firstDecision && Number.isFinite(firstDecision.exposure) && firstDecision.exposure !== 0
+    && firstDecision.checkpointIndex === 0 && Number.isFinite(firstDecision.priceAtDecision) && firstDecision.priceAtDecision > 0
+    && scenario.checkpoints[firstDecision.checkpointIndex] !== undefined) {
+    const revealed = scenario.candles.slice(scenario.checkpoints[firstDecision.checkpointIndex])
     const lows = revealed.map((candle) => candle.low)
     const highs = revealed.map((candle) => candle.high)
     const extreme =
       firstDecision.exposure > 0 ? Math.min(...lows) : Math.max(...highs)
     const distance = Math.abs(firstDecision.priceAtDecision - extreme) / extreme
 
-    if (distance <= 0.02) {
+    if (Number.isFinite(extreme) && extreme > 0 && distance <= 0.02) {
       candidates.push({
         id: 'caught-reversal',
-        title: 'Разворот пойман',
-        description: 'Вы открыли позицию в пределах 2% от локального экстремума.',
+        title: 'Вход рядом с экстремумом',
+        description: `В первой точке вы открыли позицию в пределах 2% от ${firstDecision.exposure > 0 ? 'минимальной' : 'максимальной'} цены последующего участка до конца сценария. Это наблюдение по завершённому рынку.`,
       })
     }
   }
 
-  const goodFlat = result.decisions.some((decision, index) => {
-    const segmentReturn = result.segmentReturns[index]
-    return decision.exposure === 0 && Math.abs(segmentReturn ?? 0) < 1.5
-  })
-  if (goodFlat) {
+  const flatIndex = result.decisions?.findIndex((decision, index) => {
+    const segmentReturn = result.segmentReturns?.[index]
+    return decision.checkpointIndex === index && decision.exposure === 0 && isFiniteMarketReturn(segmentReturn) && Math.abs(segmentReturn) < 1.5
+  }) ?? -1
+  if (flatIndex >= 0) {
+    const segmentReturn = result.segmentReturns[flatIndex]
+    // Keep the existing eligibility threshold, but describe only this exact interval.
+    const last = scenario ? flatIndex === scenario.checkpoints.length - 1 : false
+    const movement = marketMovement(segmentReturn, last)
     candidates.push({
       id: 'stayed-out',
       title: 'Вне рынка',
-      description: 'Вы выбрали «Вне рынка» там, где движения почти не было.',
+      description: `В точке решения ${flatIndex + 1} вы остались вне рынка. ${scenario ? movement : movement.replace('До следующей точки', 'На последующем участке')}`,
     })
   }
 
-  if (result.maxDrawdown < 1.2 && result.pnlPercent > 0) {
+  if (isFiniteMarketReturn(result.maxDrawdown) && result.maxDrawdown >= 0
+    && result.maxDrawdown < 1.2 && isFiniteMarketReturn(result.pnlPercent) && result.pnlPercent > 0) {
     candidates.push({
       id: 'clean-run',
-      title: 'Без просадки',
-      description: 'Ваша позиция ни разу не ушла заметно против вас.',
+      title: 'Небольшая просадка',
+      description: `Максимальная просадка капитала от достигнутого пика составила ${formatResultPercent(result.maxDrawdown, false)}. Сценарий завершён с положительным результатом.`,
     })
   }
 

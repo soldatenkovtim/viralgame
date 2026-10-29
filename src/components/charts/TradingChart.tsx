@@ -87,6 +87,8 @@ export function TradingChart(props: {
   visibleBars?: number
   /** Подпись у метки последней цены на оси. */
   lastPriceTitle?: string
+  /** Optional focus used by the completed-session review only. */
+  focusCandleIndex?: number
   markers?: ChartMarker[]
   segments?: OverlaySegment[]
   /** Можно ли выделять и перетаскивать уровни. */
@@ -621,6 +623,21 @@ export function TradingChart(props: {
   useEffect(() => {
     if (chartRef.current) applyChartTheme(chartRef.current, candleRef.current)
   }, [theme])
+
+  // Review navigation uses the same aggregation buckets as trade markers.
+  // Do not rerun on each reveal frame: normal playback keeps its existing viewport.
+  useEffect(() => {
+    if (props.focusCandleIndex === undefined) return
+    const candle = candles[props.focusCandleIndex]
+    const chart = chartRef.current
+    if (!candle || !chart) return
+    const time = bucketStart(candle.time, origin, frame.seconds)
+    const index = geometryRef.current.bars.findIndex(bar => bar.time === time)
+    if (index < 0) return
+    const range = chart.timeScale().getVisibleLogicalRange()
+    const width = Math.max(20, Math.min(60, range ? range.to - range.from : frame.defaultBars))
+    chart.timeScale().setVisibleLogicalRange({ from: index - width / 2, to: index + width / 2 })
+  }, [props.focusCandleIndex, timeframe, candles, origin, frame.seconds, frame.defaultBars])
 
   const hovered = hover ? bars[hover.index] : undefined
   const previous = hover && hover.index > 0 ? bars[hover.index - 1] : undefined

@@ -44,6 +44,22 @@ describe('applyAction', () => {
     expect(applyAction(0.5, 'close')).toBe(0)
   })
 
+  it.each([0.25, -0.25])('сохраняет точный размер после сокращения %s', exposure => {
+    const reduced = applyAction(exposure, 'reduce')
+    expect(reduced).toBe(exposure > 0 ? 0.125 : -0.125)
+    expect(applyAction(reduced, 'reduce')).toBe(exposure > 0 ? 0.0625 : -0.0625)
+    expect(applyAction(reduced, 'increase')).toBe(exposure > 0 ? 0.375 : -0.375)
+
+    const decisions = [decision(exposure, 0), decision(reduced, 1)]
+    const end = scenario.checkpoints[2] - 1
+    const beforeReduction = computeRunningPnl(scenario, decisions, scenario.checkpoints[1] - 1)
+    const held = simulateBlind(scenario, [decision(exposure, 0), decision(exposure, 1)], end)
+    const simulation = simulateBlind(scenario, decisions, end)
+    expect(simulation.exposure).toBe(reduced)
+    expect(simulation.pnl - beforeReduction).toBeCloseTo((held.pnl - beforeReduction) / 2, 6)
+    expect(buildTradeTimeline(scenario, decisions, end).events.at(-1)?.exposure).toBe(reduced)
+  })
+
   it('переворот меняет знак, сохраняя размер', () => {
     expect(applyAction(0.75, 'flip')).toBe(-0.75)
     expect(applyAction(-0.25, 'flip')).toBe(0.25)

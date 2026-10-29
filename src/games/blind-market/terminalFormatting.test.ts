@@ -16,9 +16,9 @@ it('formats capital return, including unsigned zero', () => {
   expect(formatTerminalReturn(-0)).toBe('0,00%')
 })
 
-it('shows the actual rounded reduction without changing the trading rule', () => {
-  expect(formatPositionLabel(applyAction(.25, 'reduce'))).toBe('Лонг 13%')
-  expect(formatPositionLabel(applyAction(-.25, 'reduce'))).toBe('Шорт 12%')
+it('shows the exact halved position for both directions', () => {
+  expect(formatPositionLabel(applyAction(.25, 'reduce'))).toBe('Лонг 12,5%')
+  expect(formatPositionLabel(applyAction(-.25, 'reduce'))).toBe('Шорт 12,5%')
   expect(formatPositionLabel(applyAction(.5, 'reduce'))).toBe('Лонг 25%')
   expect(formatPositionLabel(applyAction(.25, 'close'))).toBe('Вне рынка')
   expect(formatPositionLabel(applyAction(.25, 'flip'))).toBe('Шорт 25%')

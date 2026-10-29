@@ -15,6 +15,10 @@ export const scenarioCatalog = {
   'black-swan': [...marketShockScenarios, ...legacyMarketShockScenarios, ...advancedShockScenarios, ...archivedAdvancedShock],
   'cross-arbitrage': [...crossArbitrageSessions, ...advancedArbitrageSessions],
 }
+/** Exact lookup for analytics. Missing/foreign-mode IDs must not select another market. */
+export function findScenarioById<T extends ChallengeType>(type: T, id: string | null | undefined, mode?: ScenarioMode): (typeof scenarioCatalog)[T][number] | undefined {
+  return scenarioCatalog[type].find(s => s.id === id && (mode === undefined || s.mode === mode))
+}
 export function scenarioById<T extends ChallengeType>(type: T, id: string): (typeof scenarioCatalog)[T][number] {
   const found = scenarioCatalog[type].find(s => s.id === id)
   if (!found) throw new Error(`Unknown scenario: ${type}/${id}`)
