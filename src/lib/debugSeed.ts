@@ -62,7 +62,7 @@ function buildCrossArbitrageDemo() {
 }
 
 function buildBlindDemo() {
-  const scenario = getBlindScenario('blind_01')
+  const scenario = getBlindScenario('blind-aapl-intraday-01')
   const selectedInformation: BlindInfoKey[] = ['volume', 'marketContext']
   const prices = scenario.checkpoints.map(
     (checkpoint) => scenario.candles[checkpoint - 1].close,

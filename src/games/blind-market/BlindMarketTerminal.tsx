@@ -1,34 +1,24 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { BlindInfoKey, BlindMarketScenario } from '@/types/game'
 import { infoLabels } from './InfoSelector'
 
-/** Keep the desktop submit area in its own row, outside the scrolling fields. */
+/** Natural height keeps the page as the only vertical scroll container. */
 export function TerminalSidebar({ children }: { children: ReactNode }) {
-  const ref = useRef<HTMLElement>(null)
-  useEffect(() => {
-    const node = ref.current
-    if (!node) return
-    let frame = 0
-    const measure = () => {
-      cancelAnimationFrame(frame)
-      frame = requestAnimationFrame(() => {
-        const top = Math.max(16, node.getBoundingClientRect().top)
-        node.style.setProperty('--terminal-panel-height', `${Math.max(400, window.innerHeight - top - 16)}px`)
-      })
-    }
-    const observer = new ResizeObserver(measure)
-    node.closest('.blind-terminal')?.querySelectorAll('header, .blind-terminal-information').forEach(element => observer.observe(element))
-    window.addEventListener('resize', measure)
-    window.addEventListener('scroll', measure, { passive: true })
-    measure()
-    return () => {
-      cancelAnimationFrame(frame)
-      observer.disconnect()
-      window.removeEventListener('resize', measure)
-      window.removeEventListener('scroll', measure)
-    }
-  }, [])
-  return <aside ref={ref} className="blind-terminal-sidebar">{children}</aside>
+  return <aside className="blind-terminal-sidebar">{children}</aside>
+}
+
+/** The sticky containing block starts after every field, so the CTA cannot cover them. */
+export function TerminalSubmit({ children }: { children: ReactNode }) {
+  return <div className="blind-terminal-submit-slot">
+    <div className="blind-terminal-submit">{children}</div>
+  </div>
+}
+
+/** Retain content so both expansion and collapse can animate its natural height. */
+export function TerminalDisclosure({ open, children }: { open: boolean; children: ReactNode }) {
+  return <div className="blind-terminal-disclosure" data-open={open} aria-hidden={!open} inert={!open}>
+    <div className="blind-terminal-disclosure-inner">{children}</div>
+  </div>
 }
 
 /** Reformat only the already disclosed strings; no new data or calculations. */

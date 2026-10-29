@@ -73,6 +73,7 @@
   border: 1px solid color-mix(in srgb, white 35%, transparent);
   transition: background-color 180ms ease, border-color 180ms ease;
 }
+.blind-info-indicator-locked { border-color: transparent; }
 .blind-info-revealed {
   flex-shrink: 0;
   display: inline-flex;

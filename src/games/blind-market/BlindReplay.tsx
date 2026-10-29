@@ -4,6 +4,7 @@ import type { ChartMarker } from '@/components/charts/CandleChart'
 import { CHART_COLORS, TradingChart } from '@/components/charts/TradingChart'
 import { useReveal } from '@/hooks/useReveal'
 import type { BlindMarketResult, BlindMarketScenario, ChartAnnotations } from '@/types/game'
+import { formatPositionLabel } from './terminalFormatting'
 import { TimeframeSwitch } from './ChartToolbar'
 import { actionShortLabels, buildTradeTimeline } from './scoring'
 import { type TimeframeId } from './timeframes'
@@ -18,9 +19,13 @@ const EMPTY_ANNOTATIONS: ChartAnnotations = { levels: [], trendLine: null }
 export function BlindReplay({
   scenario,
   result,
+  selectedDecision = null,
+  onPlayingChange,
 }: {
   scenario: BlindMarketScenario
   result: BlindMarketResult
+  selectedDecision?: number | null
+  onPlayingChange?: (playing: boolean) => void
 }) {
   const total = scenario.candles.length
   const [timeframe, setTimeframe] = useState<TimeframeId>(scenario.availableTimeframes.includes('1h') ? '1h' : scenario.baseTimeframe)
@@ -33,7 +38,7 @@ export function BlindReplay({
   )
 
   const markers = useMemo<ChartMarker[]>(() => {
-    const list = tradeMarkers(timeline.events)
+    const list = tradeMarkers(timeline.events, formatPositionLabel)
     // Решения без изменения позиции тоже видны — иначе «Держал» пропадает из разбора.
     result.decisions.forEach((decision, index) => {
       const candleIndex = scenario.checkpoints[index] - 1
@@ -49,16 +54,23 @@ export function BlindReplay({
             : 'Вне рынка',
       })
     })
+    if (selectedDecision !== null && !playing) {
+      const selectedIndex = scenario.checkpoints[selectedDecision] - 1
+      return list.map(marker => marker.candleIndex === selectedIndex
+        ? { ...marker, color: '#b589ef', shape: 'square', text: `Точка ${String(selectedDecision + 1).padStart(2, '0')} · ${marker.text}` }
+        : marker)
+    }
     return list
-  }, [timeline.events, result.decisions, scenario.checkpoints])
+  }, [timeline.events, result.decisions, scenario.checkpoints, selectedDecision, playing])
 
   const segments = useMemo(() => legSegments(scenario, timeline.legs), [scenario, timeline.legs])
   const annotations = result.annotations ?? EMPTY_ANNOTATIONS
 
   const play = () => {
     setPlaying(true)
+    onPlayingChange?.(true)
     reset(scenario.checkpoints[0])
-    revealTo(total, () => setPlaying(false))
+    revealTo(total, () => { setPlaying(false); onPlayingChange?.(false) })
   }
 
   return (
@@ -87,6 +99,7 @@ export function BlindReplay({
         annotations={annotations}
         markers={markers}
         segments={segments}
+        focusCandleIndex={!playing && selectedDecision !== null ? scenario.checkpoints[selectedDecision] - 1 : undefined}
         editable={false}
         showDates
       />

@@ -1,3 +1,4 @@
+import { isReversal, positionEvents } from '@/games/blind-market/positionAnalysis'
 import { blindTraits } from '@/games/blind-market/scoring'
 import { getMarketShockScenario } from '@/games/market-shock/scenarios'
 import { marketShockTraits } from '@/games/market-shock/scoring'
@@ -124,6 +125,15 @@ export function buildTradingProfile(input: ProfileInput): TradingProfile {
   }
 }
 
+/** Refresh wording for saved profiles without mutating their traits or persisted data. */
+export function refreshProfileNarrative(profile: TradingProfile, input: ProfileInput): TradingProfile {
+  return {
+    ...profile,
+    archetype: input.blindMarket ? resolveArchetype(profile, input).name : profile.archetype,
+    description: buildDescription(input),
+  }
+}
+
 /** Показатели приводятся к 20–95: крайние 0 и 100 не показываем никогда. */
 export function scaleTrait(raw: number): number {
   const normalized = clamp(raw, 0, 100) / 100
@@ -209,7 +219,7 @@ export const OPPORTUNIST: Archetype = {
 
 export const CONTRARIAN: Archetype = {
   name: 'Контртрендовый игрок',
-  tagline: 'Идёте против движения — и в этой сессии это сработало.',
+  tagline: 'В этой сессии вы разворачивали позицию против предшествующего движения цены и завершили сценарий в плюсе.',
 }
 
 export function resolveArchetype(
@@ -221,8 +231,19 @@ export function resolveArchetype(
 
   // Особые случаи важнее пары характеристик: они описывают конкретное поведение.
   const blind = input.blindMarket
-  if (blind && blind.directionChanges >= 2 && blind.pnlPercent > 0) {
-    return CONTRARIAN
+  if (blind && blind.pnlPercent > 0) {
+    const events = positionEvents(blind.decisions, blind.stopHits)
+    const reversals = events.flatMap((event, index) => isReversal(event) ? [index] : [])
+    // Reversal alone does not establish countertrend trading: compare with the
+    // price movement already observed before that decision, not future returns.
+    const againstPriorMove = reversals.every(index => {
+      const previous = blind.decisions[index - 1]?.priceAtDecision
+      const current = blind.decisions[index].priceAtDecision
+      return Number.isFinite(previous) && Number.isFinite(current)
+        && previous > 0 && current > 0
+        && (current - previous) * blind.decisions[index].exposure < 0
+    })
+    if (reversals.length >= 2 && againstPriorMove) return CONTRARIAN
   }
 
   const swan = input.blackSwan
@@ -267,24 +288,31 @@ export function buildDescription(input: ProfileInput): string {
   const { blindMarket, marketMaker, blackSwan, crossArbitrage } = input
 
   if (blindMarket) {
-    const changes = blindMarket.directionChanges
-    const confidence = Math.round(blindMarket.averageConfidence)
-    if (changes >= 2) {
-      sentences.push(
-        `В слепом рынке вы несколько раз полностью меняли сторону сделки по мере того, как появлялась новая информация, и держали среднюю уверенность около ${confidence}%.`,
-      )
-    } else if (changes === 1) {
-      sentences.push(
-        `В слепом рынке вы один раз развернули позицию после того, как движение пошло против входа, сохраняя среднюю уверенность около ${confidence}%.`,
-      )
-    } else if (blindMarket.decisions.every((decision) => decision.action !== 'reduce')) {
-      sentences.push(
-        `В слепом рынке вы выбрали направление и не отходили от него до конца сценария при средней уверенности около ${confidence}%.`,
-      )
-    } else {
-      sentences.push(
-        `В слепом рынке вы сохраняли выбранное направление, но управляли размером позиции по ходу движения при средней уверенности около ${confidence}%.`,
-      )
+    const events = positionEvents(blindMarket.decisions, blindMarket.stopHits)
+    const completePassive = blindMarket.decisions.length === 3
+      && events.every(event => event === 'flat')
+    if (completePassive) {
+      sentences.push('Вы прошли сценарий, не открывая торговых позиций. Капитал остался вне рынка на протяжении всех трёх решений.')
+    } else if (events.length) {
+      const descriptions = events.map(event => {
+        switch (event) {
+          case 'open-long': return 'открыли лонг'
+          case 'open-short': return 'открыли шорт'
+          case 'close': return 'закрыли позицию'
+          case 'increase': return 'увеличили размер позиции'
+          case 'reduce': return 'сократили размер позиции'
+          case 'reverse-long': return 'развернули позицию из шорта в лонг'
+          case 'reverse-short': return 'развернули позицию из лонга в шорт'
+          case 'hold': return 'сохранили позицию без изменений'
+          case 'flat': return 'остались вне рынка'
+          case 'unknown': return 'приняли решение, для которого недостаточно данных об изменении позиции'
+        }
+      })
+      sentences.push(`В слепом рынке вы последовательно ${descriptions.join(', затем ')}.`)
+      if (blindMarket.stopHits?.length) sentences.push('В ходе сценария были закрытия позиции по стопу; они учтены отдельно от ваших действий.')
+      if (Number.isFinite(blindMarket.averageConfidence)) {
+        sentences.push(`Средняя уверенность — ${Math.round(blindMarket.averageConfidence)}%.`)
+      }
     }
   }
 

@@ -28,5 +28,7 @@ export const blindMarketScenarios: BlindMarketScenario[] = [
   build('blind-btc-intraday-01', 'BTC-USD', 'Bitcoin', 'crypto', btc, ['2026-09-15T19:45', '2026-09-16T19:45', '2026-09-18T19:45'], 'reversal', 'Цифровые активы: децентрализованные платёжные сети. Торговля идёт круглосуточно, включая выходные.'),
 ]
 export function getBlindScenario(id?: string | null): BlindMarketScenario {
-  return [...blindMarketScenarios, ...legacyBlindMarketScenarios].find(s => s.id === id) ?? blindMarketScenarios[0]
+  const scenario = [...blindMarketScenarios, ...legacyBlindMarketScenarios].find(s => s.id === id)
+  if (!scenario) throw new Error(`Unknown standard blind-market scenario: ${id}`)
+  return scenario
 }

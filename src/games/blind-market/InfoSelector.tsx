@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { Lock } from 'lucide-react'
 import type { BlindInfoKey, BlindMarketScenario } from '@/types/game'
 
 /** Объём не выбирается отдельно: он всегда виден гистограммой под свечами. */
@@ -66,7 +67,9 @@ export function InfoSelector({
               </span>
               {isSelected
                 ? <span className="blind-info-revealed" aria-hidden="true">Раскрыто</span>
-                : <span className="blind-info-indicator" aria-hidden="true" />}
+                : <span className={`blind-info-indicator${full ? ' blind-info-indicator-locked' : ''}`} aria-hidden="true">
+                    {full && <Lock size={16} />}
+                  </span>}
             </span>
             <span id={`${id}-${key}`} className="blind-info-card-description">
               {isSelected ? scenario.info[key] : infoDescriptions[key]}

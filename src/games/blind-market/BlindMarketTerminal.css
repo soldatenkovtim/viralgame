@@ -32,7 +32,7 @@
 .blind-terminal-chart-toolbar [role="toolbar"] { flex-wrap: wrap; }
 .blind-terminal-chart-toolbar button:hover:not(:disabled) { border-color: var(--accent); color: var(--foreground); }
 .blind-terminal-chart-help { border-top: 1px solid var(--border); padding: 10px 12px; font-size: 11px; line-height: 1.6; color: var(--muted); }
-.blind-terminal-sidebar { display: flex; flex-direction: column; gap: 12px; min-width: 0; position: sticky; top: 16px; }
+.blind-terminal-sidebar { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .blind-terminal-position { flex-shrink: 0; padding: 14px 18px; border: 1px solid var(--border); }
 .blind-terminal-panel-heading { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 12px; }
 .blind-terminal-panel-heading h2, .blind-terminal-decision h2 { font-size: var(--text-helper); font-weight: 700; letter-spacing: .035em; line-height: 1.4; text-transform: uppercase; }
@@ -44,9 +44,23 @@
 .blind-terminal-stat small { display: block; margin-top: 4px; font-size: var(--text-label); color: var(--muted); font-variant-numeric: tabular-nums; }
 .blind-terminal-decision { display: flex; flex-direction: column; min-height: 0; gap: 12px; }
 .blind-terminal-decision-options { padding-top: 12px; border-top: 1px solid var(--border); }
-.blind-terminal-fields { display: flex; flex-direction: column; gap: 12px; }
+.blind-terminal-fields { display: flex; flex-direction: column; }
 .blind-terminal-fields > * { flex-shrink: 0; }
-.blind-terminal-submit { display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+.blind-terminal-fields > * + * { margin-top: 12px; }
+.blind-terminal-fields > .blind-terminal-disclosure { margin-top: 0; }
+.blind-terminal-fields > .blind-terminal-disclosure[data-open="true"] { margin-top: 12px; }
+.blind-terminal-disclosure {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-4px);
+  visibility: hidden;
+  transition: grid-template-rows 200ms ease, margin-top 200ms ease, opacity 200ms ease, transform 200ms ease, visibility 200ms;
+}
+.blind-terminal-disclosure[data-open="true"] { grid-template-rows: 1fr; opacity: 1; transform: none; visibility: visible; }
+.blind-terminal-disclosure-inner { min-height: 0; overflow: clip; overflow-clip-margin: 5px; }
+.blind-terminal-submit-slot { flex-shrink: 0; min-width: 0; }
+.blind-terminal-submit { display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; overflow-anchor: none; }
 .blind-terminal-required { font-size: var(--text-label); line-height: 1.6; color: var(--secondary); }
 .blind-terminal-sizes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .blind-terminal-sizes button { min-height: 44px; border: 1px solid var(--border); font-size: var(--text-helper); font-weight: 500; font-variant-numeric: tabular-nums; }
@@ -66,18 +80,33 @@
 .blind-terminal-reveal { display: flex; flex-direction: column; gap: 12px; padding-block: 20px; border-top: 1px solid var(--border); }
 .blind-terminal button:focus-visible, .blind-terminal input:focus-visible, .blind-terminal summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 @media (min-width: 1100px) {
-  .blind-terminal-sidebar { max-height: var(--terminal-panel-height, calc(100dvh - 32px)); }
-  .blind-terminal-fields { min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; padding: 3px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-  .blind-terminal-submit { border-top: 1px solid var(--border); padding-top: 10px; }
+  /* Keep the chart available while the taller decision column scrolls past it. */
+  .blind-terminal-chart { position: sticky; top: 24px; }
+  .blind-terminal-sidebar { align-self: stretch; }
+  .blind-terminal-decision { flex: 1; gap: 16px; }
+  /* This in-flow slot reserves the CTA's intrinsic height and bounds sticky movement. */
+  .blind-terminal-submit-slot { display: flex; flex-direction: column; justify-content: flex-end; flex: 1 0 auto; }
+  .blind-terminal-submit {
+    position: sticky;
+    bottom: 0;
+    border-top: 1px solid var(--border);
+    padding-block: 10px max(16px, env(safe-area-inset-bottom));
+    background: var(--background);
+  }
+  .blind-terminal-submit > p { min-height: 2lh; }
+  .blind-terminal-decision-options { padding-top: 10px; gap: 6px; }
+  .blind-terminal-decision-options > .grid { gap: 6px; }
+  .blind-terminal-decision-intro { margin-top: 6px; }
+  .blind-terminal-choice { min-height: 56px; padding: 9px 14px; gap: 3px; }
 }
 @media (max-width: 1099px) {
   .blind-terminal-workspace { grid-template-columns: minmax(0, 1fr); }
   .blind-terminal-sidebar { position: static; }
-  .blind-terminal-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 12px 24px; }
+  .blind-terminal-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; column-gap: 24px; }
   .blind-terminal-fields > .blind-terminal-position { grid-column: 1; grid-row: 1 / span 3; }
   .blind-terminal-fields > :not(.blind-terminal-position) { grid-column: 2; }
-  .blind-terminal-decision-options { padding-top: 0; border-top: 0; }
-  .blind-terminal-submit { width: calc((100% - 24px) / 2); align-self: flex-end; }
+  .blind-terminal-fields > .blind-terminal-decision-options { padding-top: 0; border-top: 0; margin-top: 0; }
+  .blind-terminal-submit-slot { width: calc((100% - 24px) / 2); align-self: flex-end; }
 }
 @media (max-width: 639px) {
   .blind-terminal { padding-top: 20px; }
@@ -85,11 +114,11 @@
   .blind-terminal-information { grid-template-columns: minmax(0, 1fr); }
   .blind-terminal-source + .blind-terminal-source { padding-left: 0; border-left: 0; border-top: 1px solid var(--border); }
   .blind-terminal-sidebar { display: flex; gap: 24px; }
-  .blind-terminal-fields { display: flex; }
-  .blind-terminal-decision-options { padding-top: 12px; border-top: 1px solid var(--border); }
-  .blind-terminal-submit { width: 100%; }
+  .blind-terminal-fields { display: flex; align-items: stretch; }
+  .blind-terminal-fields > .blind-terminal-decision-options { padding-top: 12px; border-top: 1px solid var(--border); margin-top: 12px; }
+  .blind-terminal-submit-slot { width: 100%; }
   .blind-terminal-chart-toolbar { padding: 10px; }
   .blind-terminal-chart-help { display: none; }
   .blind-terminal-position, .blind-terminal-decision { width: 100%; }
 }
-@media (prefers-reduced-motion: reduce) { .blind-terminal-choice { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .blind-terminal-choice, .blind-terminal-disclosure { transition: none; } }

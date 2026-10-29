@@ -8,7 +8,7 @@ import { Button, LinkButton } from '@/components/ui/Button'
 import { Disclaimer, SectionLabel } from '@/components/ui/Card'
 import { trackEvent } from '@/lib/analytics'
 import { formatNumber } from '@/lib/formatting'
-import { archetypeTagline, buildDescription, buildTradingProfile } from '@/lib/profile'
+import { archetypeTagline, buildTradingProfile, refreshProfileNarrative } from '@/lib/profile'
 import { CHALLENGE_ORDER, challengeTitles, useGameStore } from '@/store/gameStore'
 
 export function ProfilePage() {
@@ -29,12 +29,12 @@ export function ProfilePage() {
   // Профиль по умолчанию — последнее полное прохождение серии.
   const profile = useMemo(() => {
     // Формулировки обновляются и для ранее сохранённых результатов.
-    if (storedProfile) return { ...storedProfile, description: buildDescription({
+    if (storedProfile) return refreshProfileNarrative(storedProfile, {
       blindMarket: blindMarketResult,
       marketMaker: marketMakerResult,
       blackSwan: blackSwanResult,
       crossArbitrage: crossArbitrageResult,
-    }) }
+    })
     if (!complete) return null
     return buildTradingProfile({
       blindMarket: blindMarketResult,

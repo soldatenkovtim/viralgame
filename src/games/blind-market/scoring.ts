@@ -18,11 +18,11 @@ export type PositionSize = (typeof POSITION_SIZES)[number]
 export function applyAction(exposure: number, action: BlindFollowUpAction): number {
   switch (action) {
     case 'increase':
-      return clamp(roundExposure(exposure + Math.sign(exposure) * 0.25), -1, 1)
+      return clamp(exposure + Math.sign(exposure) * 0.25, -1, 1)
     case 'hold':
       return exposure
     case 'reduce':
-      return roundExposure(exposure / 2)
+      return exposure / 2
     case 'close':
       return 0
     case 'flip':
@@ -34,10 +34,6 @@ export function applyAction(exposure: number, action: BlindFollowUpAction): numb
     case 'stay-flat':
       return 0
   }
-}
-
-function roundExposure(value: number): number {
-  return Math.round(value * 100) / 100
 }
 
 /** Набор действий зависит от того, есть ли сейчас позиция. */

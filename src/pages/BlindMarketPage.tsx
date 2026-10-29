@@ -1,5 +1,5 @@
 import { useScenario } from '@/scenario-engine/useScenario'
-import { ScenarioReplay } from '@/components/results/ScenarioReplay'
+import { scenarioById } from '@/scenario-engine/selectScenario'
 import { DuelResultShare } from '@/duel/DuelResultShare'
 import { useEffect, useState } from 'react'
 import { BlindMarketGame } from '@/games/blind-market/BlindMarketGame'
@@ -41,13 +41,12 @@ export function BlindMarketPage() {
     return (
       <DuelResultShare payload={{ challengeType: 'blind-market', result }}>
       <BlindMarketResult
-        scenario={scenario}
+        scenario={scenarioById('blind-market', result.scenarioId)}
         result={result}
         outcome={outcome}
         nextHref="/challenge/market-maker"
         nextLabel="Открыть следующее испытание"
       />
-      <ScenarioReplay challengeType="blind-market" scenarioId={scenario.id} />
       </DuelResultShare>
     )
   }

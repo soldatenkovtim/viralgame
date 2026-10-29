@@ -28,10 +28,13 @@ export function BlindMarketInfo({ scenario, selected, onSelect, onStart }: {
           </span>
         </h1>
         <p className="blind-info-description">
-          Объём торгов уже доступен на графике. Выберите ещё два блока данных, которые помогут вам
-          принимать решения. Остальные останутся скрытыми до конца испытания.
+          {revealed
+            ? 'Вы раскрыли два источника информации. Остальные данные останутся скрытыми до конца испытания.'
+            : `Объём торгов уже доступен на графике. Вы можете раскрыть ещё ${selected.length === 0 ? 'два источника' : 'один источник'} информации.`}
         </p>
-        <p id={instructions} className="blind-info-instructions">Данные открываются сразу при выборе. Отменить выбор нельзя.</p>
+        <p id={instructions} className="blind-info-instructions">
+          {revealed ? 'Теперь вы можете перейти к анализу рынка.' : 'Каждый выбор окончательный.'}
+        </p>
       </header>
 
       <div role="group" aria-label="Источники информации" aria-describedby={instructions}>
