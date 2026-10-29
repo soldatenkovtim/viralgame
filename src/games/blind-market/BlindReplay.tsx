@@ -1,14 +1,16 @@
 import { useMemo, useState } from 'react'
 import { Play } from 'lucide-react'
-import type { ChartMarker } from '@/components/charts/CandleChart'
 import { CHART_COLORS, TradingChart } from '@/components/charts/TradingChart'
 import { useReveal } from '@/hooks/useReveal'
+import { formatPrice } from '@/lib/formatting'
 import type { BlindMarketResult, BlindMarketScenario, ChartAnnotations } from '@/types/game'
 import { formatPositionLabel } from './terminalFormatting'
 import { TimeframeSwitch } from './ChartToolbar'
-import { actionShortLabels, buildTradeTimeline } from './scoring'
-import { type TimeframeId } from './timeframes'
-import { legSegments, tradeMarkers } from './tradeAnnotations'
+import { buildTradeTimeline } from './scoring'
+import { formatCalendarTime, type TimeframeId } from './timeframes'
+import { legSegments } from './tradeAnnotations'
+import { positionEvents } from './positionAnalysis'
+import { decisionTitle, replayMarkers } from './replayPresentation'
 
 const EMPTY_ANNOTATIONS: ChartAnnotations = { levels: [], trendLine: null }
 
@@ -21,11 +23,13 @@ export function BlindReplay({
   result,
   selectedDecision = null,
   onPlayingChange,
+  onSelectDecision,
 }: {
   scenario: BlindMarketScenario
   result: BlindMarketResult
   selectedDecision?: number | null
   onPlayingChange?: (playing: boolean) => void
+  onSelectDecision?: (index: number) => void
 }) {
   const total = scenario.candles.length
   const [timeframe, setTimeframe] = useState<TimeframeId>(scenario.availableTimeframes.includes('1h') ? '1h' : scenario.baseTimeframe)
@@ -37,31 +41,13 @@ export function BlindReplay({
     [scenario, result.decisions, visible],
   )
 
-  const markers = useMemo<ChartMarker[]>(() => {
-    const list = tradeMarkers(timeline.events, formatPositionLabel)
-    // Решения без изменения позиции тоже видны — иначе «Держал» пропадает из разбора.
-    result.decisions.forEach((decision, index) => {
-      const candleIndex = scenario.checkpoints[index] - 1
-      if (timeline.events.some((event) => event.candleIndex === candleIndex)) return
-      list.push({
-        candleIndex,
-        position: 'aboveBar',
-        shape: 'circle',
-        color: '#6b6b78',
-        text:
-          decision.action && decision.action !== 'stay-flat'
-            ? actionShortLabels[decision.action]
-            : 'Вне рынка',
-      })
-    })
-    if (selectedDecision !== null && !playing) {
-      const selectedIndex = scenario.checkpoints[selectedDecision] - 1
-      return list.map(marker => marker.candleIndex === selectedIndex
-        ? { ...marker, color: '#b589ef', shape: 'square', text: `Точка ${String(selectedDecision + 1).padStart(2, '0')} · ${marker.text}` }
-        : marker)
-    }
-    return list
-  }, [timeline.events, result.decisions, scenario.checkpoints, selectedDecision, playing])
+  const markers = useMemo(
+    () => replayMarkers(scenario, result.decisions, timeline.events, playing ? null : selectedDecision, visible),
+    [scenario, result.decisions, timeline.events, selectedDecision, playing, visible],
+  )
+  const events = positionEvents(result.decisions, result.stopHits)
+  const selected = selectedDecision !== null ? result.decisions[selectedDecision] : undefined
+  const selectedCandle = selected ? scenario.candles[scenario.checkpoints[selected.checkpointIndex] - 1] : undefined
 
   const segments = useMemo(() => legSegments(scenario, timeline.legs), [scenario, timeline.legs])
   const annotations = result.annotations ?? EMPTY_ANNOTATIONS
@@ -76,7 +62,7 @@ export function BlindReplay({
   return (
     <section className="flex flex-col overflow-hidden rounded-xl border border-ink-700 bg-ink-900">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink-800 px-4 py-2.5">
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
           <h3 className="text-sm text-chalk-200">Разбор сессии</h3>
           <TimeframeSwitch options={scenario.availableTimeframes} value={timeframe} onChange={setTimeframe} />
         </div>
@@ -91,6 +77,24 @@ export function BlindReplay({
         </button>
       </div>
 
+      <div className="blind-replay-navigation">
+        <div className="blind-replay-points" role="group" aria-label="Точки торговых решений">
+          {result.decisions.map((decision, index) => <button
+            key={decision.checkpointIndex}
+            type="button"
+            aria-pressed={selectedDecision === index}
+            aria-label={`Точка ${index + 1}: ${decisionTitle(events[index], decision.exposure)}`}
+            disabled={playing}
+            onClick={() => onSelectDecision?.(index)}
+          >{String(index + 1).padStart(2, '0')} · {formatPositionLabel(decision.exposure)}</button>)}
+        </div>
+        <p className="blind-replay-detail" aria-live="polite" aria-atomic="true">
+          {playing ? 'Воспроизведение сессии…' : selected && selectedCandle && selectedDecision !== null
+            ? <><span>{formatCalendarTime(selectedCandle.time)} UTC</span>{' '}<span>{decisionTitle(events[selectedDecision], selected.exposure)}</span>{' '}<span>Цена: {formatPrice(selected.priceAtDecision)}</span></>
+            : 'Выберите точку, чтобы выделить её на графике.'}
+        </p>
+      </div>
+
       <TradingChart
         className="h-[clamp(380px,62vh,620px)]"
         candles={scenario.candles}
@@ -99,7 +103,7 @@ export function BlindReplay({
         annotations={annotations}
         markers={markers}
         segments={segments}
-        focusCandleIndex={!playing && selectedDecision !== null ? scenario.checkpoints[selectedDecision] - 1 : undefined}
+        focusCandleIndex={!playing && selected ? scenario.checkpoints[selected.checkpointIndex] - 1 : undefined}
         editable={false}
         showDates
       />
@@ -108,6 +112,7 @@ export function BlindReplay({
         <LegendItem color={CHART_COLORS.up} label="Вход и добавление" />
         <LegendItem color="#9b84ff" label="Сокращение и выход" dot />
         <LegendItem color={CHART_COLORS.stop} label="Стоп" dashed />
+        {timeline.events.some(event => event.kind === 'exit') && <LegendItem color="#9b84ff" label="Ф · Автозакрытие в конце сценария" dot />}
         {annotations.levels.length ? (
           <LegendItem color={CHART_COLORS.level} label="Ваши уровни" />
         ) : null}

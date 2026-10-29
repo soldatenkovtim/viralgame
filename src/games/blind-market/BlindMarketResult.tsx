@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { CrowdStats, PersonalBestNote } from '@/components/results/ResultBlocks'
 import { ResultNavigation } from '@/components/results/ResultNavigation'
@@ -13,10 +13,11 @@ import type { BlindMarketResult as BlindResult, BlindMarketScenario } from '@/ty
 import type { SaveOutcome } from '@/store/gameStore'
 import { infoLabels } from './InfoSelector'
 import { BlindReplay } from './BlindReplay'
-import { positionEvents, positionEventLabels } from './positionAnalysis'
+import { positionEvents } from './positionAnalysis'
 import { actionShortLabels } from './scoring'
-import { decisionObservation, formatCapitalChange, formatResultPercent, isFiniteMarketReturn, scoreContributions } from './resultAnalysis'
-import { formatPositionSize, formatPositionLabel } from './terminalFormatting'
+import { decisionObservation, formatCapitalChange, formatResultPercent, isFiniteMarketReturn, scoreContributions, segmentPositionPnls } from './resultAnalysis'
+import { decisionTitle, positionChangeCount } from './replayPresentation'
+import { formatPositionLabel } from './terminalFormatting'
 import './BlindMarketResult.css'
 
 export function BlindMarketResult({ scenario, result, outcome, nextHref, nextLabel }: {
@@ -35,12 +36,12 @@ export function BlindMarketResult({ scenario, result, outcome, nextHref, nextLab
       : actionShortLabels[decision.action ?? 'hold']),
     e: result.decisions.map(decision => decision.exposure),
   }
-  const changes = result.directionChanges
   const events = positionEvents(result.decisions, result.stopHits)
   const [scoreOpen, setScoreOpen] = useState(false)
   const [selectedDecision, setSelectedDecision] = useState<number | null>(null)
   const [replaying, setReplaying] = useState(false)
-  const replayRef = useRef<HTMLDivElement>(null)
+  const segmentPnls = useMemo(() => segmentPositionPnls(scenario, result.decisions), [scenario, result.decisions])
+  const changes = positionChangeCount(events)
   const contributions = scoreContributions(result.pnlPercent, result.maxDrawdown)
   const componentPoints = (value: number) => value.toLocaleString('ru-RU', { maximumFractionDigits: 2 })
 
@@ -62,7 +63,7 @@ export function BlindMarketResult({ scenario, result, outcome, nextHref, nextLab
         </div>
         <Stat label="Максимальная просадка" value={formatResultPercent(-result.maxDrawdown)} />
         <Stat label="Средняя уверенность" value={`${Math.round(result.averageConfidence)}%`} />
-        <Stat label="Изменения позиции" value={`${changes} ${plural(changes, ['раз', 'раза', 'раз'])}`} hint="Смена состояния между решениями, без учёта размера." />
+        <Stat label="Изменения позиции" value={`${changes} ${plural(changes, ['раз', 'раза', 'раз'])}`} hint="Открытие, закрытие и изменение позиции по вашим решениям." />
         <Stat label="Открытые источники" value={`${result.selectedInformation.length} ${plural(result.selectedInformation.length, ['источник', 'источника', 'источников'])}`} hint={result.selectedInformation.map(key => infoLabels[key]).join(' · ')} />
       </div>
       <div id="blind-score-explanation" className="blind-result-score" hidden={!scoreOpen}>
@@ -78,40 +79,41 @@ export function BlindMarketResult({ scenario, result, outcome, nextHref, nextLab
       </div>
       {(outcome.previousBest !== null || achievement) && <div className="blind-result-notes">
         {outcome.previousBest !== null && <PersonalBestNote isPersonalBest={outcome.isPersonalBest} pointsToBest={outcome.pointsToBest} points={outcome.points} hasPrevious />}
-        {achievement && <p><strong>{achievement.title}</strong> · {achievement.description}</p>}
+        {achievement && <p><span className="blind-result-eyebrow">Наблюдение по сессии</span> · <span>{achievement.title}</span> · {achievement.id === 'clean-run' ? 'Испытание завершено с положительным результатом.' : achievement.description}</p>}
       </div>}
     </section>
 
     <AssetReveal scenario={scenario} />
 
     <section className="blind-result-session" aria-label="Разбор сессии и ваши решения">
-      <div ref={replayRef}>
-        <BlindReplay key={scenario.id} scenario={scenario} result={result} selectedDecision={selectedDecision} onPlayingChange={playing => { setReplaying(playing); if (playing) setSelectedDecision(null) }} />
+      <div>
+        <BlindReplay key={scenario.id} scenario={scenario} result={result} selectedDecision={selectedDecision} onSelectDecision={setSelectedDecision} onPlayingChange={playing => { setReplaying(playing); if (playing) setSelectedDecision(null) }} />
       </div>
       <div className="blind-result-decisions">
         <h2>Разбор решений</h2>
-        <p className="blind-result-decision-hint">Выберите карточку, чтобы увидеть точку решения на графике.</p>
+        <p className="blind-result-decision-hint">Точки можно выбирать над графиком или в карточках ниже.</p>
         <ol className="blind-result-timeline">
           {result.decisions.map((decision, index) => {
             const marketReturn = result.segmentReturns?.[index]
             const stop = result.stopHits?.find(hit => hit.segment === index && Number.isFinite(hit.price))
-            const action = positionEventLabels[events[index]]
+            const action = decisionTitle(events[index], decision.exposure)
             const observation = decisionObservation(decision, marketReturn, index === scenario.checkpoints.length - 1, events[index], stop)
             return <li key={decision.checkpointIndex} className={selectedDecision === index ? 'is-selected' : undefined}>
-              <button type="button" className="blind-result-decision-select" aria-label={`Показать точку решения ${index + 1} на графике`} aria-pressed={selectedDecision === index} disabled={replaying} onClick={() => {
-                setSelectedDecision(index)
-                replayRef.current?.scrollIntoView({ block: 'nearest' })
-              }} />
+              <button type="button" className="blind-result-decision-select" aria-label={`Выбрать точку решения ${index + 1}: ${action}`} aria-pressed={selectedDecision === index} disabled={replaying} onClick={() => setSelectedDecision(index)} />
               <p className="blind-result-eyebrow">Точка решения {String(index + 1).padStart(2, '0')}</p>
               <h3>{action}</h3>
               <dl>
-                <div><dt>После действия</dt><dd>{decision.exposure === 0 ? 'Вне рынка' : decision.exposure > 0 ? 'Лонг' : 'Шорт'}</dd></div>
-                <div><dt>Размер позиции</dt><dd>{formatPositionSize(decision.exposure)}</dd></div>
                 <div><dt>Уверенность</dt><dd>{decision.confidence}%</dd></div>
               </dl>
               <p className="blind-result-aftermath">
-                {index === scenario.checkpoints.length - 1 ? 'Рынок до завершения' : 'Рынок до следующей точки'}
-                {isFiniteMarketReturn(marketReturn) ? <>: <span className={`tnum ${pnlColor(marketReturn)}`}>{formatResultPercent(marketReturn)}</span></> : ": нет данных"}
+                Движение рынка
+                {isFiniteMarketReturn(marketReturn) ? <>: <span className="tnum">{formatResultPercent(marketReturn)}</span></> : ": нет данных"}
+              </p>
+              <p className="blind-result-position-pnl">
+                <span>Результат вашей позиции</span>
+                <strong className={`tnum ${pnlColor(segmentPnls[index])}`}>
+                  {segmentPnls[index] > 0 ? 'Прибыль' : segmentPnls[index] < 0 ? 'Убыток' : 'Без изменений'} · {formatCapitalChange(segmentPnls[index])} игровых ед.
+                </strong>
               </p>
               {observation && <p className="blind-result-observation">{observation}</p>}
               {stop && <p className="blind-result-stop">Стоп сработал по {formatPrice(stop.price)}. Позиция закрыта.</p>}
