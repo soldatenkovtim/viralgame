@@ -204,7 +204,7 @@ describe('financial regressions and executed stops', () => {
     const events = positionEvents(result.decisions, result.stopHits)
     expect(events).toEqual(['open-long', 'flat', 'flat'])
     const observation = decisionObservation(result.decisions[0], result.segmentReturns[0], false, events[0], result.stopHits[0])!
-    expect(observation).toContain('цена выросла на 2,0%')
+    expect(observation).toContain('движение цены за весь участок')
     expect(observation).toContain('после закрытия позиции по стопу')
     expect(observation).not.toMatch(/прибыл|заработ|правильн|надо было/)
     const reentry = [...result.decisions]
@@ -230,11 +230,16 @@ describe('result screen rendering', () => {
     expect(html).toContain('не нормализованы по сложности и волатильности')
     expect(html).toContain('Уверенность не влияет напрямую на очки')
     expect(html).toContain('<h3>Вне рынка</h3>')
-    expect(html).toContain('<h3>Открытие лонга</h3>')
+    expect(html).toContain('<h3>Открытие лонга · 25%</h3>')
     expect(html).toContain('<h3>Закрытие позиции</h3>')
     expect(html.match(/class="blind-result-decision-select"/g)).toHaveLength(3)
     expect(html).toContain('Испытание завершено.')
     expect(html).toContain('Что дальше')
+    expect(html).toContain('aria-label="Точки торговых решений"')
+    expect(html).not.toContain('После действия')
+    expect(html).not.toContain('Размер позиции')
+    expect(html).not.toContain('Вы открыли лонг')
+
   })
 
   it('renders absent, null and NaN outcomes as unavailable, without fictitious zero returns', () => {

@@ -1,8 +1,7 @@
 import { formatPercent } from '@/lib/formatting'
-import type { BlindDecision, BlindStopHit } from '@/types/game'
+import type { BlindDecision, BlindStopHit, BlindMarketScenario } from '@/types/game'
 import type { PositionEvent } from './positionAnalysis'
-import { blindScore } from './scoring'
-import { formatPositionLabel } from './terminalFormatting'
+import { blindScore, simulateBlind } from './scoring'
 
 /** Keep a small nonzero return visible; presentation only, never used for scoring. */
 export function formatResultPercent(value: number, withSign = true): string {
@@ -44,21 +43,24 @@ export function decisionObservation(
   stop?: BlindStopHit,
 ): string | null {
   if (!isFiniteMarketReturn(marketReturn)) return null
-  const position = formatPositionLabel(decision.exposure).toLocaleLowerCase('ru-RU')
-  let action: string
-  switch (event) {
-    case 'close': action = 'Вы закрыли позицию.'; break
-    case 'increase': action = `Вы увеличили позицию: ${position}.`; break
-    case 'reduce': action = `Вы сократили позицию: ${position}.`; break
-    case 'reverse-long':
-    case 'reverse-short': action = `Вы развернули позицию: ${position}.`; break
-    case 'hold': action = `Вы сохранили позицию: ${position}.`; break
-    case 'flat': action = 'Вы остались вне рынка.'; break
-    case 'open-long':
-    case 'open-short': action = `Вы открыли ${position}.`; break
-    default: action = 'Недостаточно данных об изменении позиции.'
+  const period = last ? 'До завершения сценария' : 'До следующей точки'
+  if (stop && Number.isFinite(stop.price)) {
+    return `${period} показано движение цены за весь участок, включая время после закрытия позиции по стопу.`
   }
-  const afterStop = stop && Number.isFinite(stop.price)
-    ? ' Это движение цены за весь участок, включая время после закрытия позиции по стопу; оно не является доходностью вашей сделки.' : ''
-  return `${action} ${marketMovement(marketReturn, last)}${afterStop}`
+  if (event === 'unknown') return `${period} показано изменение рыночной цены.`
+  return decision.exposure === 0
+    ? `${period} капитал оставался вне рынка.`
+    : `${period} позиция оставалась открытой.`
+}
+
+/** Differences of cumulative engine PnL, including stops and gap execution. */
+export function segmentPositionPnls(scenario: BlindMarketScenario, decisions: BlindDecision[]): number[] {
+  let previous = 0
+  return decisions.map((_, index) => {
+    const end = (scenario.checkpoints[index + 1] ?? scenario.candles.length) - 1
+    const cumulative = simulateBlind(scenario, decisions, end).pnl
+    const pnl = cumulative - previous
+    previous = cumulative
+    return pnl
+  })
 }

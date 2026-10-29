@@ -4,7 +4,7 @@ import { toPoints } from '@/store/gameStore'
 import type { PositionEvent } from './positionAnalysis'
 import type { BlindDecision } from '@/types/game'
 import { blindScore, computeBlindMarket } from './scoring'
-import { decisionObservation, formatCapitalChange, formatResultPercent, scoreContributions } from './resultAnalysis'
+import { decisionObservation, formatCapitalChange, formatResultPercent, scoreContributions, segmentPositionPnls } from './resultAnalysis'
 
 function decision(exposure: number, checkpointIndex = 0, action?: BlindDecision['action']): BlindDecision {
   return { exposure, checkpointIndex, action, direction: exposure > 0 ? 'long' : exposure < 0 ? 'short' : 'flat', confidence: 70, priceAtDecision: 100, timeMs: 1000 }
@@ -39,21 +39,42 @@ describe('result display accuracy', () => {
 
 describe('objective decision observations', () => {
   it('describes being flat without evaluating its correctness', () => {
-    expect(decisionObservation(decision(0), -0.2, false, 'flat')).toBe('Вы остались вне рынка. До следующей точки цена снизилась на 0,2%.')
+    expect(decisionObservation(decision(0), -0.2, false, 'flat')).toBe('До следующей точки капитал оставался вне рынка.')
   })
   it.each([
-    [0.25, 'open-long', 'Вы открыли лонг 25%.'],
-    [-0.25, 'open-short', 'Вы открыли шорт 25%.'],
-    [0.5, 'increase', 'Вы увеличили позицию: лонг 50%.'],
-    [0.125, 'reduce', 'Вы сократили позицию: лонг 12,5%.'],
-    [-0.25, 'reverse-short', 'Вы развернули позицию: шорт 25%.'],
-    [0, 'close', 'Вы закрыли позицию.'],
-  ] as const)('describes %s / %s with exact size', (exposure, action, prefix) => {
-    expect(decisionObservation(decision(exposure, 1), 6.7, true, action as PositionEvent)).toBe(`${prefix} До завершения сценария цена выросла на 6,7%.`)
+    [0.25, 'open-long'],
+    [-0.25, 'open-short'],
+    [0.5, 'increase'],
+    [0.125, 'reduce'],
+    [-0.25, 'reverse-short'],
+    [0, 'close'],
+  ] as const)('describes the interval for %s / %s without repeating the action', (exposure, action) => {
+    expect(decisionObservation(decision(exposure, 1), 6.7, true, action as PositionEvent)).toBe(exposure === 0 ? 'До завершения сценария капитал оставался вне рынка.' : 'До завершения сценария позиция оставалась открытой.')
   })
   it('reports an unchanged market and omits unknown market outcomes', () => {
-    expect(decisionObservation(decision(0), 0, true, 'flat')).toContain('цена не изменилась')
+    expect(decisionObservation(decision(0), 0, true, 'flat')).toContain('капитал оставался вне рынка')
     expect(decisionObservation(decision(0), undefined, true, 'flat')).toBeNull()
     expect(decisionObservation(decision(0), NaN, true, 'flat')).toBeNull()
+  })
+})
+
+describe('segment PnL from the trading engine', () => {
+  it.each([[0, 0, 0], [1, -1, -1], [0.25, 0.5, 0.75], [0.25, 0.125, 0]])('reconciles all segments for %j', (...exposures) => {
+    const scenario = blindMarketScenarios[2]
+    const decisions = exposures.map((exposure, index) => decision(exposure, index))
+    const pnls = segmentPositionPnls(scenario, decisions)
+    expect(pnls.reduce((a, b) => a + b, 0)).toBeCloseTo(computeBlindMarket(scenario, decisions).pnl, 8)
+    if (exposures[1] === -1) { expect(pnls[1]).toBeLessThan(0); expect(pnls[2]).toBeLessThan(0) }
+  })
+  it('uses engine stop and gap fills even if price later recovers', () => {
+    const base = blindMarketScenarios[0]
+    const scenario = { ...base, checkpoints: [1, 3, 5], candles: [100, 95, 105, 110, 115, 120].map((close, i) => ({
+      time: 1800000000 + i * 900, open: close, high: close + 1, low: close - 1, close, volume: 100,
+    })) }
+    const decisions = [decision(1), decision(0, 1), decision(0, 2)]
+    decisions[0].stopPrice = 98
+    const before = structuredClone(decisions)
+    expect(segmentPositionPnls(scenario, decisions)).toEqual([-50000, 0, 0])
+    expect(decisions).toEqual(before)
   })
 })
