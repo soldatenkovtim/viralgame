@@ -4,7 +4,7 @@ import type { ChallengeType } from '@/types/game'
 
 const descriptions: Record<ChallengeType, string> = {
   'blind-market': 'История цены заканчивается у границы неизвестности. За ней — несколько возможных траекторий.',
-  'market-maker': 'Ступенчатые котировки покупки и продажи. Между ними меняется спред, на линиях появляются исполнения.',
+  'market-maker': 'Ask — цена продажи, Bid — цена покупки. Расстояние между котировками — спред. Отдельный индикатор показывает инвентарь — накопленную позицию.',
   'black-swan': 'После рыночного события цена резко движется. Дальнейшее развитие остаётся неопределённым.',
   'cross-arbitrage': 'Цены двух площадок расходятся и сближаются. Возможность сделки зависит от условий исполнения.',
 }
@@ -25,7 +25,7 @@ export function ChallengeIllustration({ kind }: { kind: ChallengeType }) {
     return () => { observer.disconnect(); document.removeEventListener('visibilitychange', sync) }
   }, [])
 
-  return <figure ref={figure} className="challenge-illustration" data-paused={paused} data-running="false">
+  return <figure ref={figure} className="challenge-illustration" data-kind={kind} data-paused={paused} data-running="false">
     <svg viewBox="0 0 640 500" role="img" aria-labelledby={`${id}-title ${id}-desc`}>
       <title id={`${id}-title`}>{kind === 'blind-market' ? 'Рынок с неизвестным продолжением' : kind === 'market-maker' ? 'Поток котировок' : kind === 'black-swan' ? 'Изменение рыночных условий' : 'Расхождение цен площадок'}</title>
       <desc id={`${id}-desc`}>{descriptions[kind]} Это условная иллюстрация.</desc>
@@ -50,6 +50,10 @@ export function ChallengeIllustration({ kind }: { kind: ChallengeType }) {
       {kind === 'black-swan' && <MarketShock id={id} />}
       {kind === 'cross-arbitrage' && <CrossArbitrage />}
     </svg>
+    {kind === 'market-maker' && <div className="mm-intro-inventory" aria-label="Условная накопленная позиция">
+      <span>INVENTORY / ПОЗИЦИЯ</span>
+      <div aria-hidden="true"><i /><b /></div>
+    </div>}
     <figcaption>
       <span>Схема механики · не игровой сценарий</span>
       <button type="button" onClick={() => setPaused(value => !value)} aria-label={paused ? 'Продолжить анимацию' : 'Приостановить анимацию'} aria-pressed={paused} className="intro-motion-toggle">
@@ -90,20 +94,21 @@ function MarketMaker() {
     <text x="24" y="36" className="intro-svg-label">ДВУСТОРОННЯЯ КОТИРОВКА</text>
     <path d="M24 268H90V248H158V263H224V225H290V239H356V211H422V227H488V198H556V213H616" className="intro-reference" />
     <g className="intro-ask">
+      <text x="604" y="142" textAnchor="end" className="intro-svg-label mm-intro-diagram-label">ASK / ПРОДАЖА</text>
       <path d="M24 228H90V208H158V223H224V185H290V199H356V171H422V187H488V158H556V173H616" className="intro-price intro-draw" pathLength="1" />
       <circle cx="257" cy="185" r="5" className="intro-point intro-fill-one" />
       <circle cx="510" cy="158" r="5" className="intro-point intro-fill-two" />
     </g>
     <g className="intro-bid">
+      <text x="604" y="292" textAnchor="end" className="intro-svg-label intro-price-secondary mm-intro-diagram-label">BID / ПОКУПКА</text>
       <path d="M24 308H90V288H158V303H224V265H290V279H356V251H422V267H488V238H556V253H616" className="intro-price intro-price-secondary intro-draw" pathLength="1" />
       <circle cx="190" cy="303" r="5" className="intro-point intro-fill-one" />
       <circle cx="450" cy="267" r="5" className="intro-point intro-fill-two" />
     </g>
     <path d="M389 174V248M382 174h14M382 248h14" className="intro-boundary intro-arrival" />
-    <text x="405" y="215" className="intro-svg-label">СПРЕД</text>
+    <text x="405" y="215" className="intro-svg-label mm-intro-diagram-label">SPREAD / СПРЕД</text>
     <g className="intro-liquidity">{[24, 46, 34, 64, 42, 82, 58, 32, 72, 46, 62, 30].map((h, i) => <path key={i} d={`M${46 + i * 48} 414v-${h}`} />)}</g>
-    <text x="24" y="465" className="intro-svg-label">ASK / ПРОДАЖА</text>
-    <text x="604" y="465" textAnchor="end" className="intro-svg-label intro-muted">BID / ПОКУПКА</text>
+
   </>
 }
 
