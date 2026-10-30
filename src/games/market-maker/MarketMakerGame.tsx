@@ -106,16 +106,21 @@ export function MarketMakerGame({
   }, [stage, act, handleHedge])
 
   if (stage === 'intro') {
-    return <ChallengeIntro number="02" title={<>Маркет-<br />мейкер</>}
-      subtitle="Каждая котировка — новое решение."
-      description="Управляйте котировками и спредом в меняющихся рыночных условиях. Следите за потоком заявок и оценивайте последствия своих решений."
-      stats={[
-        { value: `${scenario.durationSeconds} с`, label: 'раунд' },
-        { value: 'Bid / Ask', label: 'две стороны котировки' },
-        { value: `${scenario.softInventoryLimit ?? MM_SOFT_INVENTORY_LIMIT}`, label: 'лотов до повышенного риска' },
+    return <ChallengeIntro className="mm-intro" number="02" title={<>Маркет-<br />мейкер</>}
+      subtitle="Зарабатывайте на спреде. Управляйте позицией."
+      description="Вы выставляете Bid и Ask — цены покупки и продажи. Инвентарь — ваша накопленная позиция."
+      howItWorks={[
+        'Задайте цены покупки (Bid) и продажи (Ask).',
+        'Рыночные заявки исполняются по вашим котировкам.',
+        'Спред даёт доход, накопленная позиция — рыночный риск.',
       ]}
-      note={scenario.mode === 'advanced' ? 'Хедж дороже, а позиция сверх лимита несёт дополнительные издержки удержания.' : 'Спред приносит доход, накопленная позиция — рыночный риск. Хеджирование имеет стоимость.'}
-      cta="Открыть котировку" visual={<ChallengeIllustration kind="market-maker" />}
+      stats={[
+        { value: `${scenario.durationSeconds} с`, label: 'длительность раунда' },
+        { value: 'Bid / Ask', label: 'покупка / продажа' },
+        { value: `${scenario.softInventoryLimit ?? MM_SOFT_INVENTORY_LIMIT}`, label: 'лотов в позиции — порог риска' },
+      ]}
+      note={scenario.mode === 'advanced' ? 'Хедж дороже, а позиция сверх лимита несёт дополнительные издержки удержания.' : 'Хеджирование закрывает накопленную позицию за комиссию.'}
+      cta="Начать раунд" visual={<ChallengeIllustration kind="market-maker" />}
       mode={context?.mode ?? scenario.mode ?? 'standard'} state={stage}
       onStart={() => { trackEvent('scenario_started', { challengeType: 'market-maker', scenarioId: scenario.id, mode: scenario.mode }); setStage('running') }} />
   }

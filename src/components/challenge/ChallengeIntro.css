@@ -93,3 +93,26 @@
   .intro-motion-toggle { display: none; }
   .challenge-illustration figcaption { padding-block: 14px; }
 }
+
+/* Market Maker instructions: scoped to its intro, without changing other trials. */
+.mm-intro .challenge-intro-subtitle { margin-top: 24px; }
+.mm-intro .challenge-intro-description { margin-top: 12px; }
+.mm-intro .challenge-intro-how { max-width: 540px; margin-top: 20px; }
+.mm-intro .challenge-intro-how h2 { font: 11px/1.5 var(--font-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--intro-accent); }
+.mm-intro .challenge-intro-how ol { margin-top: 10px; counter-reset: mm-step; }
+.mm-intro .challenge-intro-how li { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; margin-top: 6px; font-size: 14px; line-height: 1.55; color: color-mix(in srgb, white 78%, transparent); }
+.mm-intro .challenge-intro-how li::before { counter-increment: mm-step; content: counter(mm-step, decimal-leading-zero); font: 11px/1.95 var(--font-mono); color: var(--intro-accent); }
+.mm-intro .challenge-intro-stats { margin-block: 24px; }
+.mm-intro-diagram-label { font-size: 13px; letter-spacing: 0; }
+.mm-intro-inventory { display: flex; align-items: center; gap: 24px; margin: -4% 3.75% 20px; font: 11px/1.6 var(--font-mono); color: color-mix(in srgb, white 78%, transparent); }
+.mm-intro-inventory > span { flex-shrink: 0; }
+.mm-intro-inventory > div { flex: 1; position: relative; height: 1px; background: color-mix(in srgb, white 25%, transparent); }
+.mm-intro-inventory i { position: absolute; width: 1px; height: 9px; top: -4px; left: 50%; background: currentColor; }
+.mm-intro-inventory b { position: absolute; width: 6px; height: 6px; top: -2.5px; left: 65%; background: var(--intro-accent); }
+@media (max-width: 479px) {
+  .mm-intro .challenge-intro-stats { grid-template-columns: .8fr 1fr 1.25fr; gap: 12px; }
+  .mm-intro .challenge-intro-stats dt { font-size: 11px; }
+  .mm-intro .challenge-intro-stats dd { font-size: 21px; }
+  .mm-intro-diagram-label { font-size: 20px; }
+  .mm-intro-inventory { gap: 16px; font-size: 10px; margin-bottom: 16px; }
+}
