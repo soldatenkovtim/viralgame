@@ -23,3 +23,16 @@
  .shock-entry .mm-entry-content { padding-top: 32px; }
  .shock-entry-label { font-size: 16px; }
 }
+
+/* Compact desktop rhythm, scoped to this entry screen only. */
+@media (min-width: 901px) {
+ .shock-entry .mm-entry-content { padding-top: 12px; padding-bottom: 24px; }
+ .shock-entry .mm-mode-selector { margin-top: 16px; padding-top: 12px; }
+ .shock-entry-chart figcaption { padding-bottom: 8px; }
+ .shock-entry-chart svg { margin-top: 8px; }
+ .shock-entry-volatility { padding-block: 8px; }
+ .shock-entry-chart > p { margin-top: 6px; }
+ .shock-entry .mm-mode-card { padding-block: 16px; }
+ .shock-entry .mm-mode-card > span:nth-child(3) { padding-top: 16px; }
+ .shock-entry .mm-mode-card > span:last-child { margin-top: 12px; padding-top: 10px; }
+}
