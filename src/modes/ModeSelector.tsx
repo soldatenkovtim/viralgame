@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Lock, Check, ArrowUpRight } from 'lucide-react'
+import { MarketShockEntryHero } from './MarketShockEntryHero'
 import { MarketMakerEntryHero } from './MarketMakerEntryHero'
 import './MarketMakerEntry.css'
 import { useLocation } from 'react-router-dom'
@@ -68,9 +69,9 @@ function ChallengeEntry({ challenge, children }: { challenge: ChallengeType; chi
     return mode === 'duel' ? <CreateRoom challengeType={challenge} />
       : <ChallengeGate challenge={challenge}>{children}</ChallengeGate>
   }
-  if (challenge === 'market-maker') return <div className="mm-entry">
+  if (challenge === 'market-maker' || challenge === 'black-swan') return <div className={`mm-entry ${challenge === 'black-swan' ? 'shock-entry' : ''}`}>
     <div className="site-container mm-entry-content">
-      <MarketMakerEntryHero />
+      {challenge === 'black-swan' ? <MarketShockEntryHero /> : <MarketMakerEntryHero />}
       <ModeSelector variant="market-maker" />
       <div className="mm-entry-action">
         {mode === 'duel' ? <Button variant="primary" onClick={() => setStarted(true)}>Продолжить в дуэль <ArrowUpRight size={18} aria-hidden /></Button>

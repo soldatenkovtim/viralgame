@@ -1,0 +1,25 @@
+.shock-entry .mm-mode-selector { border-top: 1px solid var(--border); margin-top: 28px; padding-top: 20px; }
+.shock-entry .mm-entry-content { padding-top: 40px; }
+.shock-entry .mm-entry-copy h1 { font-size: clamp(3rem, 5vw, 5.5rem); }
+.shock-entry-chart { min-width: 0; width: 100%; color: var(--accent); }
+.shock-entry-chart figcaption { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid var(--border); padding-bottom: 14px; font: 10px/1.6 var(--font-mono); }
+.shock-entry-chart figcaption > :first-child { color: var(--secondary); }
+.shock-entry-chart svg { display: block; width: 100%; height: auto; margin-top: 16px; overflow: visible; }
+.shock-entry-grid { fill: none; stroke: var(--border); stroke-width: .6; opacity: .55; }
+.shock-entry-baseline { fill: none; stroke: var(--muted); stroke-width: .8; stroke-dasharray: 3 5; opacity: .5; }
+.shock-entry-event { fill: none; stroke: currentColor; stroke-width: 1; stroke-dasharray: 4 5; opacity: .7; }
+.shock-entry-price { fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.shock-entry-label { fill: var(--secondary); font: 12px var(--font-mono); }
+.shock-entry-volatility { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding-block: 14px; border-bottom: 1px solid var(--border); font: 11px/1.6 var(--font-mono); color: var(--secondary); }
+.shock-entry-volatility > span:last-child { display: inline-flex; align-items: center; gap: 8px; }
+.shock-entry-volatility i { width: 18px; border-top: 2px solid var(--accent); }
+.shock-entry-chart > p { margin-top: 10px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+@media (max-width: 900px) {
+ .shock-entry .mm-entry-copy h1 { font-size: clamp(3rem, 8vw, 4.5rem); }
+ .shock-entry-chart { max-width: 620px; }
+}
+@media (max-width: 479px) {
+ .shock-entry .mm-entry-copy h1 { font-size: clamp(2.5rem, 11vw, 3.5rem); }
+ .shock-entry .mm-entry-content { padding-top: 32px; }
+ .shock-entry-label { font-size: 16px; }
+}
