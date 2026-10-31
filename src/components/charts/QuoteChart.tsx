@@ -58,6 +58,7 @@ export function QuoteChart({
   height = 280,
   informedTicks,
   showTimeAxis = false,
+  emphasizeQuotes = false,
 }: {
   points: QuoteChartPoint[]
   trades: MMTrade[]
@@ -65,6 +66,7 @@ export function QuoteChart({
   height?: number
   informedTicks?: Set<number>
   showTimeAxis?: boolean
+  emphasizeQuotes?: boolean
 }) {
   const theme = useTheme()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -152,8 +154,8 @@ export function QuoteChart({
 
     const fair = line(QUOTE_COLORS.fairValue, { lineWidth: 2, title: 'Fair value' })
     const market = line(QUOTE_COLORS.market, { lineWidth: 2, lineStyle: LineStyle.Dotted })
-    const ask = line(QUOTE_COLORS.ask, { lineType: LineType.WithSteps })
-    const bid = line(QUOTE_COLORS.bid, { lineType: LineType.WithSteps })
+    const ask = line(QUOTE_COLORS.ask, { lineType: LineType.WithSteps, lineWidth: emphasizeQuotes ? 2 : 1 })
+    const bid = line(QUOTE_COLORS.bid, { lineType: LineType.WithSteps, lineWidth: emphasizeQuotes ? 2 : 1 })
 
     chartRef.current = chart
     seriesRef.current = {
@@ -169,7 +171,7 @@ export function QuoteChart({
 
     const observer = new ResizeObserver((entries) => {
       const width = entries[0]?.contentRect.width
-      if (width) chart.applyOptions({ width })
+      if (width) chart.applyOptions({ width, height: container.clientHeight })
     })
     observer.observe(container)
 
@@ -179,7 +181,7 @@ export function QuoteChart({
       chartRef.current = null
       chart.remove()
     }
-  }, [height, showTimeAxis])
+  }, [height, showTimeAxis, emphasizeQuotes])
 
   useEffect(() => {
     const series = seriesRef.current
@@ -250,14 +252,14 @@ export function QuoteChart({
     series.bid.applyOptions({ color: QUOTE_COLORS.bid })
     series.ask.applyOptions({ color: QUOTE_COLORS.ask })
     series.fair.applyOptions({ color: QUOTE_COLORS.fairValue })
-  }, [theme, height, showTimeAxis])
+  }, [theme, height, showTimeAxis, emphasizeQuotes])
 
   return <div ref={containerRef} className="w-full" style={{ height }} />
 }
 
-export function QuoteLegend({ replay = false }: { replay?: boolean }) {
+export function QuoteLegend({ replay = false, compact = false }: { replay?: boolean; compact?: boolean }) {
   return (
-    <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 px-1 text-xs text-chalk-500">
+    <div className={`mt-3 flex flex-wrap gap-y-1.5 px-1 text-chalk-500 ${compact ? 'gap-x-4 border-t border-ink-700 pt-3 text-[11px]' : 'gap-x-5 text-xs'}`}>
       {replay ? (
         <LegendItem swatch={<span className="block w-4 border-t-2 border-violet-soft" />}>
           Справедливая цена
