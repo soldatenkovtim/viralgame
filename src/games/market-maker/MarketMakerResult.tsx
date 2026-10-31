@@ -8,7 +8,7 @@ import { ShareChallengeButton } from '@/components/share/ShareChallengeButton'
 import { Button, LinkButton } from '@/components/ui/Button'
 import { Disclaimer, Stat } from '@/components/ui/Card'
 import { flowRegimeLabels } from '@/data/marketMakerScenarios'
-import { formatMoney, formatNumber, formatPrice, formatSigned, pnlColor, plural } from '@/lib/formatting'
+import { formatNumber, formatPrice, formatSigned, pnlColor, plural } from '@/lib/formatting'
 import type { SharePayload } from '@/lib/sharing'
 import type { MarketMakerResult as MMResult, MMPhaseStats } from '@/types/game'
 import type { SaveOutcome } from '@/store/gameStore'
@@ -17,18 +17,7 @@ import { tickToSeconds } from './market'
 import '../blind-market/BlindMarketResult.css'
 import './MarketMakerResult.css'
 
-const money = (value: number) => Number.isFinite(value) ? formatMoney(value, Math.round(value) !== 0) : '—'
-
-function roundObservation(result: MMResult): string {
-  if (!result.tradeCount) return 'В этом раунде не было исполненных заявок.'
-  const facts: string[] = []
-  if (result.secondsAboveSoftLimit > 0) facts.push(`Позиция превышала мягкий лимит ${formatNumber(result.secondsAboveSoftLimit)} с.`)
-  else if ((result.phases ?? []).some(p => p.regime !== 'noise' && p.averageQuoteLag > 0.6)) facts.push('Во время направленного потока ваши котировки заметно отклонялись от справедливой цены.')
-  if (result.hedgeCount >= 4) facts.push(`Вы хеджировали позицию ${result.hedgeCount} ${plural(result.hedgeCount, ['раз', 'раза', 'раз'])}; издержки хеджирования составили ${money(result.hedgeCosts)} игровых единиц.`)
-  else if (result.inventoryPnl < 0 && Math.abs(result.inventoryPnl) > Math.abs(result.spreadPnl)) facts.push('Отрицательная переоценка инвентаря по модулю превысила результат исполнения относительно рынка.')
-  else facts.push(Math.round(result.pnl) > 0 ? 'Раунд завершён с прибылью после учёта издержек.' : Math.round(result.pnl) < 0 ? 'Раунд завершён с убытком после учёта издержек.' : 'Итоговый PnL равен нулю при отображении в целых игровых единицах.')
-  return facts.slice(0, 2).join(' ')
-}
+import { financialNumber as money, roundObservation, phaseComment, phaseReconciliation } from './resultAnalysis'
 
 export function MarketMakerResult({ result, outcome, nextHref, nextLabel }: {
   result: MMResult; outcome: SaveOutcome; nextHref: string; nextLabel: string
@@ -39,7 +28,7 @@ export function MarketMakerResult({ result, outcome, nextHref, nextLabel }: {
     <header className="blind-result-header">
       <p className="blind-result-eyebrow">Испытание 02 · Маркет-мейкер</p>
       <h1>Испытание завершено.</h1>
-      <p className={`blind-result-headline tnum ${pnlColor(Math.round(result.pnl))}`}>PnL: {money(result.pnl)}</p>
+      <p className={`blind-result-headline tnum ${pnlColor(Math.round(result.pnl * 100) / 100)}`}>PnL: {money(result.pnl)}</p>
       <p className="mm-result-caption">Раунд завершён{duration !== undefined ? ` · ${formatNumber(duration)} ${plural(duration, ['секунда', 'секунды', 'секунд'])}` : ''}</p>
     </header>
     <section className="blind-result-summary" aria-label="Итоги прохождения">
@@ -79,14 +68,14 @@ export function PnlBreakdown({ result }: { result: MMResult }) {
   ]
   return <section className="mm-result-pnl">
     <h2>Из чего сложился PnL</h2>
-    <dl>{rows.map(row => <div key={row.label}><dt>{row.label}</dt><dd className={`tnum ${pnlColor(Math.round(row.value))}`}>{money(row.value)}</dd></div>)}
-      <div className="mm-result-total"><dt>Итого</dt><dd className={`tnum ${pnlColor(Math.round(result.pnl))}`}>{money(result.pnl)}</dd></div>
+    <dl>{rows.map(row => <div key={row.label}><dt>{row.label}</dt><dd className={`tnum ${pnlColor(Math.round(row.value * 100) / 100)}`}>{money(row.value)}</dd></div>)}
+      <div className="mm-result-total"><dt>Итого</dt><dd className={`tnum ${pnlColor(Math.round(result.pnl * 100) / 100)}`}>{money(result.pnl)}</dd></div>
     </dl>
     <details><summary>Подробнее о расчёте PnL</summary>
       <p>Инвентарь на закрытии: {formatSigned(result.finalInventory)}. Открытая позиция оценена по последней рыночной цене. Исполнение отражает разницу цены сделки и рынка; переоценка — последующее движение цены по позициям раунда.</p>
       {result.realizedPnl !== undefined && result.unrealizedPnl !== undefined ? <>
         <dl><div><dt>Реализованный результат · до издержек</dt><dd>{money(result.realizedPnl)}</dd></div><div><dt>Нереализованный результат</dt><dd>{money(result.unrealizedPnl)}</dd></div><div><dt>Издержки</dt><dd>{money(-(result.hedgeCosts + (result.transactionCosts ?? 0) + (result.carryCosts ?? 0)))}</dd></div></dl>
-        <p>Это альтернативная разбивка того же PnL: реализованный + нереализованный результат − издержки. Её значения не прибавляются к компонентам выше. Отображаемые суммы округлены до целых игровых единиц.</p>
+        <p>Это альтернативная разбивка того же PnL: реализованный + нереализованный результат − издержки. Её значения не прибавляются к компонентам выше. Отображаемые суммы округлены до сотых игровых единиц; расчёты используют исходную точность.</p>
       </> : <p>Альтернативная разбивка для этого прохождения не сохранена.</p>}
     </details>
   </section>
@@ -122,12 +111,12 @@ function FairValueReplay({ result }: { result: MMResult }) {
             height={340}
             showTimeAxis
           />
-          <QuoteLegend replay />
+          <QuoteLegend replay showInformed={informedTicks.size > 0} />
         </div>
       ) : <p className="mm-result-caption">Для этого прохождения график не сохранён.</p>}
 
       <PhaseStrip phases={result.phases ?? []} />
-      {!!result.phases?.length && Math.abs(result.phases.reduce((sum, phase) => sum + phase.pnlChange, 0) - result.pnl) > 0.01 && <p className="mm-result-caption">Сумма изменений PnL внутри фаз: {money(result.phases.reduce((sum, phase) => sum + phase.pnlChange, 0))}. Разница с итогом: {money(result.pnl - result.phases.reduce((sum, phase) => sum + phase.pnlChange, 0))}. Изменения между расчётными границами фаз учитываются в итоговом PnL; разбивка фаз показана как сохранена движком.</p>}
+      {phaseReconciliation(result) && <p className="mm-result-caption">{phaseReconciliation(result)}</p>}
     </section>
   )
 }
@@ -150,7 +139,7 @@ function PhaseStrip({ phases }: { phases: MMPhaseStats[] }) {
               </span>
             </div>
             <p className="text-xs leading-relaxed text-chalk-400">
-              {phase.regime === 'noise' ? 'Случайные покупки и продажи. Результат также зависит от накопленной позиции.' : phase.regime === 'informed' ? 'Контрагент учитывает будущее движение справедливой цены.' : 'Заявки следуют за уже произошедшим движением рынка.'}
+              {phaseComment(phase)}
             </p>
             <dl className="tnum mt-1 grid grid-cols-3 gap-2 text-xs">
               <PhaseFigure label="Сделок" value={formatNumber(phase.fills)} />
@@ -158,7 +147,7 @@ function PhaseStrip({ phases }: { phases: MMPhaseStats[] }) {
               <PhaseFigure
                 label="PnL"
                 value={money(phase.pnlChange)}
-                className={pnlColor(Math.round(phase.pnlChange))}
+                className={pnlColor(Math.round(phase.pnlChange * 100) / 100)}
               />
             </dl>
           </div>
