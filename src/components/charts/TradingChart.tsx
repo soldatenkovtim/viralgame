@@ -1,3 +1,4 @@
+import { layoutPriceLabels } from './priceLabelLayout'
 import { useTheme } from '@/lib/theme'
 import { CHART_COLORS, applyChartTheme, themedAnnotation } from './chartTheme'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -87,6 +88,8 @@ export function TradingChart(props: {
   visibleBars?: number
   /** Подпись у метки последней цены на оси. */
   lastPriceTitle?: string
+  /** Opt-in collision handling for market-shock preparation only. */
+  separateEntryLabels?: boolean
   /** Optional focus used by the completed-session review only. */
   focusCandleIndex?: number
   markers?: ChartMarker[]
@@ -120,11 +123,14 @@ export function TradingChart(props: {
     hint,
     visibleBars,
     lastPriceTitle = '',
+    separateEntryLabels = false,
     mutedAfter,
     className = 'h-[480px]',
   } = props
 
   const theme = useTheme()
+  const entryLabelRef = useRef<HTMLDivElement>(null)
+  const currentLabelRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const candleRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
@@ -561,8 +567,8 @@ export function TradingChart(props: {
               : CHART_COLORS.down,
           lineWidth: 1,
           lineStyle: entry.neutral ? LineStyle.LargeDashed : LineStyle.Solid,
-          axisLabelVisible: true,
-          title: entry.label ?? 'Вход',
+          axisLabelVisible: !separateEntryLabels,
+          title: separateEntryLabels ? '' : entry.label ?? 'Вход',
         }),
       )
     }
@@ -581,11 +587,11 @@ export function TradingChart(props: {
     }
 
     priceLinesRef.current = lines
-  }, [annotations.levels, selectedId, entry, stopPrice, theme])
+  }, [annotations.levels, selectedId, entry, stopPrice, theme, separateEntryLabels])
 
   useEffect(() => {
-    candleRef.current?.applyOptions({ title: lastPriceTitle })
-  }, [lastPriceTitle])
+    candleRef.current?.applyOptions({ title: separateEntryLabels ? '' : lastPriceTitle, lastValueVisible: !separateEntryLabels })
+  }, [lastPriceTitle, separateEntryLabels])
 
   useEffect(() => {
     refreshOverlay()
@@ -639,6 +645,44 @@ export function TradingChart(props: {
     chart.timeScale().setVisibleLogicalRange({ from: index - width / 2, to: index + width / 2 })
   }, [props.focusCandleIndex, timeframe, candles, origin, frame.seconds, frame.defaultBars])
 
+  // Price-axis dragging has no range-change event. Read rendered coordinates each
+  // frame while this opt-in overlay is mounted, including zoom and resize.
+  useEffect(() => {
+    if (!separateEntryLabels || !entry) return
+    let frameId = 0
+    const update = () => {
+      const series = candleRef.current
+      const chart = chartRef.current
+      const first = entryLabelRef.current
+      const second = currentLabelRef.current
+      const current = bars.at(-1)?.close
+      if (series && chart && first && second && current != null) {
+        const entryY = series.priceToCoordinate(entry.price)
+        const currentY = series.priceToCoordinate(current)
+        const equal = entry.price === current
+        first.textContent = equal ? `ENTRY = CURRENT · ${formatPrice(entry.price)}` : `ENTRY · ${formatPrice(entry.price)}`
+        second.textContent = `CURRENT · ${formatPrice(current)}`
+        second.style.display = equal ? 'none' : 'block'
+        const height = chart.panes()[0]?.getHeight() ?? 0
+        const firstHeight = first.getBoundingClientRect().height
+        const secondHeight = equal ? 0 : second.getBoundingClientRect().height
+        if (entryY != null && currentY != null) {
+          const [a, b] = layoutPriceLabels(entryY, currentY, firstHeight, secondHeight, height, equal)
+          first.style.top = `${a}px`
+          second.style.top = `${b}px`
+          first.style.visibility = 'visible'
+          second.style.visibility = 'visible'
+        } else {
+          first.style.visibility = 'hidden'
+          second.style.visibility = 'hidden'
+        }
+      }
+      frameId = requestAnimationFrame(update)
+    }
+    frameId = requestAnimationFrame(update)
+    return () => cancelAnimationFrame(frameId)
+  }, [separateEntryLabels, entry, bars])
+
   const hovered = hover ? bars[hover.index] : undefined
   const previous = hover && hover.index > 0 ? bars[hover.index - 1] : undefined
 
@@ -648,6 +692,11 @@ export function TradingChart(props: {
         ref={containerRef}
         className={`absolute inset-0 ${tool !== 'none' ? 'cursor-crosshair' : ''}`}
       />
+
+      {separateEntryLabels && entry && <>
+        <div ref={entryLabelRef} className="pointer-events-none absolute right-0 z-10 rounded border border-ink-700 bg-ink-950 px-2 py-1 font-mono text-[11px] text-chalk-200" />
+        <div ref={currentLabelRef} className="pointer-events-none absolute right-0 z-10 rounded border border-ink-700 bg-ink-950 px-2 py-1 font-mono text-[11px] text-chalk-200" />
+      </>}
 
       {hint ? (
         <div className="pointer-events-none absolute top-3 left-1/2 z-10 -translate-x-1/2 rounded-md border border-violet-accent/40 bg-ink-950/90 px-3 py-1.5 text-xs whitespace-nowrap text-chalk-200">

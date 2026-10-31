@@ -6,7 +6,7 @@ export function MarketShockEntryHero() {
     <div className="mm-entry-copy">
       <p className="micro-label mm-entry-eyebrow">ИСПЫТАНИЕ 03 / РЫНОЧНЫЙ ШОК</p>
       <h1>РЫНОЧНЫЙ<br />ШОК<span>.</span></h1>
-      <p className="mm-entry-description">Рынок изменился. Позиция осталась.<br />Вы уже в позиции, когда рыночные условия резко меняются. Оцените происходящее и принимайте решения, контролируя риск.</p>
+      <p className="mm-entry-description">Рынок изменился. Позиция осталась.<br />Оцените новые рыночные условия и решите, как управлять риском уже открытой позиции.</p>
       <ul className="mm-entry-facts" aria-label="Механика испытания">
         <li>Открытая позиция</li><li>Рыночное событие</li><li>Управление риском</li>
       </ul>

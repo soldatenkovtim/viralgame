@@ -16,6 +16,8 @@ let levelSeq = 0
  */
 export function MarketShockChart({
   scenario,
+  preparation = false,
+  active = false,
   visibleCount,
   position,
   levels,
@@ -27,6 +29,8 @@ export function MarketShockChart({
   mutedAfter,
   className = 'h-[clamp(420px,calc(100vh-260px),720px)]',
 }: {
+  preparation?: boolean
+  active?: boolean
   scenario: MarketShockScenario
   visibleCount: number
   /** Текущая позиция со знаком — только для подписи линии входа. */
@@ -150,6 +154,12 @@ export function MarketShockChart({
         ) : null}
       </div>
 
+      {preparation && editable && <p className="border-b border-ink-800 px-3 py-2 text-xs leading-relaxed text-chalk-400" aria-live="polite">
+        {levelsFull ? 'Отмечены 2 из 2 уровней. Удалите уровень, чтобы добавить новый.'
+          : tool === 'level' ? 'Нажмите на график, чтобы отметить цену. Уровни необязательны.'
+          : 'Выберите «Уровень» и нажмите на график, чтобы отметить цену. Уровни необязательны.'}
+      </p>}
+
       <TradingChart
         key={showDates ? 'revealed-dates' : 'hidden-dates'}
         className={className}
@@ -162,11 +172,12 @@ export function MarketShockChart({
         tool={tool}
         entry={entry}
         lastPriceTitle="CURRENT"
+        separateEntryLabels={preparation || active}
         markers={markers}
         mutedAfter={mutedAfter}
         editable={editable}
         showDates={showDates}
-        hint={tool === 'level' ? 'Кликните по графику, чтобы поставить уровень' : null}
+        hint={!preparation && tool === 'level' ? 'Кликните по графику, чтобы поставить уровень' : null}
         onDraw={handleDraw}
         onSelect={setSelectedId}
         onMoveLevel={moveLevel}

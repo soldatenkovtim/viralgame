@@ -17,6 +17,7 @@ import type {
 } from '@/types/game'
 import {
   applyShockAction,
+  actionLabels,
   decisionCandleIndex,
   initialExposure,
   positionLabel,
@@ -129,7 +130,7 @@ export function MarketShockGame({
       setDecisions((current) => [...current, decision])
       setSelected(null)
       setDeciding(false)
-      setNotice(timedOut ? 'Позиция оставлена без изменений.' : null)
+      setNotice(timedOut ? 'Время истекло. Позиция оставлена без изменений.' : `Решение исполнено: ${actionLabels[action]}. ${positionLabel(decision.positionAfter)}.`)
 
       if (decision.positionAfter === 0) {
         setNotice('Позиция закрыта. Остаток сценария проигрывается без позиции.')
@@ -195,14 +196,14 @@ export function MarketShockGame({
   return (
     <div className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8">
       <header className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-        <div className="flex items-baseline gap-3">
+        <div className={`flex items-baseline gap-3 ${stage === 'context' ? 'flex-wrap' : ''}`}>
           <span className="text-[11px] tracking-[0.16em] text-chalk-500 uppercase">
             Рыночный шок
           </span>
           <span className="text-sm text-chalk-200">{scenario.assetHiddenName}</span>
           <span className="text-xs text-chalk-500">актив скрыт до конца сценария</span>
         </div>
-        <div className="flex items-baseline gap-3">
+        <div className={`flex items-baseline gap-3 ${stage === 'context' ? 'flex-wrap' : ''}`}>
           <span className="tnum text-xl font-light text-chalk-50">{formatPrice(price)}</span>
           <span className={`tnum text-sm ${pnlColor(pnlPercent)}`}>
             PnL {formatPercent(pnlPercent, 2)}
@@ -210,8 +211,15 @@ export function MarketShockGame({
         </div>
       </header>
 
+      {stage === 'context' && <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs">
+        <span className="flex items-center gap-2 text-violet-accent"><span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />ПОДГОТОВКА К СОБЫТИЮ</span>
+        <span className="text-chalk-400">Без ограничения времени</span>
+      </div>}
+
       <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(300px,1fr)]">
         <MarketShockChart
+          preparation={stage === 'context'}
+          active={phaseNumber > 0}
           scenario={scenario}
           visibleCount={visible}
           position={position}
@@ -223,7 +231,7 @@ export function MarketShockGame({
         />
 
         <aside className="flex flex-col gap-4">
-          {stage === 'context' ? (
+         {stage === 'context' ? (
             <>
               {difficulty.hintsEnabled && <MarketShockMetrics context={scenario.context} />}
               <PositionSummary
@@ -234,8 +242,8 @@ export function MarketShockGame({
               />
               <section className="flex flex-col gap-4 rounded-xl border border-ink-700 bg-ink-900 p-4 sm:p-5">
                 <p className="text-sm leading-relaxed text-chalk-400">
-                  Изучи график: переключи таймфрейм, отметь до двух уровней. Времени на этом этапе
-                  нет — отсчёт начнётся с первой фазы.
+                  Изучите график и открытую позицию. После нажатия кнопки рынок покажет событие.
+                  {timerDisabled ? ' Таймер отключён.' : ' Когда движение завершится, начнётся отсчёт.'}
                 </p>
                 <Button variant="primary" size="lg" fullWidth onClick={() => playPhase(1)}>
                   Начать управление позицией

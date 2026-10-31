@@ -13,13 +13,15 @@ export function MarketShockIntro({ scenario, mode, timerDisabled, onStart }: {
   const difficulty = difficultyFor('black-swan', scenario.mode === 'advanced')
   return <ChallengeIntro number="03" title={<>Рыночный<br />шок</>}
     subtitle="Рынок изменился. Позиция осталась."
-    description="Вы уже находитесь в позиции, когда рыночные условия резко меняются. Оцените ситуацию и определите дальнейшие действия."
+    description="Вы начинаете с открытой позицией. После рыночного события решите: удержать её, сократить, увеличить или полностью закрыть."
     stats={[
       { value: scenario.phases.length, label: 'этапа рынка' },
-      { value: timerDisabled ? 'Без лимита' : `${difficulty.timerSeconds} с`, label: 'на решение' },
-      { value: CAPITAL.toLocaleString('ru-RU'), label: 'капитал' },
+      { value: timerDisabled ? 'Без лимита' : `${difficulty.timerSeconds} с`, label: 'на каждое решение' },
+      { value: CAPITAL.toLocaleString('ru-RU'), label: 'игровой капитал' },
     ]}
-    note="Сначала изучите открытую позицию и график. Отсчёт начнётся после перехода к управлению и появления рыночного события."
+    note={timerDisabled
+      ? 'Изучите позицию и график, затем нажмите «Начать управление позицией». В этом режиме таймер отключён.'
+      : 'Изучите позицию и график без спешки. После «Начать управление позицией» рынок покажет событие, затем включится таймер.'}
     cta="Открыть рынок" visual={<ChallengeIllustration kind="black-swan" />}
     mode={mode} state="intro" onStart={onStart}
   />
