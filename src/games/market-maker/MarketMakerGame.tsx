@@ -2,14 +2,7 @@ import { ChallengeIntro } from '@/components/challenge/ChallengeIntro'
 import { ChallengeIllustration } from '@/components/challenge/ChallengeIllustration'
 import { trackEvent } from '@/lib/analytics'
 import type { ChallengeContext } from '@/modes/config'
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import {
-  ArrowLeft,
-  ArrowRight,
-  ChevronsLeftRight,
-  ChevronsRightLeft,
-  Shield,
-} from 'lucide-react'
+import { useCallback, useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react'
 import { QuoteChart, QuoteLegend } from '@/components/charts/QuoteChart'
 import { SectionLabel } from '@/components/ui/Card'
 import {
@@ -17,14 +10,15 @@ import {
   MM_SOFT_INVENTORY_LIMIT,
   MM_TICK_MS,
 } from '@/data/marketMakerScenarios'
-import { formatMoney, formatPrice, formatSigned, pnlColor } from '@/lib/formatting'
+import { formatMoney, formatPrice, formatSigned, pnlColor, plural } from '@/lib/formatting'
 import type { MarketMakerResult, MarketMakerScenario, MMTrade } from '@/types/game'
 import { AccountingDebug } from './AccountingDebug'
 import { MarketMakerEngine, type MarketMakerSnapshot } from './engine'
+import './MarketMakerGame.css'
 
 type Stage = 'intro' | 'running' | 'finished'
 
-const RECENT_TRADES = 8
+const RECENT_TRADES = 4
 
 export function MarketMakerGame({
   context,
@@ -107,19 +101,19 @@ export function MarketMakerGame({
 
   if (stage === 'intro') {
     return <ChallengeIntro className="mm-intro" number="02" title={<>Маркет-<br />мейкер</>}
-      subtitle="Зарабатывайте на спреде. Управляйте позицией."
-      description="Вы выставляете Bid и Ask — цены покупки и продажи. Инвентарь — ваша накопленная позиция."
+      subtitle="Каждая котировка — новое решение."
+      description={`Выставляйте цены покупки и продажи. Зарабатывайте на исполнении заявок, управляйте спредом и следите за накопленной позицией. У вас ${scenario.durationSeconds} секунд.`}
       howItWorks={[
         'Задайте цены покупки (Bid) и продажи (Ask).',
         'Рыночные заявки исполняются по вашим котировкам.',
-        'Спред даёт доход, накопленная позиция — рыночный риск.',
+        'Исполнение котировок может приносить доход от спреда. Накопленная позиция создаёт рыночный риск.',
       ]}
       stats={[
-        { value: `${scenario.durationSeconds} с`, label: 'длительность раунда' },
-        { value: 'Bid / Ask', label: 'покупка / продажа' },
-        { value: `${scenario.softInventoryLimit ?? MM_SOFT_INVENTORY_LIMIT}`, label: 'лотов в позиции — порог риска' },
+        { value: `${scenario.durationSeconds} с`, label: 'раунд' },
+        { value: 'Bid / Ask', label: 'две стороны котировки' },
+        { value: `${scenario.softInventoryLimit ?? MM_SOFT_INVENTORY_LIMIT} лотов`, label: 'Порог повышенного риска' },
       ]}
-      note={scenario.mode === 'advanced' ? 'Хедж дороже, а позиция сверх лимита несёт дополнительные издержки удержания.' : 'Хеджирование закрывает накопленную позицию за комиссию.'}
+      note={scenario.mode === 'advanced' ? 'Хедж дороже, а позиция сверх лимита несёт дополнительные издержки удержания.' : 'Исполнение котировок может приносить доход от спреда. Накопленная позиция создаёт рыночный риск, а хеджирование требует затрат.'}
       cta="Начать раунд" visual={<ChallengeIllustration kind="market-maker" />}
       mode={context?.mode ?? scenario.mode ?? 'standard'} state={stage}
       onStart={() => { trackEvent('scenario_started', { challengeType: 'market-maker', scenarioId: scenario.id, mode: scenario.mode }); setStage('running') }} />
@@ -131,24 +125,26 @@ export function MarketMakerGame({
   const recentTrades = snapshot.trades.slice(-RECENT_TRADES).reverse()
 
   return (
-    <div className="mx-auto w-full max-w-[1180px] px-5 py-8 sm:px-8 sm:py-12">
-      <header className="mb-6 flex items-center justify-between gap-6">
-        <span className="text-sm text-chalk-400">Вы котируете рынок</span>
-        <div className="flex items-center gap-4">
-          <span className="tnum text-sm text-chalk-200">{snapshot.secondsLeft} с</span>
-          <div className="h-1 w-28 overflow-hidden rounded-full bg-ink-700 sm:w-48">
-            <div
-              className="h-full rounded-full bg-violet-accent transition-[width] duration-500 ease-linear"
-              style={{ width: `${progress * 100}%` }}
-            />
+    <div className="mm-terminal mx-auto w-full max-w-[1180px] px-5 py-6 sm:px-8 sm:py-8">
+      <header className="mm-terminal-header">
+        <span className="mm-terminal-status"><span aria-hidden />Вы котируете рынок</span>
+        <div className="mm-timer" data-urgent={snapshot.secondsLeft <= 10}>
+          <div className="mm-timer-heading">
+            <span className="mm-label">До конца раунда</span>
+            <span className="mm-timer-value tnum" role="timer" aria-label={`Осталось ${snapshot.secondsLeft} секунд`}>
+              {snapshot.secondsLeft}<span>с</span>
+            </span>
+          </div>
+          <div className="mm-timer-track" aria-hidden="true">
+            <div className="mm-timer-progress" style={{ width: `${progress * 100}%` }} />
           </div>
         </div>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-        <div className="flex flex-col gap-6">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="flex min-w-0 flex-col gap-5">
           <div
-            className={`grid grid-cols-3 gap-px overflow-hidden rounded-xl border border-ink-700 bg-ink-700 ${
+            className={`mm-quotes grid grid-cols-3 gap-px overflow-hidden rounded-xl border border-ink-700 bg-ink-700 ${
               hedgeFlash ? 'animate-pulse-ring' : ''
             }`}
           >
@@ -163,13 +159,14 @@ export function MarketMakerGame({
             <QuoteCell label="Ask" value={snapshot.ask} className="text-market-down" align="end" />
           </div>
 
-          <div className="rounded-xl border border-ink-700 bg-ink-900 p-3 sm:p-5">
+          <div className="mm-chart rounded-xl border border-ink-700 bg-ink-900 p-3 sm:p-5">
             <QuoteChart
               points={snapshot.history}
               trades={snapshot.trades}
               totalTicks={snapshot.totalTicks}
+              emphasizeQuotes
             />
-            <QuoteLegend />
+            <QuoteLegend compact />
           </div>
 
           <Controls
@@ -184,23 +181,23 @@ export function MarketMakerGame({
           />
         </div>
 
-        <aside className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-1">
+        <aside className="mm-sidebar flex min-w-0 flex-col gap-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
             <InventoryCard softLimit={scenario.softInventoryLimit} inventory={snapshot.inventory} />
-            <div className="flex flex-col gap-2 rounded-xl border border-ink-700 bg-ink-900 px-5 py-4">
+            <div className="mm-pnl flex flex-col gap-3 rounded-xl border border-ink-700 bg-ink-900 px-4 py-4">
               <span className="text-[11px] tracking-[0.16em] text-chalk-500 uppercase">PnL</span>
-              <span className={`tnum text-3xl leading-none font-light ${pnlColor(snapshot.pnl)}`}>
+              <span className={`mm-pnl-value tnum ${pnlColor(snapshot.pnl)}`}>
                 {formatMoney(snapshot.pnl)}
               </span>
             </div>
           </div>
 
           <RecentTrades trades={recentTrades} />
-          {import.meta.env.DEV && <AccountingDebug data={snapshot.accounting} />}
+          {import.meta.env.DEV && <div className="mm-debug"><AccountingDebug data={snapshot.accounting} /></div>}
 
-          <p className="text-xs leading-relaxed text-chalk-500">
+          <p className="text-[11px] leading-relaxed text-chalk-500">
             Справедливая цена скрыта. У вас есть рыночная цена, собственная котировка и
-            поток сделок. Клавиши: ← → сдвиг, ↓ ↑ спред, H — хедж.
+            поток сделок.
           </p>
         </aside>
       </div>
@@ -244,7 +241,7 @@ function riskLevel(inventory: number, softLimit: number): { label: string; class
   return { label: 'низкий', className: 'text-chalk-400' }
 }
 
-function InventoryCard({ inventory, softLimit = MM_SOFT_INVENTORY_LIMIT }: { inventory: number; softLimit?: number }) {
+export function InventoryCard({ inventory, softLimit = MM_SOFT_INVENTORY_LIMIT }: { inventory: number; softLimit?: number }) {
   const risk = riskLevel(inventory, softLimit)
   const scale = MM_HARD_INVENTORY_LIMIT + 5
   const position = ((Math.max(-scale, Math.min(scale, inventory)) + scale) / (scale * 2)) * 100
@@ -255,7 +252,7 @@ function InventoryCard({ inventory, softLimit = MM_SOFT_INVENTORY_LIMIT }: { inv
 
   return (
     <div
-      className={`flex flex-col gap-3 rounded-xl border bg-ink-900 px-5 py-4 transition-colors duration-300 ${
+      className={`flex flex-col gap-3 rounded-xl border bg-ink-900 px-4 py-4 transition-colors duration-300 ${
         aboveHard
           ? 'border-market-down/60'
           : aboveSoft
@@ -274,79 +271,84 @@ function InventoryCard({ inventory, softLimit = MM_SOFT_INVENTORY_LIMIT }: { inv
           aboveSoft ? risk.className : 'text-chalk-50'
         }`}
       >
-        {formatSigned(inventory)}
+        {formatSigned(inventory)} <span className="text-sm text-chalk-500">{plural(inventory, ['лот', 'лота', 'лотов'])}</span>
       </span>
 
-      <div className="relative h-3" aria-hidden>
-        <div className="absolute top-1/2 right-0 left-0 h-px -translate-y-1/2 bg-ink-600" />
-        {[-hardOffset, -softOffset, softOffset, hardOffset].map((offset) => (
+      <div className="mm-inventory-scale" role="img" aria-label={`Позиция ${formatSigned(inventory)}. Пороги повышенного риска: ${formatSigned(-softLimit)} и ${formatSigned(softLimit)} лотов. Диапазон шкалы: от −${scale} до +${scale}.`}>
+        <div className="relative h-3" aria-hidden>
+          <div className="absolute top-1/2 right-0 left-0 h-px -translate-y-1/2 bg-ink-600" />
+          {[-hardOffset, -softOffset, softOffset, hardOffset].map((offset) => (
+            <div
+              key={offset}
+              className={`absolute top-0.5 h-2 w-px ${
+                Math.abs(offset) === hardOffset ? 'bg-market-down/60' : 'bg-risk/50'
+              }`}
+              style={{ left: `${50 + offset}%` }}
+            />
+          ))}
+          <div className="absolute top-0 left-1/2 h-3 w-px bg-ink-500" />
           <div
-            key={offset}
-            className={`absolute top-0.5 h-2 w-px ${
-              Math.abs(offset) === hardOffset ? 'bg-market-down/60' : 'bg-risk/50'
+            className={`absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-[left] duration-300 ${
+              aboveHard ? 'bg-market-down' : aboveSoft ? 'bg-risk' : 'bg-chalk-200'
             }`}
-            style={{ left: `${50 + offset}%` }}
+            style={{ left: `${position}%` }}
           />
-        ))}
-        <div className="absolute top-0 left-1/2 h-3 w-px bg-ink-500" />
-        <div
-          className={`absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-[left] duration-300 ${
-            aboveHard ? 'bg-market-down' : aboveSoft ? 'bg-risk' : 'bg-chalk-200'
-          }`}
-          style={{ left: `${position}%` }}
-        />
+        </div>
+
+        <div className="mm-inventory-labels tnum" aria-hidden="true">
+          {[-softLimit, 0, softLimit].map(value => (
+            <span key={value} style={{ left: `${50 + value / (scale * 2) * 100}%` }}>{formatSigned(value)}</span>
+          ))}
+        </div>
       </div>
 
       <p
-        className={`text-xs leading-snug transition-opacity duration-300 ${
-          aboveSoft ? 'opacity-100' : 'opacity-0'
-        } ${aboveHard ? 'text-market-down' : 'text-risk/90'}`}
+        className={`mm-inventory-hint text-[11px] leading-snug ${
+          aboveSoft ? '' : 'text-chalk-500'
+        } ${aboveHard ? 'text-market-down' : aboveSoft ? 'text-risk/90' : ''}`}
         aria-live="polite"
-        aria-hidden={!aboveSoft}
       >
         {aboveHard
           ? 'Позиция сверх лимита: высокий позиционный риск'
-          : 'Позиционный риск растёт'}
+          : aboveSoft ? 'Позиционный риск растёт' : 'Отмечены пороги повышенного риска'}
       </p>
     </div>
   )
 }
 
-function RecentTrades({ trades }: { trades: MMTrade[] }) {
+export function RecentTrades({ trades }: { trades: MMTrade[] }) {
   return (
-    <div className="flex flex-1 flex-col gap-3 rounded-xl border border-ink-700 bg-ink-900 p-5">
+    <div className="mm-trades rounded-xl border border-ink-700 bg-ink-900 p-4" style={{ '--mm-trade-rows': RECENT_TRADES } as CSSProperties}>
       <SectionLabel>Последние сделки</SectionLabel>
+      <div className="mm-trade-columns mm-trade-head" aria-hidden="true">
+        <span>Клиент</span><span>Лоты</span><span>Цена</span>
+      </div>
       {trades.length === 0 ? (
-        <p className="text-sm text-chalk-500">Сделок пока не было.</p>
+        <p className="mm-trade-list py-4 text-xs text-chalk-500">Пока нет исполненных заявок</p>
       ) : (
-        <ul className="flex flex-col gap-1.5">
-          {trades.map((trade) => (
+        <ul className="mm-trade-list" aria-label="Последние сделки, новые сверху">
+          {trades.map((trade, index) => (
             <li
-              key={`${trade.tick}-${trade.botSide}`}
-              className={`tnum flex items-baseline justify-between gap-3 rounded-md border-l-2 px-2.5 py-1 text-sm ${
-                trade.increasedRisk
-                  ? 'border-risk/60 bg-risk/[0.04] text-chalk-200'
-                  : 'border-transparent text-chalk-400'
-              }`}
+              key={`${trade.tick}-${trade.botSide}-${index}`}
+              className={`mm-trade-columns mm-trade-row tnum ${trade.increasedRisk ? 'mm-trade-risk' : ''}`}
+              title={`Клиент ${trade.botSide === 'buy' ? 'купил' : 'продал'} ${trade.size} ${plural(trade.size, ['лот', 'лота', 'лотов'])} по вашей ${trade.botSide === 'buy' ? 'Ask' : 'Bid'}. Ваш инвентарь ${trade.botSide === 'buy' ? 'уменьшился' : 'увеличился'} на ${trade.size} ${plural(trade.size, ['лот', 'лота', 'лотов'])}.${trade.increasedRisk ? ' Абсолютная позиция выросла.' : ''}`}
+              tabIndex={0}
             >
-              <span>
-                {trade.botSide === 'buy' ? 'Купили' : 'Продали'} {trade.size}
-              </span>
+              <span>{trade.botSide === 'buy' ? 'Купили' : 'Продали'}</span>
+              <span><span className="sr-only">Лотов: </span>{trade.size}</span>
               <span className={trade.botSide === 'buy' ? 'text-market-down' : 'text-market-up'}>
-                @ {formatPrice(trade.price)}
+                <span className="sr-only">Цена: </span>{formatPrice(trade.price)}
               </span>
             </li>
           ))}
         </ul>
       )}
-      <p className="mt-auto pt-2 text-[11px] leading-snug text-chalk-500">
-        Выделены сделки, которые увеличили inventory.
-      </p>
+      <p className="mm-trade-note"><span aria-hidden />Выделены сделки, увеличившие inventory.</p>
     </div>
   )
 }
 
-function Controls({
+export function Controls({
   onLower,
   onHigher,
   onNarrow,
@@ -366,32 +368,17 @@ function Controls({
   spread: number
 }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      <ControlGroup label="Сместить котировки">
-        <ControlButton onClick={onLower}>
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          Ниже
-        </ControlButton>
-        <ControlButton onClick={onHigher}>
-          Выше
-          <ArrowRight className="h-4 w-4" aria-hidden />
-        </ControlButton>
+    <div className="mm-controls">
+      <ControlGroup label="Смещение котировок">
+        <ControlButton onClick={onLower} shortcut="←" shortcutCode="ArrowLeft">Ниже</ControlButton>
+        <ControlButton onClick={onHigher} shortcut="→" shortcutCode="ArrowRight">Выше</ControlButton>
       </ControlGroup>
-
-      <ControlGroup label={`Спред · ${formatPrice(spread)}`}>
-        <ControlButton onClick={onNarrow}>
-          <ChevronsRightLeft className="h-4 w-4" aria-hidden />
-          Сузить
-        </ControlButton>
-        <ControlButton onClick={onWiden}>
-          <ChevronsLeftRight className="h-4 w-4" aria-hidden />
-          Расширить
-        </ControlButton>
+      <ControlGroup label="Управление спредом" detail={formatPrice(spread)}>
+        <ControlButton onClick={onNarrow} shortcut="↓" shortcutCode="ArrowDown">Сузить</ControlButton>
+        <ControlButton onClick={onWiden} shortcut="↑" shortcutCode="ArrowUp">Расширить</ControlButton>
       </ControlGroup>
-
-      <ControlGroup label={hedgeDisabled ? 'Риск' : `Риск · хедж ${formatMoney(-hedgeCost)}`}>
-        <ControlButton onClick={onHedge} disabled={hedgeDisabled} accent wide>
-          <Shield className="h-4 w-4" aria-hidden />
+      <ControlGroup label="Управление риском" detail={`Стоимость хеджа: ${hedgeDisabled ? '—' : `${formatMoney(hedgeCost, false)} ед.`}`}>
+        <ControlButton onClick={onHedge} disabled={hedgeDisabled} accent wide shortcut="H" shortcutCode="H">
           Хеджировать
         </ControlButton>
       </ControlGroup>
@@ -399,40 +386,38 @@ function Controls({
   )
 }
 
-function ControlGroup({ label, children }: { label: string; children: ReactNode }) {
+function ControlGroup({ label, detail, children }: { label: string; detail?: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-2.5">
-      <span className="tnum text-[11px] tracking-[0.14em] text-chalk-500 uppercase">{label}</span>
-      <div className="grid grid-cols-2 gap-2">{children}</div>
+    <div className="mm-control-group" role="group" aria-label={label}>
+      <div className="mm-control-heading">
+        <span className="mm-label">{label}</span>
+        <span className="mm-control-detail tnum">{detail || '\u00a0'}</span>
+      </div>
+      <div className="mm-control-buttons">{children}</div>
     </div>
   )
 }
 
 function ControlButton({
-  children,
-  onClick,
-  disabled,
-  accent,
-  wide,
+  children, onClick, disabled, accent, wide, shortcut, shortcutCode,
 }: {
   children: ReactNode
   onClick: () => void
   disabled?: boolean
   accent?: boolean
   wide?: boolean
+  shortcut: string
+  shortcutCode: string
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`col-span-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border text-sm font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-35 ${wide ? '' : 'sm:col-span-1'} ${
-        accent
-          ? 'border-violet-accent/40 bg-violet-accent/10 text-violet-soft hover:bg-violet-accent/18'
-          : 'border-ink-700 bg-ink-900 text-chalk-200 hover:border-ink-500 hover:bg-ink-850'
-      }`}
+      aria-keyshortcuts={shortcutCode}
+      className={`mm-control-button ${wide ? 'mm-control-wide' : ''} ${accent ? 'mm-control-accent' : ''}`}
     >
-      {children}
+      <span>{children}</span><kbd aria-hidden="true">{shortcut}</kbd>
     </button>
   )
 }
