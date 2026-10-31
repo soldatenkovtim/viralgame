@@ -1,5 +1,4 @@
 import { useScenario } from '@/scenario-engine/useScenario'
-import { ScenarioReplay } from '@/components/results/ScenarioReplay'
 import { DuelResultShare } from '@/duel/DuelResultShare'
 import { useEffect, useState } from 'react'
 import { ChallengeGate } from '@/components/layout/ChallengeGate'
@@ -51,7 +50,6 @@ export function MarketMakerPage() {
         nextHref="/challenge/black-swan"
         nextLabel="Открыть следующее испытание"
       />
-      <ScenarioReplay challengeType="market-maker" scenarioId={scenario.id} />
       </DuelResultShare>
     ) : (
       <MarketMakerGame key={scenario.id} context={{ mode, seed: scenario.seed }} scenario={scenario} onComplete={handleComplete} />

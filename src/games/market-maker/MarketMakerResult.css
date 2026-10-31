@@ -1,0 +1,16 @@
+.mm-result h2 { font-size: 20px; font-weight: 500; letter-spacing: -.02em; }
+.mm-result-caption { color: var(--muted); font-size: 13px; line-height: 1.65; }
+.mm-result-pnl { border-block: 1px solid var(--border); padding-block: 24px; }
+.mm-result-pnl > dl { max-width: 760px; margin-block: 20px; }
+.mm-result-pnl dl > div { display: flex; justify-content: space-between; gap: 20px; padding-block: 8px; font-size: 14px; }
+.mm-result-pnl dt { color: var(--secondary); }
+.mm-result-pnl dd { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mm-result-total { border-top: 1px solid var(--border); margin-top: 8px; font-weight: 600; }
+.mm-result-pnl details { font-size: 13px; line-height: 1.65; color: var(--secondary); max-width: 760px; }
+.mm-result-pnl summary { cursor: pointer; color: var(--accent); }
+.mm-result-pnl details p { margin-top: 12px; }
+.mm-result-replay { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.mm-result-observation { padding-left: 16px; border-left: 2px solid var(--accent); }
+.mm-result-observation p { margin-top: 8px; color: var(--secondary); font-size: 14px; line-height: 1.65; }
+.mm-result .blind-result-next a, .mm-result .blind-result-next button { white-space: normal; }
+@media(max-width:639px) { .mm-result-pnl dl > div { gap: 12px; } .mm-result-pnl details dl > div { flex-wrap: wrap; } }

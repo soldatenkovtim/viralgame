@@ -7,6 +7,8 @@ import { QuoteChart, QuoteLegend } from '@/components/charts/QuoteChart'
 import { SectionLabel } from '@/components/ui/Card'
 import {
   MM_HARD_INVENTORY_LIMIT,
+  MM_MIN_SPREAD,
+  MM_MAX_SPREAD,
   MM_SOFT_INVENTORY_LIMIT,
   MM_TICK_MS,
 } from '@/data/marketMakerScenarios'
@@ -121,24 +123,11 @@ export function MarketMakerGame({
 
   if (!snapshot) return null
 
-  const progress = snapshot.tick / snapshot.totalTicks
-  const recentTrades = snapshot.trades.slice(-RECENT_TRADES).reverse()
-
   return (
     <div className="mm-terminal mx-auto w-full max-w-[1180px] px-5 py-6 sm:px-8 sm:py-8">
       <header className="mm-terminal-header">
         <span className="mm-terminal-status"><span aria-hidden />Вы котируете рынок</span>
-        <div className="mm-timer" data-urgent={snapshot.secondsLeft <= 10}>
-          <div className="mm-timer-heading">
-            <span className="mm-label">До конца раунда</span>
-            <span className="mm-timer-value tnum" role="timer" aria-label={`Осталось ${snapshot.secondsLeft} секунд`}>
-              {snapshot.secondsLeft}<span>с</span>
-            </span>
-          </div>
-          <div className="mm-timer-track" aria-hidden="true">
-            <div className="mm-timer-progress" style={{ width: `${progress * 100}%` }} />
-          </div>
-        </div>
+        <RoundTimer secondsLeft={snapshot.secondsLeft} progress={snapshot.tick / snapshot.totalTicks} />
       </header>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -184,16 +173,11 @@ export function MarketMakerGame({
         <aside className="mm-sidebar flex min-w-0 flex-col gap-3">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
             <InventoryCard softLimit={scenario.softInventoryLimit} inventory={snapshot.inventory} />
-            <div className="mm-pnl flex flex-col gap-3 rounded-xl border border-ink-700 bg-ink-900 px-4 py-4">
-              <span className="text-[11px] tracking-[0.16em] text-chalk-500 uppercase">PnL</span>
-              <span className={`mm-pnl-value tnum ${pnlColor(snapshot.pnl)}`}>
-                {formatMoney(snapshot.pnl)}
-              </span>
-            </div>
+            <PnlCard value={snapshot.pnl} />
           </div>
 
-          <RecentTrades trades={recentTrades} />
-          {import.meta.env.DEV && <div className="mm-debug"><AccountingDebug data={snapshot.accounting} /></div>}
+          <RecentTrades trades={snapshot.trades} />
+          {import.meta.env.DEV && import.meta.env.VITE_MM_ACCOUNTING_DEBUG === 'true' && <div className="mm-debug"><AccountingDebug data={snapshot.accounting} /></div>}
 
           <p className="text-[11px] leading-relaxed text-chalk-500">
             Справедливая цена скрыта. У вас есть рыночная цена, собственная котировка и
@@ -201,6 +185,37 @@ export function MarketMakerGame({
           </p>
         </aside>
       </div>
+    </div>
+  )
+}
+
+export function RoundTimer({ secondsLeft, progress }: { secondsLeft: number; progress: number }) {
+  const urgency = secondsLeft <= 5 ? 'critical' : secondsLeft <= 10 ? 'warning' : 'normal'
+  return (
+    <div className="mm-timer" data-urgency={urgency}>
+      <div className="mm-timer-heading">
+        <span className="mm-label">До конца раунда</span>
+        <span className="mm-timer-value tnum" role="timer" aria-label={`Осталось ${secondsLeft} ${plural(secondsLeft, ['секунда', 'секунды', 'секунд'])}`}>
+          {secondsLeft}<span>с</span>
+        </span>
+      </div>
+      <div className="mm-timer-track" aria-hidden="true">
+        <div className="mm-timer-progress" style={{ width: `${Math.max(0, Math.min(1, progress)) * 100}%` }} />
+      </div>
+    </div>
+  )
+}
+
+export function PnlCard({ value }: { value: number }) {
+  // Sign and color follow the displayed, rounded amount (including negative zero).
+  const rounded = Math.round(value)
+  const formatted = formatMoney(rounded, rounded !== 0)
+  return (
+    <div className="mm-pnl flex flex-col gap-3 rounded-xl border border-ink-700 bg-ink-900 px-4 py-4">
+      <span className="text-[11px] tracking-[0.16em] text-chalk-500 uppercase">PnL</span>
+      <span className={`mm-pnl-value tnum ${pnlColor(rounded)}`} data-compact={formatted.length > 9}>
+        {formatted}
+      </span>
     </div>
   )
 }
@@ -220,7 +235,7 @@ function QuoteCell({
 }) {
   const alignment = { start: 'items-start', center: 'items-center', end: 'items-end' }[align]
   return (
-    <div className={`flex flex-col justify-between gap-2 bg-ink-900 px-4 py-5 sm:px-6 ${alignment}`}>
+    <div className={`mm-quote-cell flex flex-col justify-between gap-2 bg-ink-900 px-4 py-5 sm:px-6 ${alignment}`}>
       <span className="text-[11px] tracking-[0.16em] text-chalk-500 uppercase">{label}</span>
       <span
         className={`tnum leading-none font-light ${className} ${
@@ -235,9 +250,9 @@ function QuoteCell({
 
 function riskLevel(inventory: number, softLimit: number): { label: string; className: string } {
   const size = Math.abs(inventory)
-  if (size > MM_HARD_INVENTORY_LIMIT) return { label: 'сверх лимита', className: 'text-market-down' }
-  if (size > softLimit) return { label: 'повышенный', className: 'text-risk' }
-  if (size >= 8) return { label: 'умеренный', className: 'text-chalk-200' }
+  if (size > MM_HARD_INVENTORY_LIMIT) return { label: 'высокий', className: 'text-market-down' }
+  if (size > softLimit) return { label: 'высокий', className: 'text-risk' }
+  if (size >= Math.ceil(softLimit / 2)) return { label: 'средний', className: 'text-risk' }
   return { label: 'низкий', className: 'text-chalk-400' }
 }
 
@@ -252,7 +267,7 @@ export function InventoryCard({ inventory, softLimit = MM_SOFT_INVENTORY_LIMIT }
 
   return (
     <div
-      className={`flex flex-col gap-3 rounded-xl border bg-ink-900 px-4 py-4 transition-colors duration-300 ${
+      className={`mm-inventory-card flex flex-col gap-3 rounded-xl border bg-ink-900 px-4 py-4 transition-colors duration-300 ${
         aboveHard
           ? 'border-market-down/60'
           : aboveSoft
@@ -317,6 +332,7 @@ export function InventoryCard({ inventory, softLimit = MM_SOFT_INVENTORY_LIMIT }
 }
 
 export function RecentTrades({ trades }: { trades: MMTrade[] }) {
+  const recentTrades = trades.slice(-RECENT_TRADES).reverse()
   return (
     <div className="mm-trades rounded-xl border border-ink-700 bg-ink-900 p-4" style={{ '--mm-trade-rows': RECENT_TRADES } as CSSProperties}>
       <SectionLabel>Последние сделки</SectionLabel>
@@ -327,9 +343,9 @@ export function RecentTrades({ trades }: { trades: MMTrade[] }) {
         <p className="mm-trade-list py-4 text-xs text-chalk-500">Пока нет исполненных заявок</p>
       ) : (
         <ul className="mm-trade-list" aria-label="Последние сделки, новые сверху">
-          {trades.map((trade, index) => (
+          {recentTrades.map((trade) => (
             <li
-              key={`${trade.tick}-${trade.botSide}-${index}`}
+              key={`${trade.tick}-${trade.botSide}`}
               className={`mm-trade-columns mm-trade-row tnum ${trade.increasedRisk ? 'mm-trade-risk' : ''}`}
               title={`Клиент ${trade.botSide === 'buy' ? 'купил' : 'продал'} ${trade.size} ${plural(trade.size, ['лот', 'лота', 'лотов'])} по вашей ${trade.botSide === 'buy' ? 'Ask' : 'Bid'}. Ваш инвентарь ${trade.botSide === 'buy' ? 'уменьшился' : 'увеличился'} на ${trade.size} ${plural(trade.size, ['лот', 'лота', 'лотов'])}.${trade.increasedRisk ? ' Абсолютная позиция выросла.' : ''}`}
               tabIndex={0}
@@ -343,7 +359,7 @@ export function RecentTrades({ trades }: { trades: MMTrade[] }) {
           ))}
         </ul>
       )}
-      <p className="mm-trade-note"><span aria-hidden />Выделены сделки, увеличившие inventory.</p>
+      <p className="mm-trade-note"><span aria-hidden />Выделены сделки, увеличившие модуль позиции.</p>
     </div>
   )
 }
@@ -374,8 +390,8 @@ export function Controls({
         <ControlButton onClick={onHigher} shortcut="→" shortcutCode="ArrowRight">Выше</ControlButton>
       </ControlGroup>
       <ControlGroup label="Управление спредом" detail={formatPrice(spread)}>
-        <ControlButton onClick={onNarrow} shortcut="↓" shortcutCode="ArrowDown">Сузить</ControlButton>
-        <ControlButton onClick={onWiden} shortcut="↑" shortcutCode="ArrowUp">Расширить</ControlButton>
+        <ControlButton onClick={onNarrow} disabled={spread <= MM_MIN_SPREAD} shortcut="↓" shortcutCode="ArrowDown">Сузить</ControlButton>
+        <ControlButton onClick={onWiden} disabled={spread >= MM_MAX_SPREAD} shortcut="↑" shortcutCode="ArrowUp">Расширить</ControlButton>
       </ControlGroup>
       <ControlGroup label="Управление риском" detail={`Стоимость хеджа: ${hedgeDisabled ? '—' : `${formatMoney(hedgeCost, false)} ед.`}`}>
         <ControlButton onClick={onHedge} disabled={hedgeDisabled} accent wide shortcut="H" shortcutCode="H">
