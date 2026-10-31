@@ -100,9 +100,14 @@ export function MarketMakerGame({
   }, [stage, act, handleHedge])
 
   if (stage === 'intro') {
-    return <ChallengeIntro number="02" title={<>Маркет-<br />мейкер</>}
+    return <ChallengeIntro className="mm-intro" number="02" title={<>Маркет-<br />мейкер</>}
       subtitle="Каждая котировка — новое решение."
       description={`Выставляйте цены покупки и продажи. Зарабатывайте на исполнении заявок, управляйте спредом и следите за накопленной позицией. У вас ${scenario.durationSeconds} секунд.`}
+      howItWorks={[
+        'Задайте цены покупки (Bid) и продажи (Ask).',
+        'Рыночные заявки исполняются по вашим котировкам.',
+        'Исполнение котировок может приносить доход от спреда. Накопленная позиция создаёт рыночный риск.',
+      ]}
       stats={[
         { value: `${scenario.durationSeconds} с`, label: 'раунд' },
         { value: 'Bid / Ask', label: 'две стороны котировки' },
