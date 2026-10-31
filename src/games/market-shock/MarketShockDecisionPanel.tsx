@@ -17,20 +17,22 @@ export function PositionSummary({
   entryPrice,
   price,
   caption,
+  compact = false,
 }: {
   position: number
   pnlPercent: number
   entryPrice: number
   price: number
+  compact?: boolean
   caption?: string
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-ink-700 bg-ink-900 p-4">
+    <div className={`flex flex-col rounded-xl border border-ink-700 bg-ink-900 ${compact ? "gap-2 px-3 py-2" : "gap-3 p-4"}`}>
       <div className="flex items-start justify-between gap-3">
         <Field label="Позиция" value={positionLabel(position)} />
         <Field label="PnL" value={formatPercent(pnlPercent, 2)} valueClass={pnlColor(pnlPercent)} align="end" />
       </div>
-      <div className="flex items-start justify-between gap-3 border-t border-ink-800 pt-3">
+      <div className={`flex items-start justify-between gap-3 border-t border-ink-800 ${compact ? "pt-1" : "pt-3"}`}>
         <Field label="Средняя цена" value={formatPrice(entryPrice)} small />
         <Field label="Текущая" value={formatPrice(price)} small align="end" />
       </div>
@@ -71,17 +73,9 @@ export function MarketShockDecisionPanel({
   onConfirm: () => void
 }) {
   return (
-    <section className="flex flex-col gap-3 rounded-xl border border-ink-700 bg-ink-900 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <span className="tnum text-[11px] tracking-[0.14em] text-chalk-500 uppercase">
-          Решение {String(phaseNumber).padStart(2, '0')} из 03
-        </span>
-        <span className="text-xs text-chalk-400">{!deciding ? "Рынок двигается…" : timerDisabled ? "Без ограничения времени" : "Осталось"}</span>
-      </div>
-
-      <Countdown total={totalSeconds} remaining={remaining} active={deciding && !timerDisabled} />
-
-
+    <section className="flex flex-col gap-2 rounded-xl border border-ink-700 bg-ink-900 p-3">
+      <Countdown total={totalSeconds} remaining={remaining} active={deciding && !timerDisabled}
+        phaseNumber={phaseNumber} timerDisabled={timerDisabled} />
 
       <h2 className="text-lg font-normal tracking-tight text-chalk-50">Что делать с позицией?</h2>
 
@@ -91,7 +85,7 @@ export function MarketShockDecisionPanel({
           return (
             <button key={action} type="button" aria-pressed={selected === action}
               disabled={!deciding || !effective} onClick={() => onSelect(action)}
-              className={`min-w-0 rounded-lg border px-3 py-2 text-left disabled:cursor-not-allowed disabled:opacity-40 ${selected === action
+              className={`min-w-0 rounded-lg border min-h-14 px-2.5 py-1.5 text-left disabled:cursor-not-allowed disabled:opacity-40 ${selected === action
                 ? 'border-violet-accent bg-violet-accent/10 text-chalk-50'
                 : 'border-ink-700 text-chalk-200 enabled:hover:border-violet-accent/60'}`}>
               <span className="flex items-center justify-between gap-1 text-sm font-medium">
@@ -105,7 +99,7 @@ export function MarketShockDecisionPanel({
         })}
       </div>
 
-      <p className="min-h-8 text-xs leading-4 text-chalk-400" role="status">{notice ?? (timerDisabled ? "Выберите действие и подтвердите решение." : "Без подтверждения до конца отсчёта позиция останется без изменений.")}</p>
+      <p className="min-h-8 text-xs leading-4 text-chalk-400" role="status">{notice ?? (timerDisabled ? "Выберите действие и подтвердите решение." : "Если время истечёт — позиция останется без изменений.")}</p>
 
       <Button variant="primary" size="lg" fullWidth disabled={!deciding || !selected} onClick={onConfirm}>
         {deciding ? 'Подтвердить решение' : 'Рынок двигается…'}
@@ -115,13 +109,19 @@ export function MarketShockDecisionPanel({
   )
 }
 
-function Countdown({ remaining, total, active }: { remaining: number; total: number; active: boolean }) {
+function Countdown({ remaining, total, active, phaseNumber, timerDisabled }: { remaining: number; total: number; active: boolean; phaseNumber: number; timerDisabled: boolean }) {
   const seconds = Math.max(0, Math.min(total, remaining))
   const tone = !active ? 'text-chalk-500' : seconds <= 5 ? 'text-market-down' : seconds <= 10 ? 'text-amber-400' : 'text-violet-accent'
   return (
     <div className={tone}>
+      <div className="flex items-center justify-between gap-3">
+        <span className="tnum text-[11px] tracking-[0.1em] text-chalk-400 uppercase">
+          Решение {String(phaseNumber).padStart(2, '0')} из 03
+          {timerDisabled && <span className="mt-1 block text-[10px] normal-case">Без ограничения времени</span>}
+        </span>
       <div className="tnum text-3xl font-medium leading-none" aria-label={active ? `Осталось ${seconds} секунд` : 'Отсчёт не идёт'}>
         {active ? seconds : '—'} <span className="text-sm">с</span>
+      </div>
       </div>
       <div className="mt-2 h-1 overflow-hidden rounded-full bg-ink-700" role="progressbar" aria-label="Время на решение"
         aria-valuemin={0} aria-valuemax={total} aria-valuenow={active ? seconds : 0}>

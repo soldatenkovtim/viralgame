@@ -5,6 +5,13 @@ import { MarketShockDecisionPanel, PositionSummary } from './MarketShockDecision
 
 const base = { phaseNumber: 2, position: 0.6, deciding: true, remaining: 18, timerDisabled: false, selected: null, onSelect: () => {}, onConfirm: () => {} }
 describe('active shock presentation', () => {
+  it.each([1, 2, 3])('preserves all controls in decision %s', phaseNumber => {
+    const html = renderToStaticMarkup(createElement(MarketShockDecisionPanel, { ...base, phaseNumber, selected: 'hedge', notice: 'Решение исполнено: Хеджировать. SHORT 21%.' }))
+    expect(html).toContain(`Решение 0${phaseNumber} из 03`)
+    expect((html.match(/aria-pressed=/g) ?? []).length).toBe(4)
+    expect(html).toContain('Подтвердить решение')
+    expect(html).toContain('SHORT 21%')
+  })
   it.each([20, 18, 10, 5, 1, 0, -1])('renders bounded countdown at %s', remaining => {
     const html = renderToStaticMarkup(createElement(MarketShockDecisionPanel, { ...base, remaining: remaining, }))
     expect(html).toContain(`aria-valuenow="${Math.max(0, remaining)}"`)
