@@ -20,7 +20,7 @@ describe('result financial presentation', () => {
   it.each([0, 815, -815])('shows %s with the correct sign, including missing optional accounting', pnl => {
     const r = new MarketMakerEngine(marketMakerScenarios[0]).buildResult()
     const html = renderToStaticMarkup(createElement(PnlBreakdown,{result:{...r,pnl, realizedPnl:undefined, unrealizedPnl:undefined}}))
-    expect(html).toContain(pnl === 0 ? '>0</dd>' : pnl > 0 ? '>+815</dd>' : '>−815</dd>')
+    expect(html).toContain(pnl === 0 ? '>0,00</dd>' : pnl > 0 ? '>+815,00</dd>' : '>−815,00</dd>')
     expect(html).toContain('Альтернативная разбивка для этого прохождения не сохранена')
   })
 })

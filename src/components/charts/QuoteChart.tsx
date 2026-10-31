@@ -263,7 +263,7 @@ export function QuoteChart({
   return <div ref={containerRef} className="w-full" style={{ height }} />
 }
 
-export function QuoteLegend({ replay = false, compact = false }: { replay?: boolean; compact?: boolean }) {
+export function QuoteLegend({ replay = false, compact = false, showInformed = true }: { replay?: boolean; compact?: boolean; showInformed?: boolean }) {
   return (
     <div className={`mt-3 flex flex-wrap gap-y-1.5 px-1 text-chalk-500 ${compact ? 'gap-x-4 border-t border-ink-700 pt-3 text-[11px]' : 'gap-x-5 text-xs'}`}>
       {replay ? (
@@ -285,9 +285,9 @@ export function QuoteLegend({ replay = false, compact = false }: { replay?: bool
       </LegendItem>
       {replay ? (
         <>
-          <LegendItem swatch={<span className="block h-3 w-4 rounded-sm bg-violet-accent/25" />}>
+          {showInformed && <LegendItem swatch={<span className="block h-3 w-4 rounded-sm bg-violet-accent/25" />}>
             Информированный поток
-          </LegendItem>
+          </LegendItem>}
           <LegendItem swatch={<span className="block h-1 w-4 rounded-sm bg-risk" />}>
             Котировка отставала от fair value
           </LegendItem>
