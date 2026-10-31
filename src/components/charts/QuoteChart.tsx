@@ -103,6 +103,7 @@ export function QuoteChart({
       rightPriceScale: {
         borderColor: CHART_COLORS.border,
         scaleMargins: { top: 0.12, bottom: 0.12 },
+        minimumWidth: 64,
       },
       timeScale: {
         visible: showTimeAxis,
@@ -110,6 +111,7 @@ export function QuoteChart({
         tickMarkFormatter: (time: Time) => `${formatTickSeconds(Number(time))} с`,
       },
       localization: {
+        priceFormatter: (price: number) => price.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         timeFormatter: (time: Time) => `${formatTickSeconds(Number(time))} с`,
       },
       crosshair: { mode: showTimeAxis ? CrosshairMode.Normal : CrosshairMode.Hidden },
@@ -165,8 +167,8 @@ export function QuoteChart({
       fair,
       informed,
       lag,
-      askMarkers: createSeriesMarkers(ask, []),
-      bidMarkers: createSeriesMarkers(bid, []),
+      askMarkers: createSeriesMarkers(ask, [], { autoScale: !emphasizeQuotes }),
+      bidMarkers: createSeriesMarkers(bid, [], { autoScale: !emphasizeQuotes }),
     }
 
     const observer = new ResizeObserver((entries) => {
@@ -226,7 +228,11 @@ export function QuoteChart({
     const askMarkers: SeriesMarker<Time>[] = []
     const bidMarkers: SeriesMarker<Time>[] = []
 
-    for (const trade of trades) {
+    // Keep live markers compact; replay retains every execution and its size.
+    const visibleTrades = emphasizeQuotes
+      ? compactTradeMarkers(trades, totalTicks, Math.max(1, (containerRef.current?.clientWidth ?? 664) - 64))
+      : trades
+    for (const trade of visibleTrades) {
       const atAsk = trade.botSide === 'buy'
       const marker: SeriesMarker<Time> = {
         time: toTime(trade.tick),
@@ -234,7 +240,7 @@ export function QuoteChart({
         price: trade.price,
         shape: 'circle',
         color: atAsk ? QUOTE_COLORS.ask : QUOTE_COLORS.bid,
-        size: 0.5 + Math.min(trade.size, 5) * 0.12,
+        size: emphasizeQuotes ? 0.65 : 0.5 + Math.min(trade.size, 5) * 0.12,
       }
       if (atAsk) askMarkers.push(marker)
       else bidMarkers.push(marker)
@@ -242,7 +248,7 @@ export function QuoteChart({
 
     series.askMarkers.setMarkers(askMarkers)
     series.bidMarkers.setMarkers(bidMarkers)
-  }, [trades, points, theme])
+  }, [trades, points, theme, emphasizeQuotes, totalTicks])
 
   useEffect(() => {
     if (chartRef.current) applyChartTheme(chartRef.current)
@@ -293,7 +299,7 @@ export function QuoteLegend({ replay = false, compact = false }: { replay?: bool
 
 function LegendItem({ swatch, children }: { swatch: ReactNode; children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex items-center gap-2 whitespace-nowrap">
       <span aria-hidden>{swatch}</span>
       {children}
     </span>
@@ -306,4 +312,14 @@ function toTime(tick: number): Time {
 
 function formatTickSeconds(time: number): string {
   return String(Math.round(((time - 1) * MM_TICK_MS) / 1000))
+}
+
+/** At most one marker per side in each 8px time bucket, keeping the newest fill. */
+export function compactTradeMarkers(trades: MMTrade[], totalTicks: number, plotWidth: number): MMTrade[] {
+  const ticksPerBucket = Math.max(1, totalTicks * 8 / Math.max(1, plotWidth))
+  const buckets = new Map<string, MMTrade>()
+  for (const trade of trades) {
+    buckets.set(`${trade.botSide}-${Math.floor(trade.tick / ticksPerBucket)}`, trade)
+  }
+  return [...buckets.values()].sort((a, b) => a.tick - b.tick)
 }

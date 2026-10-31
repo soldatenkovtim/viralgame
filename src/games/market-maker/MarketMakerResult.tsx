@@ -1,164 +1,95 @@
 import { useMemo } from 'react'
-import { ArrowRight, Eye } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { QuoteChart, QuoteLegend } from '@/components/charts/QuoteChart'
-import {
-  AchievementNote,
-  MetricGrid,
-  PersonalBestNote,
-  ProfileProgressBlock,
-  ResultHeader,
-} from '@/components/results/ResultBlocks'
+import { PersonalBestNote } from '@/components/results/ResultBlocks'
+import { ScenarioReplay } from '@/components/results/ScenarioReplay'
+import { ResultNavigation } from '@/components/results/ResultNavigation'
 import { ShareChallengeButton } from '@/components/share/ShareChallengeButton'
-import { LinkButton } from '@/components/ui/Button'
+import { Button, LinkButton } from '@/components/ui/Button'
 import { Disclaimer, Stat } from '@/components/ui/Card'
-import { flowRegimeExplanation, flowRegimeLabels } from '@/data/marketMakerScenarios'
-import { marketMakerAchievement } from '@/lib/achievements'
-import { formatMoney, formatNumber, formatPrice, formatSigned, pnlColor } from '@/lib/formatting'
+import { flowRegimeLabels } from '@/data/marketMakerScenarios'
+import { formatMoney, formatNumber, formatPrice, formatSigned, pnlColor, plural } from '@/lib/formatting'
 import type { SharePayload } from '@/lib/sharing'
 import type { MarketMakerResult as MMResult, MMPhaseStats } from '@/types/game'
 import type { SaveOutcome } from '@/store/gameStore'
 import { AccountingDebug } from './AccountingDebug'
 import { tickToSeconds } from './market'
-import { marketMakerInsights } from './scoring'
+import '../blind-market/BlindMarketResult.css'
+import './MarketMakerResult.css'
 
-export function MarketMakerResult({
-  result,
-  outcome,
-  nextHref,
-  nextLabel,
-}: {
-  result: MMResult
-  outcome: SaveOutcome
-  nextHref: string
-  nextLabel: string
-}) {
-  const achievement = useMemo(() => marketMakerAchievement(result), [result])
-  const insights = useMemo(() => marketMakerInsights(result), [result])
+const money = (value: number) => Number.isFinite(value) ? formatMoney(value, Math.round(value) !== 0) : '—'
 
-  const sharePayload: SharePayload = {
-    t: 'market-maker',
-    s: result.scenarioId,
-    d: result.seed,
-    r: Number(result.pnl.toFixed(0)),
-    a: [
-      `Спред ${formatMoney(result.spreadPnl)}`,
-      `Инвентарь до ${result.maxInventory}`,
-      `Хедж ${result.hedgeCount}`,
-    ],
-  }
-
-  return (
-    <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-10 px-5 py-14 sm:px-8 sm:py-20">
-      <ResultHeader eyebrow="Испытание 02 · Маркет-мейкер" headline="Рынок закрыт">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className={`tnum text-3xl font-light ${pnlColor(result.pnl)}`}>
-            PnL: {formatMoney(result.pnl)}
-          </p>
-          <ProfileProgressBlock />
-        </div>
-      </ResultHeader>
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.6fr)]">
-        <PnlBreakdown result={result} />
-        <MetricGrid>
-          <Stat label="Максимальный inventory" value={formatNumber(result.maxInventory)} />
-          <Stat label="Количество сделок" value={formatNumber(result.tradeCount)} />
-          <Stat label="Средний спред" value={formatPrice(result.averageSpread)} />
-          <Stat label="Хедж использован" value={formatNumber(result.hedgeCount)} />
-          <Stat
-            label="Над мягким лимитом"
-            value={`${formatNumber(result.secondsAboveSoftLimit, 0)} с`}
-            valueClassName={result.secondsAboveSoftLimit > 0 ? 'text-risk' : ''}
-          />
-          <Stat label="Очки испытания" value={formatNumber(outcome.points)} />
-        </MetricGrid>
-      </div>
-
-      {import.meta.env.DEV && result.accounting && <AccountingDebug data={result.accounting} />}
-
-      <PersonalBestNote
-        isPersonalBest={outcome.isPersonalBest}
-        pointsToBest={outcome.pointsToBest}
-        points={outcome.points}
-        hasPrevious={outcome.previousBest !== null}
-      />
-
-      <FairValueReplay result={result} />
-
-      <section className="rounded-xl border border-ink-700 bg-ink-900 p-6 sm:p-8">
-        <h3 className="mb-4 text-lg font-normal tracking-tight text-chalk-50">Как прошёл раунд</h3>
-        <ul className="flex max-w-3xl flex-col gap-3">
-          {insights.map((text) => (
-            <li key={text} className="text-base leading-relaxed text-chalk-200">
-              {text}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <AchievementNote achievement={achievement} />
-
-      <div className="flex flex-col gap-6 border-t border-ink-800 pt-10">
-        <ShareChallengeButton payload={sharePayload} />
-
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <Disclaimer>
-            Поток заявок и справедливая цена смоделированы для прототипа и не воспроизводят
-            реальный рынок.
-          </Disclaimer>
-          <LinkButton to={nextHref} variant="primary" size="lg">
-            {nextLabel}
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </LinkButton>
-        </div>
-      </div>
-    </div>
-  )
+function roundObservation(result: MMResult): string {
+  if (!result.tradeCount) return 'В этом раунде не было исполненных заявок.'
+  const facts: string[] = []
+  if (result.secondsAboveSoftLimit > 0) facts.push(`Позиция превышала мягкий лимит ${formatNumber(result.secondsAboveSoftLimit)} с.`)
+  else if ((result.phases ?? []).some(p => p.regime !== 'noise' && p.averageQuoteLag > 0.6)) facts.push('Во время направленного потока ваши котировки заметно отклонялись от справедливой цены.')
+  if (result.hedgeCount >= 4) facts.push(`Вы хеджировали позицию ${result.hedgeCount} ${plural(result.hedgeCount, ['раз', 'раза', 'раз'])}; издержки хеджирования составили ${money(result.hedgeCosts)} игровых единиц.`)
+  else if (result.inventoryPnl < 0 && Math.abs(result.inventoryPnl) > Math.abs(result.spreadPnl)) facts.push('Отрицательная переоценка инвентаря по модулю превысила результат исполнения относительно рынка.')
+  else facts.push(Math.round(result.pnl) > 0 ? 'Раунд завершён с прибылью после учёта издержек.' : Math.round(result.pnl) < 0 ? 'Раунд завершён с убытком после учёта издержек.' : 'Итоговый PnL равен нулю при отображении в целых игровых единицах.')
+  return facts.slice(0, 2).join(' ')
 }
 
-function PnlBreakdown({ result }: { result: MMResult }) {
+export function MarketMakerResult({ result, outcome, nextHref, nextLabel }: {
+  result: MMResult; outcome: SaveOutcome; nextHref: string; nextLabel: string
+}) {
+  const sharePayload: SharePayload = { t: 'market-maker', s: result.scenarioId, d: result.seed, r: Number(result.pnl.toFixed(0)), a: [`Спред ${money(result.spreadPnl)}`, `Инвентарь до ${result.maxInventory}`, `Хедж ${result.hedgeCount}`] }
+  const duration = result.timeline?.length ? tickToSeconds(result.timeline.at(-1)!.tick) : result.phases?.at(-1)?.to
+  return <div className="blind-result mm-result">
+    <header className="blind-result-header">
+      <p className="blind-result-eyebrow">Испытание 02 · Маркет-мейкер</p>
+      <h1>Испытание завершено.</h1>
+      <p className={`blind-result-headline tnum ${pnlColor(Math.round(result.pnl))}`}>PnL: {money(result.pnl)}</p>
+      <p className="mm-result-caption">Раунд завершён{duration !== undefined ? ` · ${formatNumber(duration)} ${plural(duration, ['секунда', 'секунды', 'секунд'])}` : ''}</p>
+    </header>
+    <section className="blind-result-summary" aria-label="Итоги прохождения">
+      <div className="blind-result-metrics">
+        <Stat label="Очки испытания" value={formatNumber(outcome.points)} />
+        <Stat label="Количество сделок" value={formatNumber(result.tradeCount)} />
+        <Stat label="Средний спред" value={formatPrice(result.averageSpread)} />
+        <Stat label="Максимальный инвентарь" value={`${formatNumber(result.maxInventory)} ${plural(result.maxInventory, ['лот', 'лота', 'лотов'])}`} />
+        <Stat label="Хеджирований" value={formatNumber(result.hedgeCount)} />
+        <Stat label="Время выше мягкого лимита" value={`${formatNumber(result.secondsAboveSoftLimit)} с`} />
+      </div>
+      {outcome.previousBest !== null && <div className="blind-result-notes"><PersonalBestNote isPersonalBest={outcome.isPersonalBest} pointsToBest={outcome.pointsToBest} points={outcome.points} hasPrevious /></div>}
+    </section>
+    <PnlBreakdown result={result} />
+    <FairValueReplay result={result} />
+    <section className="mm-result-observation"><h2>Главное наблюдение</h2><p>{roundObservation(result)}</p></section>
+    <ScenarioReplay challengeType="market-maker" scenarioId={result.scenarioId}>
+      {({completed, total, remaining, onReplay}) => <section className="blind-result-next">
+        <div className="blind-result-next-primary"><div><h2>Что дальше</h2><p>Вы прошли {completed} из {total} сценариев этого испытания. {remaining ? `Доступно ещё ${remaining} ${plural(remaining, ['сценарий', 'сценария', 'сценариев'])}.` : 'Все сценарии этого испытания пройдены.'}</p></div>
+          <LinkButton to={nextHref} variant="primary" size="lg">{nextLabel}<ArrowRight size={18} aria-hidden /></LinkButton></div>
+        <div className="blind-result-secondary"><Button variant="secondary" onClick={onReplay}>{remaining ? 'Попробовать другой сценарий' : 'Сыграть случайный сценарий'}</Button><div className="blind-result-share"><ShareChallengeButton payload={sharePayload} /></div></div>
+        <ResultNavigation />
+      </section>}
+    </ScenarioReplay>
+    <Disclaimer>Поток заявок и справедливая цена смоделированы и не воспроизводят реальный рынок.</Disclaimer>
+    {import.meta.env.DEV && import.meta.env.VITE_MM_ACCOUNTING_DEBUG === 'true' && result.accounting && <AccountingDebug data={result.accounting} />}
+  </div>
+}
+
+export function PnlBreakdown({ result }: { result: MMResult }) {
   const rows = [
-    { label: 'Spread / execution', value: result.spreadPnl },
-    { label: 'Inventory MTM', value: result.inventoryPnl },
-    { label: 'Hedge', value: -result.hedgeCosts },
-    ...(result.transactionCosts ? [{ label: 'Комиссии сделок', value: -result.transactionCosts }] : []),
+    { label: 'Исполнение относительно рынка', value: result.spreadPnl },
+    { label: 'Переоценка инвентаря', value: result.inventoryPnl },
+    { label: 'Хеджирование', value: -result.hedgeCosts },
+    { label: 'Комиссии', value: -(result.transactionCosts ?? 0) },
     ...(result.carryCosts ? [{ label: 'Удержание позиции', value: -result.carryCosts }] : []),
   ]
-
-  return (
-    <section className="flex flex-col gap-5 rounded-xl border border-ink-700 bg-ink-900 p-6">
-      <span className="text-[11px] tracking-[0.14em] text-chalk-500 uppercase">
-        Из чего сложился PnL
-      </span>
-      <dl className="tnum flex flex-col gap-3 text-sm">
-        {rows.map((row) => (
-          <div key={row.label} className="flex items-baseline justify-between gap-4">
-            <dt className="text-chalk-400">{row.label}</dt>
-            <dd className={row.value === 0 ? 'text-chalk-400' : pnlColor(row.value)}>
-              {formatMoney(row.value)}
-            </dd>
-          </div>
-        ))}
-        <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-ink-700 pt-4">
-          <dt className="text-chalk-50">Итого</dt>
-          <dd className={`text-2xl font-light ${pnlColor(result.pnl)}`}>{formatMoney(result.pnl)}</dd>
-        </div>
-      </dl>
-      <p className="text-xs leading-relaxed text-chalk-500">
-        Inventory на закрытии: {formatSigned(result.finalInventory)}. Открытая позиция
-        оценена по последней рыночной цене. Spread / execution — разница цены исполнения
-        и рынка в момент сделки; Inventory MTM — последующее движение цены по всем
-        позициям раунда, включая закрытые.
-      </p>
-      {result.realizedPnl !== undefined && result.unrealizedPnl !== undefined && (
-        <dl className="tnum flex flex-col gap-2 border-t border-ink-700 pt-4 text-xs text-chalk-400">
-          <div className="flex justify-between gap-4"><dt>Realized · до costs</dt><dd>{formatMoney(result.realizedPnl)}</dd></div>
-          <div className="flex justify-between gap-4"><dt>Unrealized · по final mark</dt><dd>{formatMoney(result.unrealizedPnl)}</dd></div>
-          <div className="text-chalk-500">Другая разбивка того же PnL: realized + unrealized − все costs. Spread / execution — оценка исполнения относительно рынка, а не реализованная прибыль.</div>
-        </dl>
-      )}
-    </section>
-  )
+  return <section className="mm-result-pnl">
+    <h2>Из чего сложился PnL</h2>
+    <dl>{rows.map(row => <div key={row.label}><dt>{row.label}</dt><dd className={`tnum ${pnlColor(Math.round(row.value))}`}>{money(row.value)}</dd></div>)}
+      <div className="mm-result-total"><dt>Итого</dt><dd className={`tnum ${pnlColor(Math.round(result.pnl))}`}>{money(result.pnl)}</dd></div>
+    </dl>
+    <details><summary>Подробнее о расчёте PnL</summary>
+      <p>Инвентарь на закрытии: {formatSigned(result.finalInventory)}. Открытая позиция оценена по последней рыночной цене. Исполнение отражает разницу цены сделки и рынка; переоценка — последующее движение цены по позициям раунда.</p>
+      {result.realizedPnl !== undefined && result.unrealizedPnl !== undefined ? <>
+        <dl><div><dt>Реализованный результат · до издержек</dt><dd>{money(result.realizedPnl)}</dd></div><div><dt>Нереализованный результат</dt><dd>{money(result.unrealizedPnl)}</dd></div><div><dt>Издержки</dt><dd>{money(-(result.hedgeCosts + (result.transactionCosts ?? 0) + (result.carryCosts ?? 0)))}</dd></div></dl>
+        <p>Это альтернативная разбивка того же PnL: реализованный + нереализованный результат − издержки. Её значения не прибавляются к компонентам выше. Отображаемые суммы округлены до целых игровых единиц.</p>
+      </> : <p>Альтернативная разбивка для этого прохождения не сохранена.</p>}
+    </details>
+  </section>
 }
 
 function FairValueReplay({ result }: { result: MMResult }) {
@@ -168,7 +99,7 @@ function FairValueReplay({ result }: { result: MMResult }) {
     if (!timeline) return ticks
     for (const point of timeline) {
       const second = tickToSeconds(point.tick)
-      const informed = result.phases.some(
+      const informed = (result.phases ?? []).some(
         (phase) => phase.regime === 'informed' && second >= phase.from && second < phase.to,
       )
       if (informed) ticks.add(point.tick)
@@ -176,26 +107,10 @@ function FairValueReplay({ result }: { result: MMResult }) {
     return ticks
   }, [timeline, result.phases])
 
-  const duration = result.phases.length ? result.phases[result.phases.length - 1].to : 60
-
   return (
-    <section className="flex flex-col gap-6 rounded-xl border border-violet-accent/30 bg-violet-dim/20 p-6 sm:p-8">
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-3">
-          <Eye className="h-4 w-4 text-violet-soft" aria-hidden />
-          <span className="text-[11px] tracking-[0.18em] text-violet-soft uppercase">
-            Что было скрыто
-          </span>
-        </div>
-        <h2 className="text-2xl font-light tracking-tight text-chalk-50 sm:text-3xl">
-          Справедливая цена и смена потока
-        </h2>
-        <p className="max-w-2xl text-sm leading-relaxed text-chalk-400">
-          Фиолетовая линия — справедливая цена, которую вы не видели. Жёлтая полоса снизу
-          отмечает моменты, когда середина вашей котировки заметно отставала от неё:
-          там поток забирал у вас выгодную ему сторону.
-        </p>
-      </div>
+    <section className="mm-result-replay">
+      <h2>Что происходило на рынке</h2>
+      <p className="mm-result-caption">Во время раунда справедливая цена была скрыта. Фиолетовая линия раскрывает её движение, а жёлтая полоса отмечает существенное отклонение ваших котировок от неё.</p>
 
       {timeline && timeline.length > 1 ? (
         <div className="rounded-xl border border-ink-700 bg-ink-900 p-3 sm:p-5">
@@ -209,57 +124,41 @@ function FairValueReplay({ result }: { result: MMResult }) {
           />
           <QuoteLegend replay />
         </div>
-      ) : null}
+      ) : <p className="mm-result-caption">Для этого прохождения график не сохранён.</p>}
 
-      <PhaseStrip phases={result.phases} duration={duration} />
+      <PhaseStrip phases={result.phases ?? []} />
+      {!!result.phases?.length && Math.abs(result.phases.reduce((sum, phase) => sum + phase.pnlChange, 0) - result.pnl) > 0.01 && <p className="mm-result-caption">Сумма изменений PnL внутри фаз: {money(result.phases.reduce((sum, phase) => sum + phase.pnlChange, 0))}. Разница с итогом: {money(result.pnl - result.phases.reduce((sum, phase) => sum + phase.pnlChange, 0))}. Изменения между расчётными границами фаз учитываются в итоговом PnL; разбивка фаз показана как сохранена движком.</p>}
     </section>
   )
 }
 
-function PhaseStrip({ phases, duration }: { phases: MMPhaseStats[]; duration: number }) {
-  if (!phases.length) return null
-
+function PhaseStrip({ phases }: { phases: MMPhaseStats[] }) {
+  if (!phases.length) return <p className="mm-result-caption">Данные фаз для этого прохождения не сохранены.</p>
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex overflow-hidden rounded-lg border border-ink-700">
-        {phases.map((phase, index) => (
-          <div
-            key={`${phase.regime}-${phase.from}`}
-            className={`flex min-w-0 flex-col gap-1 px-3 py-2.5 ${
-              index > 0 ? 'border-l border-ink-700' : ''
-            } ${phase.regime === 'informed' ? 'bg-violet-accent/15' : 'bg-ink-900'}`}
-            style={{ width: `${((phase.to - phase.from) / duration) * 100}%` }}
-          >
-            <span className="truncate text-xs text-chalk-200">{flowRegimeLabels[phase.regime]}</span>
-            <span className="tnum text-[11px] text-chalk-500">
-              {phase.from}–{phase.to} с
-            </span>
-          </div>
-        ))}
-      </div>
-
+    <div>
       <div className="grid gap-4 sm:grid-cols-3">
-        {phases.map((phase) => (
+        {phases.map((phase, index) => (
           <div
             key={`${phase.regime}-${phase.from}-stats`}
             className="flex flex-col gap-2 rounded-lg border border-ink-700 bg-ink-900 p-4"
           >
-            <div className="flex items-baseline justify-between gap-3">
+            <p className="blind-result-eyebrow">Фаза {String(index + 1).padStart(2, '0')}</p>
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
               <span className="text-sm text-chalk-50">{flowRegimeLabels[phase.regime]}</span>
               <span className="tnum text-xs text-chalk-500">
                 {phase.from}–{phase.to} с
               </span>
             </div>
             <p className="text-xs leading-relaxed text-chalk-400">
-              {flowRegimeExplanation[phase.regime]}
+              {phase.regime === 'noise' ? 'Случайные покупки и продажи. Результат также зависит от накопленной позиции.' : phase.regime === 'informed' ? 'Контрагент учитывает будущее движение справедливой цены.' : 'Заявки следуют за уже произошедшим движением рынка.'}
             </p>
             <dl className="tnum mt-1 grid grid-cols-3 gap-2 text-xs">
               <PhaseFigure label="Сделок" value={formatNumber(phase.fills)} />
               <PhaseFigure label="Спред" value={formatPrice(phase.averageSpread)} />
               <PhaseFigure
                 label="PnL"
-                value={formatMoney(phase.pnlChange)}
-                className={pnlColor(phase.pnlChange)}
+                value={money(phase.pnlChange)}
+                className={pnlColor(Math.round(phase.pnlChange))}
               />
             </dl>
           </div>
