@@ -14,3 +14,13 @@
 .mm-result-observation p { margin-top: 8px; color: var(--secondary); font-size: 14px; line-height: 1.65; }
 .mm-result .blind-result-next a, .mm-result .blind-result-next button { white-space: normal; }
 @media(max-width:639px) { .mm-result-pnl dl > div { gap: 12px; } .mm-result-pnl details dl > div { flex-wrap: wrap; } }
+
+/* Phase count comes from the result; narrow screens always use one column. */
+.mm-phase-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.mm-phase-card, .mm-phase-card dl > div { min-width: 0; }
+.mm-phase-card dd { overflow-wrap: anywhere; }
+@media (min-width: 640px) {
+  .mm-phase-grid { grid-template-columns: repeat(var(--phase-columns), minmax(0, 1fr)); }
+  .mm-phase-grid[data-single="true"] .mm-phase-card { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: center; column-gap: 32px; }
+  .mm-phase-grid[data-single="true"] .mm-phase-description { max-width: 520px; }
+}

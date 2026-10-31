@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, type CSSProperties } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { QuoteChart, QuoteLegend } from '@/components/charts/QuoteChart'
 import { PersonalBestNote } from '@/components/results/ResultBlocks'
@@ -125,12 +125,13 @@ function PhaseStrip({ phases }: { phases: MMPhaseStats[] }) {
   if (!phases.length) return <p className="mm-result-caption">Данные фаз для этого прохождения не сохранены.</p>
   return (
     <div>
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="mm-phase-grid" data-single={phases.length === 1} style={{ '--phase-columns': Math.min(phases.length, 3) } as CSSProperties}>
         {phases.map((phase, index) => (
           <div
             key={`${phase.regime}-${phase.from}-stats`}
-            className="flex flex-col gap-2 rounded-lg border border-ink-700 bg-ink-900 p-4"
+            className="mm-phase-card flex flex-col gap-2 rounded-lg border border-ink-700 bg-ink-900 p-4"
           >
+            <div className="mm-phase-description flex min-w-0 flex-col gap-2">
             <p className="blind-result-eyebrow">Фаза {String(index + 1).padStart(2, '0')}</p>
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <span className="text-sm text-chalk-50">{flowRegimeLabels[phase.regime]}</span>
@@ -141,6 +142,7 @@ function PhaseStrip({ phases }: { phases: MMPhaseStats[] }) {
             <p className="text-xs leading-relaxed text-chalk-400">
               {phaseComment(phase)}
             </p>
+            </div>
             <dl className="tnum mt-1 grid grid-cols-3 gap-2 text-xs">
               <PhaseFigure label="Сделок" value={formatNumber(phase.fills)} />
               <PhaseFigure label="Спред" value={formatPrice(phase.averageSpread)} />
