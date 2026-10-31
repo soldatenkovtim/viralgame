@@ -230,7 +230,7 @@ export function MarketShockGame({
           showDates={revealDone}
         />
 
-        <aside className="flex flex-col gap-4">
+        <aside className={`flex flex-col ${phase ? "gap-2" : "gap-4"}`}>
          {stage === 'context' ? (
             <>
               {difficulty.hintsEnabled && <MarketShockMetrics context={scenario.context} />}
@@ -262,6 +262,7 @@ export function MarketShockGame({
                 pending={!deciding}
               />}
               <PositionSummary
+                compact
                 position={position}
                 pnlPercent={pnlPercent}
                 entryPrice={scenario.initialPosition.entryPrice}
@@ -275,7 +276,9 @@ export function MarketShockGame({
                 totalSeconds={difficulty.timerSeconds}
                 timerDisabled={timerDisabled}
                 selected={selected}
-                notice={notice}
+                notice={decisions.length > 0
+                  ? `Предыдущее решение: ${decisions.at(-1)!.timedOut ? 'удержание по таймауту' : ({ close: 'закрытие', hedge: 'хеджирование', hold: 'удержание', increase: 'увеличение' } as const)[decisions.at(-1)!.action]} · текущая экспозиция ${positionLabel(position)}`
+                  : null}
                 onSelect={setSelected}
                 onConfirm={() => selected && commit(selected, false)}
               />

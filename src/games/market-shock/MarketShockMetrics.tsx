@@ -36,17 +36,17 @@ export function MarketShockMetrics({
 
   return (
     <Panel title={title} severe={severe}>
-      <p className="min-h-10 text-sm leading-relaxed text-chalk-200">{pending ? "Рынок двигается…" : phase.marketDescription}</p>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-ink-800 pt-3">
+      <p className="min-h-8 text-xs leading-4 text-chalk-200">{pending ? "Рынок двигается…" : phase.marketDescription === "Сравните движение цены и объём с доступной историей." ? "Сравните цену и объём с историей." : phase.marketDescription}</p>
+      <div className="grid grid-cols-[1fr_1.4fr_1fr] gap-2 border-t border-ink-800 pt-2">
         <Metric
           label="Цена"
           value={pending ? "—" : formatPercent(phase.priceChange)}
           valueClass={pending ? 'text-chalk-400' : phase.priceChange >= 0 ? 'text-market-up' : 'text-market-down'}
         />
-        <Metric label="Изменение волатильности" value={pending ? "—" : `${formatSigned(phase.volatilityChange)}%`} />
+        <Metric label="Δ волатильности" value={pending ? "—" : `${formatSigned(phase.volatilityChange)}%`} />
         <Metric label="Объём" value={pending ? "—" : `${formatNumber(phase.volumeMultiplier, 1)}×`} />
       </div>
-      <p className="text-xs text-chalk-400">Волатильность и объём — к исходной истории. Стакан недоступен.</p>
+      <p className="text-[11px] leading-4 text-chalk-400">Δ волатильности и объём — к истории. Стакан недоступен.</p>
     </Panel>
   )
 }
@@ -62,7 +62,7 @@ function Panel({
 }) {
   return (
     <section
-      className={`flex animate-fade flex-col gap-3 rounded-xl border p-4 ${
+      className={`flex flex-col gap-2 rounded-xl border px-3 py-2 ${
         severe ? 'border-market-down/35 bg-market-down/6' : 'border-ink-700 bg-ink-900'
       }`}
     >
