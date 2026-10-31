@@ -83,3 +83,28 @@ describe('Trial card navigation', () => {
     expect(entry({ ...fresh(), selectedMode: 'advanced' }, 'blind-market', 'advanced')).not.toContain('GAME_CONTENT')
   })
 })
+
+describe('Market shock entry presentation', () => {
+  it.each([0, 2, 4])('renders actual series progress %s with the shared mode cards', count => {
+    const state = { ...fresh(), unlockedChallenges: CHALLENGE_ORDER,
+      standardResults: CHALLENGE_ORDER.slice(0,count).map(challengeType=>({challengeType,scenarioId:'saved',score:10,completedAt:''})),
+    }
+    const html = entry(state, 'black-swan')
+    expect(html).toContain(`Стандартная серия · ${count} из 4`)
+    expect(html).toContain('Схема механики · не игровой сценарий')
+    expect(html).toContain('Перейти к испытанию')
+    expect(html).toContain('aria-label="Продвинутый" aria-pressed="false" disabled=""')
+    expect(html).not.toContain('GAME_CONTENT')
+  })
+  it('retains advanced access and duel continuation',()=>{
+    const state = {...fresh(), advancedUnlocked:true, selectedMode:'advanced'} as GameState
+    expect(entry(state,'black-swan')).toContain('aria-label="Продвинутый" aria-pressed="true"')
+    expect(entry(state,'black-swan','advanced')).toContain('GAME_CONTENT')
+    expect(entry({...state,selectedMode:'duel'},'black-swan')).toContain('Продолжить в дуэль')
+  })
+  it('leaves other entry screens unchanged',()=>{
+    expect(entry(fresh(),'market-maker')).toContain('ДВЕ СТОРОНЫ РЫНКА')
+    expect(entry(fresh(),'market-maker')).not.toContain('shock-entry-chart')
+    expect(entry(fresh(),'blind-market')).not.toContain('shock-entry-chart')
+  })
+})
