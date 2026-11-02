@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
 import type { ArbitrageRoundResult, CrossArbitrageScenario } from '@/types/game'
-import { formatNumber, formatPrice, pnlColor } from '@/lib/formatting'
+import { formatNumber, pnlColor } from '@/lib/formatting'
 import { formatEdge, routeLabel, sizeLabel } from './scoring'
 import { roundPresentation } from './roundPresentation'
+import { RoundExecutionDetails } from './RoundExecutionDetails'
 import './RoundFeedback.css'
 
 export function RoundFeedback({ round, scenario, remainingMs, durationMs, finalRound }: {
@@ -27,21 +28,7 @@ export function RoundFeedback({ round, scenario, remainingMs, durationMs, finalR
         <p>Изменение капитала раунда</p>
         {percent !== 0 && roundedPercent === 0 && <p className="arb-round-rounding">Результат округлён до 0,00%.</p>}
       </div>
-      {!round.choseNoTrade && <>
-        <dl className="arb-round-execution">
-          <div><dt>Маршрут</dt><dd>{routeLabel(scenario, round.buyVenue, round.sellVenue)}</dd></div>
-          <div><dt>Исполнено</dt><dd>{sizeLabel(round.positionSize)}</dd></div>
-          <div><dt>Средняя цена покупки</dt><dd>{round.avgBuyPrice === undefined ? '—' : formatPrice(round.avgBuyPrice)}</dd></div>
-          <div><dt>Средняя цена продажи</dt><dd>{round.avgSellPrice === undefined ? '—' : formatPrice(round.avgSellPrice)}</dd></div>
-        </dl>
-        <dl className="arb-round-costs">
-          <div><dt>Разница цен</dt><dd>{formatEdge(round.grossReturn * 100)}</dd></div>
-          <div><dt>Комиссии</dt><dd>{round.feeReturn === undefined ? '—' : formatEdge(-round.feeReturn * 100)}</dd></div>
-          <div><dt>Проскальзывание</dt><dd>{round.slippageReturn === undefined ? '—' : formatEdge(-round.slippageReturn * 100)}</dd></div>
-          <div className="arb-round-yield"><dt>Доходность сделки после издержек</dt><dd>{formatEdge(round.netReturn * 100)}</dd></div>
-        </dl>
-        <p className="arb-round-basis">Доходность и издержки — от цены Ask в момент сделки.</p>
-      </>}
+      <RoundExecutionDetails round={round} scenario={scenario} />
       <div className="arb-round-observation"><p>{presentation.observation}</p>
         {presentation.bestExecution && <p>Вы выбрали лучший доступный маршрут и объём по чистому результату.</p>}
       </div>

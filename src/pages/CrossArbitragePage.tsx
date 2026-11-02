@@ -1,5 +1,4 @@
 import { useScenario } from '@/scenario-engine/useScenario'
-import { ScenarioReplay } from '@/components/results/ScenarioReplay'
 import { DuelResultShare } from '@/duel/DuelResultShare'
 import { useEffect, useState } from 'react'
 import { ChallengeGate } from '@/components/layout/ChallengeGate'
@@ -48,10 +47,7 @@ export function CrossArbitragePage() {
         session={session}
         result={result}
         outcome={outcome}
-        nextHref={mode === 'advanced' ? '/play' : '/profile'}
-        nextLabel={mode === 'advanced' ? 'Результаты режимов' : 'Собрать мой профиль'}
       />
-      <ScenarioReplay challengeType="cross-arbitrage" scenarioId={session.id} />
       </DuelResultShare>
     ) : (
       <CrossArbitrageGame key={session.id}

@@ -1,212 +1,152 @@
-import { ExecutionBreakdown } from './CrossArbitrageGame'
 import { useMemo } from 'react'
-import { ArrowRight } from 'lucide-react'
-import {
-  AchievementNote,
-  MetricGrid,
-  PersonalBestNote,
-  ProfileProgressBlock,
-  ResultHeader,
-} from '@/components/results/ResultBlocks'
+import { ArrowRight, ChevronDown } from 'lucide-react'
+import { PersonalBestNote } from '@/components/results/ResultBlocks'
+import { ResultNavigation } from '@/components/results/ResultNavigation'
+import { ScenarioReplay } from '@/components/results/ScenarioReplay'
 import { ShareChallengeButton } from '@/components/share/ShareChallengeButton'
-import { LinkButton } from '@/components/ui/Button'
-import { Disclaimer, SectionLabel, Stat } from '@/components/ui/Card'
-import { sessionScenarios } from '@/data/crossArbitrageScenarios'
+import { Button, LinkButton } from '@/components/ui/Button'
+import { Disclaimer, Stat } from '@/components/ui/Card'
 import { crossArbitrageAchievement } from '@/lib/achievements'
-import { formatNumber, pnlColor } from '@/lib/formatting'
+import { formatNumber, plural, pnlColor } from '@/lib/formatting'
 import { scaleTrait, traitLabels } from '@/lib/profile'
-import type { SaveOutcome } from '@/store/gameStore'
-import type { CrossArbitrageResult as ArbResult, CrossArbitrageSession } from '@/types/game'
-import {
-  arbitrageObservations,
-  buildArbitrageSharePayload,
-  crossArbitrageTraits,
-  formatDecisionSeconds,
-  formatEdge,
-  roundFeedback,
-  roundShortLabel,
-  routeLabel,
-  sizeLabel,
-  type CrossArbitrageTraits,
-} from './scoring'
+import { useGameStore, type SaveOutcome } from '@/store/gameStore'
+import type { ArbitrageRoundResult, CrossArbitrageResult as ArbResult, CrossArbitrageScenario, CrossArbitrageSession } from '@/types/game'
+import { RoundExecutionDetails } from './RoundExecutionDetails'
+import { resolveRoundScenario, roundExecutionDisplay, roundInstrument } from './roundDisplay'
+import { roundPresentation } from './roundPresentation'
+import { buildQuotePath } from './engine'
+import { resultCounts, resultNextStep, roundStatus, sessionObservation } from './resultPresentation'
+import { buildArbitrageSharePayload, crossArbitrageTraits, formatDecisionSeconds, formatEdge, routeLabel, sizeLabel, type CrossArbitrageTraits } from './scoring'
+import '../blind-market/BlindMarketResult.css'
+import './CrossArbitrageResult.css'
 
 const PROFILE_CONTRIBUTION: { trait: keyof CrossArbitrageTraits; share: string }[] = [
   { trait: 'opportunity', share: '50%' },
   { trait: 'discipline', share: '30%' },
   { trait: 'adaptability', share: '20%' },
 ]
+const resultColor = (percent: number) => pnlColor(Number(percent.toFixed(2)))
 
-export function CrossArbitrageResult({
-  session,
-  result,
-  outcome,
-  nextHref,
-  nextLabel,
-}: {
+export function CrossArbitrageResult({ session, result, outcome }: {
   session: CrossArbitrageSession
   result: ArbResult
   outcome: SaveOutcome
-  nextHref: string
-  nextLabel: string
 }) {
+  const completedChallenges = useGameStore(s => s.completedChallenges)
+  const unlockedChallenges = useGameStore(s => s.unlockedChallenges)
+  const advancedResults = useGameStore(s => s.advancedResults)
+  const next = resultNextStep({ completedChallenges, unlockedChallenges, advancedResults }, session.mode === 'advanced')
+  const scenarios = useMemo(() => result.rounds.flatMap(round => {
+    const scenario = resolveRoundScenario(round.scenarioId, session.scenarios)
+    return scenario ? [scenario] : []
+  }), [result.rounds, session.scenarios])
   const achievement = useMemo(() => crossArbitrageAchievement(result), [result])
-  const observations = useMemo(() => arbitrageObservations(result), [result])
   const traits = useMemo(() => crossArbitrageTraits(result), [result])
+  const counts = resultCounts(result)
 
-  return (
-    <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-10 px-5 py-14 sm:px-8 sm:py-20">
-      <ResultHeader eyebrow="Испытание 04 · Кросс-арбитраж" headline="Испытание завершено">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className={`tnum text-3xl font-light ${pnlColor(result.totalReturnPercent)}`}>
-            Общий результат: {formatEdge(result.totalReturnPercent)}
-          </p>
-          <ProfileProgressBlock />
-        </div>
-      </ResultHeader>
+  return <div className="blind-result arb-result">
+    <header className="blind-result-header">
+      <p className="blind-result-eyebrow">Испытание 04 · Кросс-арбитраж</p>
+      <h1>ИСПЫТАНИЕ ЗАВЕРШЕНО.</h1>
+      <p className={`arb-result-total tnum ${resultColor(result.totalReturnPercent)}`}>{formatEdge(result.totalReturnPercent)}</p>
+      <p className="arb-result-caption">Изменение капитала за {result.rounds.length} раундов</p>
+      {next.complete && <p className="arb-result-complete">Все четыре стандартных испытания пройдены</p>}
+    </header>
 
-      <MetricGrid>
-        <Stat
-          label="Общий результат"
-          value={formatEdge(result.totalReturnPercent)}
-          valueClassName={pnlColor(Number(result.totalReturnPercent.toFixed(2)))}
-          hint="Сумма чистых результатов с учётом размера"
-        />
-        <Stat
-          label="Найдено возможностей"
-          value={`${result.found} / ${result.opportunities}`}
-        />
-        <Stat label="Ложных сделок" value={formatNumber(result.falseTrades)} />
-        <Stat label="Пропущено сделок" value={formatNumber(result.missed)} />
-        <Stat
-          label="Среднее время решения"
-          value={formatDecisionSeconds(result.averageDecisionMs)}
-        />
-        <Stat
-          label="Лучший найденный edge"
-          value={result.bestEdgePercent > 0 ? formatEdge(result.bestEdgePercent) : '—'}
-          valueClassName={result.bestEdgePercent > 0 ? 'text-market-up' : 'text-chalk-200'}
-        />
-        <Stat label="Средний размер сделки" value={`${formatNumber(result.averageSizeUnits ?? 0, 1)} ед.`} />
-        <Stat label="Размер ухудшил edge" value={`${result.sizeWorsenedCount ?? 0} раз`} />
-      </MetricGrid>
-
-      <PersonalBestNote
-        isPersonalBest={outcome.isPersonalBest}
-        pointsToBest={outcome.pointsToBest}
-        points={outcome.points}
-        hasPrevious={outcome.previousBest !== null}
-      />
-
-      {observations.length ? (
-        <div className="flex flex-col gap-3 rounded-xl border border-violet-accent/30 bg-violet-dim/20 p-6 sm:p-8">
-          {observations.map((text) => (
-            <p key={text} className="max-w-3xl text-lg leading-relaxed font-light text-chalk-50">
-              {text}
-            </p>
-          ))}
-        </div>
-      ) : null}
-
-      <AchievementNote achievement={achievement} />
-
-      <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-normal tracking-tight text-chalk-50">Рынок за рынком</h2>
-        <ol className="flex flex-col gap-3">
-          {result.rounds.map((round, index) => {
-            const scenario = sessionScenarios(session).find(s => s.id === round.scenarioId)!
-            const feedback = roundFeedback(round, scenario)
-            return (
-              <li
-                key={round.scenarioId}
-                className="grid gap-4 rounded-xl border border-ink-700 bg-ink-900 p-5 sm:grid-cols-[180px_1fr_auto] sm:items-start"
-              >
-                <div className="flex flex-col gap-1">
-                  <span className="text-[11px] tracking-[0.14em] text-chalk-500 uppercase">
-                    Рынок {index + 1}
-                  </span>
-                  <span className="text-base text-chalk-50">{scenario.asset}</span>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-base text-chalk-50">{roundShortLabel(round)}</span>
-                  <span className="text-sm text-chalk-200">{feedback.title}</span>
-                  {round.optimalNetReturn > 0 ? (
-                    <span className="tnum text-xs text-chalk-500">
-                      Лучший вариант на старте: {routeLabel(scenario, round.optimalBuyVenue, round.optimalSellVenue)}{' '}
-                      · {sizeLabel(round.optimalPositionSize ?? 1)} · {formatEdge(round.optimalNetReturn * 100)}
-                    </span>
-                  ) : null}
-                  <ExecutionBreakdown round={round} />
-                  {scenario.revealText ? (
-                    <span className="text-xs leading-relaxed text-chalk-500">
-                      {scenario.revealText}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="flex flex-col items-start gap-1 sm:items-end">
-                  <span
-                    className={`tnum text-xl font-light ${pnlColor(Number(feedback.valuePercent.toFixed(2)))}`}
-                  >
-                    {formatEdge(feedback.valuePercent)}
-                  </span>
-                  <span className="tnum text-xs text-chalk-500">
-                    {formatDecisionSeconds(round.decisionTimeMs)}
-                  </span>
-                </div>
-              </li>
-            )
-          })}
-        </ol>
-      </section>
-
-      <section className="grid gap-8 rounded-xl border border-ink-700 bg-ink-900 p-6 sm:p-8 lg:grid-cols-[1fr_1.2fr]">
-        <div className="flex flex-col gap-3">
-          <SectionLabel>{session.mode === 'advanced' ? 'Характеристики прохождения' : 'Вклад в Trading Profile'}</SectionLabel>
-          <p className="text-sm leading-relaxed text-chalk-400">
-            {session.mode === 'advanced' ? 'Поиск возможностей, дисциплина и адаптивность по решениям в этом продвинутом сценарии.' : <>Кросс-арбитраж добавляет в профиль новую характеристику — «Поиск
-            возможностей» — и дополняет дисциплину и адаптивность. Скорость влияет
-            только на адаптивность и не является главным критерием.</>}
-          </p>
-        </div>
-        <div className="flex flex-col gap-5">
-          {PROFILE_CONTRIBUTION.map(({ trait, share }) => {
-            const value = scaleTrait(traits[trait])
-            return (
-              <div key={trait} className="flex flex-col gap-2">
-                <div className="flex items-baseline justify-between gap-4">
-                  <span className="text-base text-chalk-200">
-                    {traitLabels[trait]}
-                    <span className="ml-2 text-xs text-chalk-500">{share} вклада</span>
-                  </span>
-                  <span className="tnum text-2xl leading-none font-light text-chalk-50">
-                    {value}
-                  </span>
-                </div>
-                <div className="h-[3px] w-full overflow-hidden rounded-full bg-ink-800">
-                  <div
-                    className="h-full rounded-full bg-violet-accent"
-                    style={{ width: `${value}%` }}
-                  />
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </section>
-
-      <div className="flex flex-col gap-6 border-t border-ink-800 pt-10">
-        <ShareChallengeButton payload={buildArbitrageSharePayload(session, result)} />
-
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <Disclaimer>
-            Котировки в прототипе смоделированы. Результат описывает только эту игровую
-            сессию и не является оценкой профессиональной квалификации.
-          </Disclaimer>
-          <LinkButton to={nextHref} variant="primary" size="lg">
-            {nextLabel}
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </LinkButton>
-        </div>
+    <section className="blind-result-summary" aria-label="Итоги прохождения">
+      <div className="blind-result-metrics">
+        <Stat label="Очки испытания" value={formatNumber(outcome.points)} />
+        <Stat label="Прибыльных сделок" value={counts.profitable} />
+        <Stat label="Убыточных сделок" value={counts.losing} />
+        <Stat label="Пропущено раундов" value={counts.skipped} hint={counts.timedOut ? `Из них по тайм-ауту: ${counts.timedOut}` : undefined} />
+        <Stat label="Среднее время решения" value={formatDecisionSeconds(result.averageDecisionMs)} />
+        <Stat label="Общий результат" value={formatEdge(result.totalReturnPercent)} valueClassName={resultColor(result.totalReturnPercent)} />
       </div>
+      {(outcome.previousBest !== null || achievement) && <div className="blind-result-notes">
+        {outcome.previousBest !== null && <PersonalBestNote isPersonalBest={outcome.isPersonalBest} pointsToBest={outcome.pointsToBest} points={outcome.points} hasPrevious />}
+        {achievement && <p><span className="blind-result-eyebrow">Достижение</span> · {achievement.title} · {achievement.id === 'clean-spread' ? 'Ни одной сделки с отрицательной доходностью после издержек.' : achievement.description}</p>}
+      </div>}
+    </section>
+
+    <section className="arb-result-observation" aria-labelledby="arb-observation-title">
+      <h2 id="arb-observation-title">Главное наблюдение</h2>
+      <p>{sessionObservation(result)}</p>
+    </section>
+
+    <section className="arb-result-history" aria-labelledby="arb-history-title">
+      <div className="arb-result-section-heading"><h2 id="arb-history-title">История пяти раундов</h2><p>Раскройте раунд, чтобы увидеть исполнение и издержки.</p></div>
+      <ol>{result.rounds.map((round, index) => <li key={`${round.scenarioId}-${index}`}>
+        <RoundHistory round={round} scenario={scenarios.find(s => s.id === round.scenarioId)} index={index} />
+      </li>)}</ol>
+      <p className="arb-result-caption">Общий результат — сумма неокруглённых изменений капитала раундов с учётом объёма. Проценты на экране округлены до сотых, поэтому их сумма может отличаться от итога.</p>
+      <details className="arb-result-extra">
+        <summary>Дополнительная статистика<ChevronDown size={16} aria-hidden /></summary>
+        <div className="blind-result-metrics">
+          <Stat label="Лучшее ценовое преимущество после издержек" value={result.bestEdgePercent > 0 ? formatEdge(result.bestEdgePercent) : '—'} hint="На единицу объёма среди прибыльных сделок." />
+          <Stat label="Средний размер сделки" value={`${formatNumber(result.averageSizeUnits ?? 0, 1)} ед.`} />
+          <Stat label="Объём ухудшил исполнение" value={`${result.sizeWorsenedCount ?? 0} ${plural(result.sizeWorsenedCount ?? 0, ['раз', 'раза', 'раз'])}`} hint="Объём превысил ликвидность по лучшей цене, снизив доходность после комиссий." />
+          <Stat label="Найдено возможностей" value={`${result.found} / ${result.opportunities}`} hint="Прибыльные сделки в раундах, где на старте был прибыльный маршрут, из всех таких раундов." />
+          <Stat label="Сделок без прибыли" value={result.falseTrades} hint="Классификация скоринга: убыточные и нулевые сделки. Пропуски не учитываются." />
+          <Stat label="Пропущено возможностей" value={result.missed} hint="Раунды без сделки, в которых на старте был прибыльный маршрут; включая тайм-ауты." />
+        </div>
+      </details>
+    </section>
+
+    <section className="arb-result-profile" aria-labelledby="arb-profile-title">
+      <div><h2 id="arb-profile-title">Ваш результат по трём характеристикам</h2>
+        <p>Оценки отражают ваши решения в испытании «Кросс-арбитраж». Общий торговый профиль объединяет результаты всех испытаний.</p>
+        {session.mode === 'advanced' && <p className="arb-result-caption">Оценки этого продвинутого сценария; стандартный профиль не пересчитывается.</p>}
+      </div>
+      <div className="arb-result-traits">{PROFILE_CONTRIBUTION.map(({ trait, share }) => {
+        const value = scaleTrait(traits[trait])
+        return <div key={trait}>
+          <div className="arb-result-trait-label"><span>{traitLabels[trait]} <small>· вес {share}</small></span><span className="tnum">{value}<small> / 100</small></span></div>
+          <div className="arb-result-meter" role="meter" aria-label={traitLabels[trait]} aria-valuemin={0} aria-valuemax={100} aria-valuenow={value}><span style={{ width: `${value}%` }} /></div>
+        </div>
+      })}</div>
+    </section>
+
+    <ScenarioReplay challengeType="cross-arbitrage" scenarioId={session.id}>
+      {({ completed, total, remaining, onReplay }) => <section className="blind-result-next" aria-labelledby="arb-next-title">
+        <div className="blind-result-next-primary">
+          <div><h2 id="arb-next-title">Что дальше</h2><p>Вы прошли {completed} из {total} сценариев этого испытания. {remaining ? `Доступно ещё ${remaining} ${plural(remaining, ['сценарий', 'сценария', 'сценариев'])}.` : 'Все сценарии этого испытания пройдены.'}</p></div>
+          <LinkButton to={next.to} variant="primary" size="lg">{next.label}<ArrowRight size={18} aria-hidden /></LinkButton>
+        </div>
+        <div className="blind-result-secondary"><Button variant="secondary" onClick={onReplay}>{remaining ? 'Попробовать другой сценарий' : 'Сыграть случайный сценарий'}</Button><div className="blind-result-share"><ShareChallengeButton payload={buildArbitrageSharePayload(session, result)} /></div></div>
+        <ResultNavigation />
+      </section>}
+    </ScenarioReplay>
+    <Disclaimer>Котировки смоделированы. Характеристики относятся только к игровому симулятору и не являются оценкой профессиональной квалификации.</Disclaimer>
+  </div>
+}
+
+export function RoundHistory({ round, scenario: suppliedScenario, index }: { round: ArbitrageRoundResult; scenario?: CrossArbitrageScenario; index: number }) {
+  const scenario = resolveRoundScenario(round.scenarioId, suppliedScenario ? [suppliedScenario] : [])
+  const execution = roundExecutionDisplay(round, scenario)
+  const presentation = useMemo(() => scenario && Number.isInteger(round.quoteStep) && round.quoteStep >= 0
+    && round.quoteStep < buildQuotePath(scenario).length ? roundPresentation(round, scenario) : undefined, [round, scenario])
+  const comparison = presentation?.comparison
+  const percent = round.capitalReturn * 100
+  return <details className="arb-history-round">
+    <summary>
+      <span className="arb-history-number">{String(index + 1).padStart(2, '0')}</span>
+      <span className="arb-history-instrument"><strong>{roundInstrument(round.scenarioId, scenario ? [scenario] : [])}</strong><span>{roundStatus(round)}</span></span>
+      <span className="arb-history-route">{execution.summary}</span>
+      <span className={`arb-history-return tnum ${resultColor(percent)}`}>{formatEdge(percent)}</span>
+      <ChevronDown className="arb-history-chevron" size={18} aria-hidden />
+    </summary>
+    <div className="arb-history-detail">
+      <RoundExecutionDetails round={round} scenario={scenario} />
+      <dl className="arb-history-capital"><div><dt>Изменение капитала раунда</dt><dd className={resultColor(percent)}>{formatEdge(percent)}</dd></div><div><dt>Время решения</dt><dd>{formatDecisionSeconds(round.decisionTimeMs)}</dd></div></dl>
+      {percent !== 0 && Number(percent.toFixed(2)) === 0 && <p>Результат округлён до 0,00%.</p>}
+      {round.timedOut && <p>Время на решение истекло. Сделка не совершена.</p>}
+      {presentation && <p>{presentation.observation}</p>}
+      {!round.choseNoTrade && round.liquidityHit && <p>Объём превысил доступную ликвидность по лучшей цене. Часть сделки исполнена на следующих уровнях.</p>}
+      {comparison && scenario && <div className="arb-history-alternative">
+        <h3>{presentation.comparisonTitle}</h3>
+        <p>{routeLabel(scenario, comparison.buyVenue, comparison.sellVenue)} · {sizeLabel(comparison.positionSize)} · <span className="text-market-up tnum">{formatEdge(comparison.capitalReturn * 100)}</span> к капиталу раунда</p>
+        <p>{presentation.comparisonMoment}</p>
+      </div>}
     </div>
-  )
+  </details>
 }
