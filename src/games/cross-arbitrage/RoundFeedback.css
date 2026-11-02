@@ -1,0 +1,33 @@
+.arb-round-body { padding: 18px 20px; display: grid; gap: 12px; }
+.arb-round-body p { font-size: 14px; line-height: 1.4; }
+.arb-round-outcome h3 { color: var(--secondary); }
+.arb-round-outcome > strong { display: block; margin-block: 8px 2px; font: 500 42px/1.1 var(--font-mono); letter-spacing: -.04em; }
+.arb-round-outcome p { color: var(--secondary); }
+.arb-round-rounding { margin-top: 4px; }
+.arb-round-execution, .arb-round-costs { display: grid; gap: 4px; border-top: 1px solid var(--border); padding-top: 12px; }
+.arb-round-body dl > div { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.arb-round-body dt { font-size: 14px; line-height: 1.4; color: var(--secondary); }
+.arb-round-body dd { font: 14px/1.4 var(--font-mono); text-align: right; }
+.arb-round-execution dd, .arb-round-costs dd { color: var(--secondary); }
+.arb-round-yield { margin-top: 3px; padding-top: 6px; border-top: 1px solid var(--border); }
+.arb-round-body .arb-round-yield dt { color: var(--foreground); font-weight: 500; }
+.arb-round-body .arb-round-yield dd { color: var(--foreground); font-size: 18px; line-height: 1.1; font-weight: 600; }
+.arb-round-body .arb-round-basis { margin-top: -8px; font-size: 12px; color: var(--secondary); }
+.arb-round-observation { display: grid; gap: 6px; margin-top: 2px; }
+.arb-round-observation > p:first-child { font-weight: 500; color: var(--foreground); }
+.arb-round-observation > p + p { color: var(--secondary); }
+.arb-round-alternative { padding-left: 12px; border-left: 2px solid var(--accent); }
+.arb-round-alternative h3 { color: var(--accent); margin-bottom: 5px; }
+.arb-round-alternative p + p { margin-top: 3px; color: var(--secondary); }
+.arb-round-alternative strong { margin-left: .3em; font-weight: 500; white-space: nowrap; color: var(--foreground); }
+.arb-round-alternative > span { color: var(--secondary); font-size: 12px; }
+.arb-round-next { border-top: 1px solid var(--border); padding-top: 12px; color: var(--secondary); }
+.arb-round-next span { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.arb-round-next progress { display: block; appearance: none; width: 100%; height: 3px; border: 0; margin-top: 8px; background: var(--border); color: var(--accent); }
+.arb-round-next progress::-webkit-progress-bar { background: var(--border); }
+.arb-round-next progress::-webkit-progress-value { background: var(--accent); }
+.arb-round-next progress::-moz-progress-bar { background: var(--accent); }
+@media (max-width: 620px) {
+  .arb-round-body { padding-inline: 12px; }
+  .arb-round-body dd { max-width: 55%; }
+}
