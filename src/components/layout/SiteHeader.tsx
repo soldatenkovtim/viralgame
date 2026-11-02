@@ -9,8 +9,11 @@ export function Brand() {
 }
 
 export function SiteHeader() {
-  const entry = gameEntry(useGameStore())
-  const home = useLocation().pathname === '/'
+  const state = useGameStore()
+  const location = useLocation()
+  const entry = location.pathname === '/profile' && state.completedChallenges.length === 4
+    ? { to: '/#trials', label: 'Другие сценарии' } : gameEntry(state)
+  const home = location.pathname === '/'
   return <header className={`trial-header${home ? ' trial-header-home' : ''}`}><div className="site-container header-row">
     <Brand />
     {!home && <LinkButton to={entry.to} variant="primary" className="header-start">{entry.label}<span aria-hidden>↗</span></LinkButton>}

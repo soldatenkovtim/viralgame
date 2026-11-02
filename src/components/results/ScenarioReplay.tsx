@@ -4,6 +4,7 @@ import { trackEvent } from '@/lib/analytics'
 import type { ChallengeType } from '@/types/game'
 import { Button } from '@/components/ui/Button'
 import type { ReactNode } from 'react'
+import { useLocation } from 'react-router-dom'
 
 interface ScenarioReplayState {
   completed: number
@@ -17,15 +18,21 @@ export function ScenarioReplay({ challengeType, scenarioId, children }: {
   scenarioId: string
   children?: (state: ScenarioReplayState) => ReactNode
 }) {
-  const mode = useGameStore(s => s.selectedMode) === 'advanced' ? 'advanced' : 'standard'
+  const selectedMode = useGameStore(s => s.selectedMode)
+  const { search } = useLocation()
+  // Profile breakdowns always belong to the saved standard series.
+  const mode = new URLSearchParams(search).get('view') === 'result'
+    ? 'standard' : selectedMode === 'advanced' ? 'advanced' : 'standard'
   const progress = useGameStore(s => (mode === 'advanced' ? s.advancedScenarioProgress : s.scenarioProgress)[challengeType])
   const pool = scenarioPool(challengeType, mode)
   const completed = pool.filter(s => progress.completedScenarioIds.includes(s.id)).length
   const remaining = pool.length - completed
   const onReplay = () => {
+    useGameStore.getState().setMode(mode)
     trackEvent('alternate_scenario_clicked', { challengeType, scenarioId, mode })
     const params = new URLSearchParams(window.location.search)
     params.delete('scenario')
+    params.delete('view')
     window.location.assign(`${challengeRoutes[challengeType]}${params.size ? `?${params}` : ''}`)
   }
   if (children) return children({ completed, total: pool.length, remaining, onReplay })

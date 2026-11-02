@@ -16,7 +16,7 @@ describe('entry into the existing series', () => {
   })
   it('does not imply that a finished series has an unfinished round', () => {
     expect(gameEntry({ ...fresh, completedChallenges: CHALLENGE_ORDER, unlockedChallenges: CHALLENGE_ORDER }))
-      .toEqual({ to: '/#trials', label: 'Начать испытания' })
+      .toEqual({ to: '/#trials', label: 'Другие сценарии' })
   })
   it('uses advanced progress independently of the standard series', () => {
     expect(gameEntry({ ...fresh, selectedMode: 'advanced', completedChallenges: CHALLENGE_ORDER,

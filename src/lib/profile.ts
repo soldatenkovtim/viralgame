@@ -152,69 +152,69 @@ export interface Archetype {
 const PAIR_ARCHETYPES: Record<string, Archetype> = {
   'adaptability+marketSense': {
     name: 'Адаптивный трейдер',
-    tagline: 'Меняете взгляд вместе с рынком, а не вопреки ему.',
+    tagline: 'Ведущие черты — рыночное чутьё и адаптивность.',
   },
   'discipline+riskControl': {
     name: 'Дисциплинированный риск-менеджер',
-    tagline: 'Сначала размер риска, потом идея.',
+    tagline: 'Контроль риска и дисциплина — основа этого профиля.',
   },
   'pricing+riskControl': {
     name: 'Поставщик ликвидности',
-    tagline: 'Зарабатываете на цене, а не на направлении.',
+    tagline: 'В профиле выделяются цена и контроль риска.',
   },
   'discipline+marketSense': {
     name: 'Селективный трейдер',
-    tagline: 'Ждёте свою ситуацию и не торгуете всё подряд.',
+    tagline: 'Рыночное чутьё сочетается с дисциплиной.',
   },
   'adaptability+discipline': {
     name: 'Тактический трейдер',
-    tagline: 'Часто перестраиваете позицию, оставаясь в рамках плана.',
+    tagline: 'Адаптивность и дисциплина задают ваш игровой профиль.',
   },
   'adaptability+pricing': {
     name: 'Гибкий маркет-мейкер',
-    tagline: 'Подстраиваете котировку под характер потока.',
+    tagline: 'Ведущие черты — адаптивность и ценообразование.',
   },
   'discipline+pricing': {
     name: 'Методичный котировщик',
-    tagline: 'Держите одну модель цены и не отходите от неё.',
+    tagline: 'Ценообразование и дисциплина — ваши ведущие показатели.',
   },
   'marketSense+pricing': {
     name: 'Читатель потока',
-    tagline: 'Считываете, кто стоит по другую сторону сделки.',
+    tagline: 'Рыночное чутьё и ценообразование выходят на первый план.',
   },
   'marketSense+riskControl': {
     name: 'Осторожный охотник',
-    tagline: 'Берёте направление, но никогда не всем размером.',
+    tagline: 'Рыночное чутьё и контроль риска — ваши ведущие показатели.',
   },
   'adaptability+riskControl': {
     name: 'Кризисный управляющий',
-    tagline: 'Лучше всего работаете, когда рынок ломается.',
+    tagline: 'В профиле выделяются адаптивность и контроль риска.',
   },
   'marketSense+opportunity': {
     name: 'Охотник за расхождениями',
-    tagline: 'Замечаете, где рынок ошибается, раньше остальных.',
+    tagline: 'Рыночное чутьё сочетается с поиском возможностей.',
   },
   'discipline+opportunity': {
     name: 'Арбитражёр',
-    tagline: 'Берёте только тот edge, который остаётся после издержек.',
+    tagline: 'Поиск возможностей и дисциплина — основа этого профиля.',
   },
   'adaptability+opportunity': {
     name: 'Быстрый арбитражёр',
-    tagline: 'Успеваете собрать сделку, пока окно ещё открыто.',
+    tagline: 'Ведущие черты — поиск возможностей и адаптивность.',
   },
   'opportunity+pricing': {
     name: 'Точный исполнитель',
-    tagline: 'Видите цену сделки вместе со всеми издержками.',
+    tagline: 'Ценообразование сочетается с поиском возможностей.',
   },
   'opportunity+riskControl': {
     name: 'Осторожный арбитражёр',
-    tagline: 'Берёте расхождение, только когда риск уже посчитан.',
+    tagline: 'В профиле выделяются поиск возможностей и контроль риска.',
   },
 }
 
 export const OPPORTUNIST: Archetype = {
   name: 'Оппортунист',
-  tagline: 'Видите движение и не боитесь взять его размером.',
+  tagline: 'Рыночное чутьё среди ведущих черт; в шоке вы сохраняли или наращивали экспозицию от 80%.',
 }
 
 export const CONTRARIAN: Archetype = {
@@ -250,7 +250,11 @@ export function resolveArchetype(
   if (
     (first === 'marketSense' || second === 'marketSense') &&
     swan &&
-    swan.maxExposure >= 0.8
+    swan.maxExposure >= 0.8 &&
+    swan.decisions.some(decision => !decision.timedOut
+      && (decision.action === 'hold' || decision.action === 'increase')
+      && Number.isFinite(decision.positionAfter)
+      && Math.abs(decision.positionAfter) >= 0.8)
   ) {
     return OPPORTUNIST
   }

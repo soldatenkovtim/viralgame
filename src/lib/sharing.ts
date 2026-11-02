@@ -65,9 +65,15 @@ export function buildShareUrl(payload: SharePayload): string {
   return `${origin}/challenge/${payload.t}/shared?data=${encodeSharePayload(payload)}`
 }
 
-export function buildProfileShareUrl(archetype: string): string {
-  const origin = typeof window === 'undefined' ? '' : window.location.origin
-  return `${origin}/?a=${encodeURIComponent(archetype)}`
+/** A local profile has no public URL. Share its actual exported image only. */
+export async function shareProfileImage(file: File): Promise<'shared' | 'cancelled' | 'unavailable' | 'failed'> {
+  try {
+    if (!navigator.share || !navigator.canShare?.({ files: [file] })) return 'unavailable'
+    await navigator.share({ title: 'Рыночный вызов — торговый профиль', files: [file] })
+    return 'shared'
+  } catch (error) {
+    return error instanceof DOMException && error.name === 'AbortError' ? 'cancelled' : 'failed'
+  }
 }
 
 export const challengeShareTitles: Record<ChallengeType, string> = {
