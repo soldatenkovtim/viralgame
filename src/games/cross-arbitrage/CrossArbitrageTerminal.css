@@ -1,0 +1,130 @@
+.arb-terminal {
+  --background: var(--color-graphite);
+  --surface: #1f1f24;
+  --border: #3c3c45;
+  --foreground: #f5f5f1;
+  --secondary: #c5c5cb;
+  --muted: #a2a2ad;
+  --accent: #c6a3f4;
+  --button-background: var(--accent);
+  --button-foreground: var(--background);
+  --accent-foreground: var(--background);
+  min-height: calc(100svh - 61px);
+  background: var(--background);
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+.arb-workspace { padding-block: 24px 40px; }
+.arb-topbar, .arb-panel-head, .arb-board-note, .arb-estimate-total, .arb-clock > div {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.arb-topbar { padding-bottom: 18px; }
+.arb-topbar p, .arb-panel h2, .arb-panel h3, .arb-ticket legend, .arb-clock span {
+  font: 500 12px/1.4 var(--font-mono); text-transform: uppercase; letter-spacing: .07em;
+}
+.arb-topbar p { color: var(--accent); }
+.arb-topbar h1 { margin-top: 4px; font-size: clamp(23px, 2.2vw, 32px); line-height: 1.15; font-weight: 600; }
+.arb-clock { width: clamp(140px, 18vw, 230px); color: var(--accent); }
+.arb-clock span { color: var(--secondary); }
+.arb-clock strong { white-space: nowrap; font: 500 25px/1.25 var(--font-mono); }
+.arb-clock progress { width: 100%; display: block; height: 4px; margin-top: 6px; appearance: none; border: 0; background: var(--border); color: inherit; }
+.arb-clock progress::-webkit-progress-bar { background: var(--border); }
+.arb-clock progress::-webkit-progress-value { background: currentColor; }
+.arb-clock progress::-moz-progress-bar { background: currentColor; }
+.arb-clock[data-urgent="true"] { color: #f5bd69; }
+.arb-columns { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; gap: clamp(14px, 1.7vw, 26px); }
+.arb-panel { min-width: 0; border: 1px solid var(--border); background: var(--surface); }
+.arb-panel-head { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.arb-panel h2 { font-size: 14px; }
+.arb-panel-head > span, .arb-board-note, .arb-depth { font-size: 13px; color: var(--secondary); }
+.arb-market table { width: 100%; border-collapse: collapse; text-align: right; }
+.arb-market th { font-weight: 500; }
+.arb-market th:first-child { text-align: left; }
+.arb-market th, .arb-market td { padding-inline: 10px; }
+.arb-market th:first-child { padding-left: 20px; }
+.arb-market :is(th,td):last-child { padding-right: 20px; }
+.arb-quotes thead th { padding-block: 12px; font: 11px/1.4 var(--font-mono); color: var(--muted); }
+.arb-quotes tbody tr { border-top: 1px solid var(--border); }
+.arb-quotes tbody th { font-size: 17px; }
+.arb-quotes tbody td { height: 74px; font-family: var(--font-mono); white-space: nowrap; }
+.arb-price { position: relative; font-size: clamp(16px, 1.45vw, 23px); letter-spacing: -.04em; }
+.arb-price[data-selected="true"] { background: color-mix(in srgb, var(--accent) 8%, transparent); color: var(--accent); }
+.arb-price small { position: absolute; right: 10px; top: calc(50% + 12px); font: 10px/1.4 var(--font-mono); letter-spacing: 0; }
+.arb-fee, .arb-volume { font-size: 13px; color: var(--secondary); }
+.arb-fee small, .arb-volume small { display: none; }
+.arb-board-note { flex-wrap: wrap; padding: 14px 20px; border-top: 1px solid var(--border); }
+.arb-board-note > span + span { color: var(--accent); }
+.arb-depth { padding: 12px 20px; border-top: 1px solid var(--border); }
+.arb-depth summary { width: fit-content; cursor: pointer; }
+.arb-depth table { margin-top: 12px; font-size: 12px; }
+.arb-depth :is(td,th) { padding: 5px 4px; }
+.arb-depth th:first-child { padding-left: 0; }
+.arb-depth :is(th,td):last-child { padding-right: 0; }
+.arb-ticket-body { display: grid; gap: 14px; padding: 18px 20px; }
+.arb-ticket-body p, .arb-estimate-total span { font-size: 14px; line-height: 1.4; color: var(--secondary); }
+.arb-ticket fieldset { min-width: 0; }
+.arb-ticket legend, .arb-ticket h3 { color: var(--secondary); }
+.arb-options { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.arb-options button { flex: 1 0 auto; min-height: 36px; padding: 4px 8px; background: var(--background); border: 1px solid var(--border); font-size: 14px; }
+.arb-options button:enabled:hover, .arb-options button[aria-pressed="true"]:enabled { border-color: var(--accent); color: var(--accent); }
+.arb-options button[aria-pressed="true"]:enabled { background: color-mix(in srgb, var(--accent) 10%, var(--background)); }
+.arb-options button:disabled { color: var(--muted); background: transparent; border-style: dashed; cursor: not-allowed; }
+.arb-terminal :is(button,summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.arb-route { border-top: 1px solid var(--border); padding-top: 12px; min-height: 62px; display: grid; grid-template-columns: auto 1fr; align-content: start; align-items: baseline; gap: 3px 14px; }
+.arb-route strong { font-size: 17px; font-weight: 550; }
+.arb-route p { grid-column: 1/-1; }
+.arb-route p span { padding-inline: 4px; color: var(--muted); }
+.arb-fill-note { margin-top: -9px; }
+.arb-estimate { padding: 12px 14px; background: var(--background); border-left: 2px solid var(--accent); }
+.arb-estimate-total { flex-wrap: wrap; gap: 4px 10px; }
+.arb-ticket .arb-fill-note, .arb-ticket .arb-estimate p { color: var(--foreground); }
+.arb-estimate-total strong { font: 500 clamp(25px, 2.2vw, 34px)/1.15 var(--font-mono); letter-spacing: -.05em; }
+.arb-costs { display: grid; grid-template-columns: 1fr .85fr minmax(max-content,1fr); gap: 5px; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; }
+.arb-costs dt { color: var(--secondary); font-size: 14px; }
+.arb-costs dd, .arb-estimate p b { font: 14px/1.45 var(--font-mono); }
+.arb-estimate p { margin-top: 4px; }
+.arb-empty { border-color: var(--border); }
+.arb-actions { display: grid; grid-template-columns: 1.45fr 1fr; gap: 8px; }
+.arb-actions button { padding-inline: 8px; font-size: 14px; }
+.arb-feedback { display: grid; gap: 12px; padding: 20px; }
+.arb-terminal .text-market-up { color: #34d399; }
+.arb-terminal .text-market-down { color: #fb7185; }
+.arb-terminal .text-chalk-200, .arb-terminal .text-chalk-400 { color: var(--secondary); }
+.arb-terminal .text-chalk-50 { color: var(--foreground); }
+@media (min-width: 1001px) and (max-height: 800px) {
+  .arb-workspace { padding-block: 16px; }
+  .arb-ticket-body { padding-block: 12px; gap: 10px; }
+  .arb-fill-note { margin-top: -5px; }
+}
+@media (max-width: 1000px) {
+  .arb-columns { grid-template-columns: minmax(0,1fr); }
+  .arb-topbar { position: sticky; top: 0; z-index: 1; background: var(--background); padding-block: 8px; border-bottom: 1px solid var(--border); }
+  .arb-workspace { padding-block: 8px 72px; }
+  .arb-terminal :is(button,summary) { scroll-margin-block: 86px 12px; }
+}
+@media (max-width: 620px) {
+  .arb-terminal .site-container { padding-inline: 12px; }
+  .arb-panel-head, .arb-board-note, .arb-depth, .arb-ticket-body { padding-inline: 12px; }
+  .arb-clock { width: 136px; }
+  .arb-clock strong { font-size: 20px; }
+  .arb-panel-head { padding-block: 12px; }
+  .arb-quotes tr { display: grid; grid-template-columns: minmax(0,.86fr) repeat(2,minmax(0,1fr)); align-items: center; padding: 8px 10px; }
+  .arb-quotes :is(th,td):nth-child(n) { padding: 2px 4px; height: auto; }
+  .arb-quotes thead th:nth-child(n+4) { display: none; }
+  .arb-quotes td.arb-price:nth-child(n) { align-self: stretch; padding-bottom: 12px; font-size: 15px; }
+  .arb-price small { top: auto; bottom: 0; right: 4px; font-size: 10px; }
+  .arb-quotes tbody th { align-self: start; font-size: 15px; }
+  .arb-fee small, .arb-volume small { display: inline; color: var(--muted); font: inherit; }
+  .arb-fee, .arb-volume { font-size: 11px; }
+  .arb-fee { text-align: left; grid-column: 1 / 3; grid-row: 2; }
+  .arb-volume { grid-column: 2 / 4; grid-row: 2; justify-self: end; }
+  .arb-ticket-body { gap: 12px; }
+  .arb-costs { grid-template-columns: minmax(0,1fr); gap: 2px; }
+  .arb-costs > div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+}
+
+@media (max-width: 1000px) {
+  main:has(.arb-terminal) ~ details:has(input[name="preview-theme"]) {
+    position: relative; inset: auto; align-self: start; margin: 0 12px 12px;
+  }
+}
