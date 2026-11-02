@@ -33,7 +33,7 @@ export function ChallengeGate({
 
   const Heading = compact ? 'h2' : 'h1'
   return (
-    <div className={compact ? 'flex flex-col items-start gap-4 border-t border-ink-700 pt-6' : 'mx-auto flex w-full max-w-2xl flex-col gap-6 px-5 py-24 sm:px-8 sm:py-32'}>
+    <div className={compact ? 'challenge-gate-compact flex flex-col items-start gap-4 border-t border-ink-700 pt-6' : 'mx-auto flex w-full max-w-2xl flex-col gap-6 px-5 py-24 sm:px-8 sm:py-32'}>
       <div className="flex h-11 w-11 items-center justify-center rounded-full border border-ink-700">
         <Lock className="h-4 w-4 text-chalk-500" aria-hidden />
       </div>

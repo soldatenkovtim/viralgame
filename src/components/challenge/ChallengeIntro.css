@@ -116,3 +116,7 @@
   .mm-intro-diagram-label { font-size: 20px; }
   .mm-intro-inventory { gap: 16px; font-size: 10px; margin-bottom: 16px; }
 }
+
+@media (max-width: 479px) {
+  .challenge-illustration[data-kind="cross-arbitrage"] g.intro-svg-label { font-size: 20px; }
+}
