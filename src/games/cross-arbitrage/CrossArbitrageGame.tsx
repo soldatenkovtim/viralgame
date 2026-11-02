@@ -6,7 +6,6 @@ import { RoundFeedback } from './RoundFeedback'
 import { QuoteBoard, RoundClock, TradeTicket } from './CrossArbitrageTerminal'
 import { sessionScenarios } from '@/data/crossArbitrageScenarios'
 import { trackEvent } from '@/lib/analytics'
-import { formatPrice } from '@/lib/formatting'
 import type {
   ArbitrageRoundResult,
   CrossArbitrageResult,
@@ -20,7 +19,6 @@ import {
 import {
   buildCrossArbitrageResult,
   evaluateRound,
-  formatEdge,
 } from './scoring'
 
 type Stage = 'intro' | 'market' | 'feedback'
@@ -190,19 +188,4 @@ export function CrossArbitrageGame({
             onSkip={() => commit({ positionSize: 0 }, false)} />}
     </div>
   </div></div>
-}
-
-export function ExecutionBreakdown({ round }: { round: ArbitrageRoundResult }) {
-  if (round.choseNoTrade) return null
-  return (
-    <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-chalk-400">
-      <span>Gross spread {formatEdge(round.grossReturn * 100)}</span>
-      <span>Комиссии {formatEdge(-(round.feeReturn ?? round.grossReturn - round.netBeforeLiquidity) * 100)}</span>
-      <span>Slippage {formatEdge(-(round.slippageReturn ?? round.netBeforeLiquidity - round.netReturn) * 100)}</span>
-      <span>Net result {formatEdge(round.netReturn * 100)}</span>
-      {round.avgBuyPrice !== undefined && round.avgSellPrice !== undefined ? (
-        <span>Среднее исполнение: покупка {formatPrice(round.avgBuyPrice)} → продажа {formatPrice(round.avgSellPrice)}</span>
-      ) : null}
-    </div>
-  )
 }

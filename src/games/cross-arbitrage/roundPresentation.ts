@@ -24,7 +24,9 @@ export function roundPresentation(round: ArbitrageRoundResult, scenario: CrossAr
       ? 'Сделка принесла прибыль после комиссий и проскальзывания.'
       : 'Разница цен покрыла комиссии. Сделка принесла прибыль.'
   } else {
-    observation = round.liquidityHit
+    observation = round.grossReturn < 0
+      ? 'Цена продажи была ниже цены покупки ещё до комиссий и проскальзывания.'
+      : round.liquidityHit
       ? 'Комиссии и исполнение части объёма по менее выгодным ценам привели к убытку.'
       : 'Разницы между ценой продажи и покупки не хватило, чтобы покрыть комиссии.'
   }

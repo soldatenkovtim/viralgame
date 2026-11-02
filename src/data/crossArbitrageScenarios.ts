@@ -104,7 +104,7 @@ export const crossArbitrageScenarios: CrossArbitrageScenario[] = [
       quote('Gamma', 3_101, 3_102.6, 0.1),
     ],
     revealText:
-      'Расхождение между Alpha и Beta было реальным, но другие участники тоже его видели — котировки сошлись за несколько секунд.',
+      'В этом сценарии расхождение между Alpha и Beta меняется со временем. Результат зависит от котировок в момент решения.',
   },
   {
     ...metadata('cross-arbitrage', 'arb_btc_dynamic', 75),
