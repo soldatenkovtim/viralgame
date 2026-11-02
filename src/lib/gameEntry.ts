@@ -10,6 +10,6 @@ export function gameEntry(state: Pick<GameState, 'selectedMode' | 'completedChal
     (state.selectedMode === 'advanced' || state.unlockedChallenges.includes(type)))
   return {
     to: next ? challengeRoutes[next] : '/#trials',
-    label: completed.length > 0 && next ? 'Продолжить испытания' : 'Начать испытания',
+    label: completed.length === CHALLENGE_ORDER.length ? 'Другие сценарии' : completed.length > 0 && next ? 'Продолжить испытания' : 'Начать испытания',
   }
 }

@@ -11,6 +11,7 @@ import { ChallengeGate } from '@/components/layout/ChallengeGate'
 import { useDebugParams } from '@/hooks/useDebug'
 import type { ChallengeType } from '@/types/game'
 import { CreateRoom } from '@/duel/CreateRoom'
+import { SavedChallengeResult } from '@/components/results/SavedChallengeResult'
 import { trialModeState } from '@/components/home/trialState'
 import type { GameMode } from './config'
 const labels: Record<GameMode, string> = { standard: 'Стандартный', advanced: 'Продвинутый', duel: 'Дуэль' }
@@ -61,6 +62,7 @@ export function ModeBoundary({ children }: { children: ReactNode }) {
   const { pathname, search } = useLocation()
   const challenge = CHALLENGE_ORDER.find(type => pathname.endsWith(`/${type}`))
   if (!challenge) return children
+  if (new URLSearchParams(search).get('view') === 'result') return <SavedChallengeResult challenge={challenge} />
   return <ChallengeEntry key={`${pathname}/${search}`} challenge={challenge}>{children}</ChallengeEntry>
 }
 

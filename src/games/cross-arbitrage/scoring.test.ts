@@ -11,6 +11,7 @@ import type { ArbitrageVenueQuote, CrossArbitrageScenario } from '@/types/game'
 import {
   ARB_CONVERGENCE_DELAY_MS,
   ARB_DECISION_SECONDS,
+  ARB_POSITION_SIZES,
   executionPrice,
   bestTrade,
   buildQuotePath,
@@ -71,6 +72,20 @@ function perfectDecision(scenario: CrossArbitrageScenario): ArbitrageDecision {
 }
 
 describe('evaluateTrade', () => {
+  it('discipline loss proxy equals the known decision-time net edge, not a later price outcome', () => {
+    for (const scenario of crossArbitrageScenarios) {
+      const route = bestTrade(scenario.quotes)
+      for (const positionSize of ARB_POSITION_SIZES) for (const decisionTimeMs of [1000, 7000, 14000]) {
+        const round = evaluateRound(scenario, { buyVenue: route.buyVenue, sellVenue: route.sellVenue, positionSize, decisionTimeMs, timedOut: false })
+        const quotes = buildQuotePath(scenario)[round.quoteStep]
+        const expected = evaluateTrade(quotes, route.buyVenue, route.sellVenue, positionSize)
+        expect(round.netReturn).toBe(expected.netReturn)
+        expect(round.capitalReturn).toBe(expected.netReturn * positionSize)
+        expect(round.profitable).toBe(expected.netReturn > 0)
+        expect(buildCrossArbitrageResult(crossArbitrageSessions[0], [round]).falseTrades).toBe(expected.netReturn > 0 ? 0 : 1)
+      }
+    }
+  })
   it('покупает по ask, продаёт по bid и вычитает обе комиссии', () => {
     // Пример из ТЗ: +0,15% gross, 0,20% комиссий → около −0,05%.
     const quotes = [quote('alpha', 99.7, 100, 0.001), quote('beta', 100.15, 100.4, 0.001)]

@@ -96,7 +96,7 @@ export function MarketShockResult({ scenario, result, outcome, nextHref, nextLab
       {({ completed, total, remaining, onReplay }) => <section className="blind-result-next">
         <div className="blind-result-next-primary">
           <div><h2>Что дальше</h2><p>Вы прошли {completed} из {total} сценариев этого испытания. {remaining > 0 ? `Доступно ещё ${remaining} ${plural(remaining, ['сценарий', 'сценария', 'сценариев'])}.` : 'Все сценарии этого испытания пройдены.'}</p></div>
-          <LinkButton to={nextHref} variant="primary" size="lg">{nextCompleted ? 'Вернуться к последнему испытанию' : nextLabel}<ArrowRight size={18} aria-hidden /></LinkButton>
+          <LinkButton to={nextHref} variant="primary" size="lg">{nextCompleted && nextHref !== '/profile' ? 'Вернуться к последнему испытанию' : nextLabel}<ArrowRight size={18} aria-hidden /></LinkButton>
         </div>
         <div className="blind-result-secondary"><Button variant="secondary" onClick={onReplay}>{remaining ? 'Попробовать другой сценарий' : 'Сыграть случайный сценарий'}</Button><div className="blind-result-share"><ShareChallengeButton payload={sharePayload} /></div></div>
         <ResultNavigation />

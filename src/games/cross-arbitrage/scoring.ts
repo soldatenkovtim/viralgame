@@ -430,7 +430,10 @@ export function crossArbitrageTraits(result: CrossArbitrageResult): CrossArbitra
       100
     : 50
 
-  // Дисциплина: правильные «Сделки нет» и отсутствие убыточных сделок.
+  // В этой детерминированной модели profitable = (netReturn * positionSize > 0):
+  // netReturn рассчитан по видимым котировкам, комиссиям и глубине в момент
+  // решения. falseTrades — исполнения без положительного расчётного edge,
+  // а не случайный последующий убыток. Веса и начисление очков не меняются.
   const emptyRounds = rounds.length - opportunityRounds.length
   const passRatio = emptyRounds > 0 ? result.correctPasses / emptyRounds : 1
   const falseRatio = result.tradeCount > 0 ? result.falseTrades / result.tradeCount : 0
