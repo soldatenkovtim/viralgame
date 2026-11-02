@@ -1,0 +1,29 @@
+.shock-result { min-width: 0; }
+.shock-result h2 { font-size: 20px; font-weight: 500; letter-spacing: -.02em; }
+.shock-result .blind-result-market h2 { font-size: 24px; font-weight: 400; }
+.shock-result-context { color: var(--foreground); }
+.shock-result-observation { border-block: 1px solid var(--border); padding-block: 20px; }
+.shock-result-observation p { margin-top: 10px; font-size: 14px; line-height: 1.7; color: var(--secondary); }
+.shock-result .blind-result-timeline h3 { overflow-wrap: anywhere; }
+.shock-result .blind-result-timeline { margin-bottom: 0; }
+.shock-exposure { margin-top: 12px; font-size: 12px; color: var(--secondary); }
+.shock-exposure-track { display: flex; height: 36px; gap: 2px; margin-top: 8px; }
+.shock-exposure-segment { position: relative; min-width: 0; overflow: hidden; background: var(--surface); border: 1px solid var(--border); }
+.shock-exposure-segment.is-selected { border-color: var(--accent); }
+.shock-exposure-fill { position: absolute; bottom: 0; width: 100%; background: color-mix(in srgb, var(--accent) 25%, transparent); }
+.shock-exposure-labels { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-family: var(--font-mono); }
+.shock-exposure-labels .is-selected { color: var(--accent); }
+.shock-replay-extremes { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.shock-result .blind-replay-detail { min-height: 40px; }
+.shock-result .blind-result-next { padding-top: 0; border-top: 0; }
+@media (max-width: 639px) {
+  .shock-result .blind-result-header h1 { font-size: clamp(26px, 7.4vw, 30px); }
+  .shock-result .blind-result-metrics { gap: 20px 12px; }
+  .shock-result .blind-result-metrics .tnum { font-size: 23px; }
+  .shock-result .blind-result-secondary button { white-space: normal; }
+}
+
+.shock-result .blind-replay-points { gap: 6px; }
+.shock-result .blind-replay-points button { min-height: 36px; padding: 7px 12px; border: 1px solid var(--border); background: var(--surface); color: var(--secondary); transition: background-color .15s, border-color .15s; }
+.shock-result .blind-replay-points button:hover:not(:disabled) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.shock-result .blind-replay-points button[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--surface)); color: var(--foreground); box-shadow: inset 0 -2px 0 var(--accent); }

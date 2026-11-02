@@ -93,6 +93,7 @@ export function TradingChart(props: {
   /** Optional focus used by the completed-session review only. */
   focusCandleIndex?: number
   markers?: ChartMarker[]
+  onMarkerSelect?: (id: string) => void
   segments?: OverlaySegment[]
   /** Можно ли выделять и перетаскивать уровни. */
   editable?: boolean
@@ -370,6 +371,10 @@ export function TradingChart(props: {
 
     chart.subscribeClick((param) => {
       const current = propsRef.current
+      if (typeof param.hoveredObjectId === 'string' && current.onMarkerSelect) {
+        current.onMarkerSelect(param.hoveredObjectId)
+        return
+      }
       if (!param.point) return
       const point = pointAt(param.point.x, param.point.y)
       if (!point) return
@@ -614,6 +619,7 @@ export function TradingChart(props: {
     const mapped: SeriesMarker<Time>[] = (markers ?? [])
       .filter((marker) => Number.isInteger(marker.candleIndex) && marker.candleIndex >= 0 && marker.candleIndex < Math.min(visibleCount, candles.length))
       .map((marker) => ({
+        id: marker.id,
         time: bucketStart(candles[marker.candleIndex].time, origin, frame.seconds) as Time,
         position: marker.position,
         shape: marker.shape,
