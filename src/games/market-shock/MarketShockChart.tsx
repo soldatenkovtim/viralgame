@@ -27,6 +27,8 @@ export function MarketShockChart({
   showDates = false,
   toolbarExtra,
   mutedAfter,
+  focusCandleIndex,
+  onMarkerSelect,
   className = 'h-[clamp(420px,calc(100vh-260px),720px)]',
 }: {
   preparation?: boolean
@@ -38,6 +40,8 @@ export function MarketShockChart({
   levels: UserPriceLevel[]
   onLevelsChange?: (levels: UserPriceLevel[]) => void
   markers?: ChartMarker[]
+  focusCandleIndex?: number
+  onMarkerSelect?: (id: string) => void
   editable?: boolean
   showDates?: boolean
   toolbarExtra?: ReactNode
@@ -172,8 +176,10 @@ export function MarketShockChart({
         tool={tool}
         entry={entry}
         lastPriceTitle="CURRENT"
-        separateEntryLabels={preparation || active}
+        separateEntryLabels={preparation || active || showDates}
         markers={markers}
+        focusCandleIndex={focusCandleIndex}
+        onMarkerSelect={onMarkerSelect}
         mutedAfter={mutedAfter}
         editable={editable}
         showDates={showDates}

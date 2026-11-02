@@ -18,6 +18,7 @@ import {
 import type { Candle } from '@/types/game'
 
 export interface ChartMarker {
+  id?: string
   candleIndex: number
   position: 'aboveBar' | 'belowBar'
   shape: 'circle' | 'arrowUp' | 'arrowDown' | 'square'

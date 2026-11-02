@@ -1,5 +1,4 @@
 import { useScenario } from '@/scenario-engine/useScenario'
-import { ScenarioReplay } from '@/components/results/ScenarioReplay'
 import { DuelResultShare } from '@/duel/DuelResultShare'
 import { useEffect, useState } from 'react'
 import { ChallengeGate } from '@/components/layout/ChallengeGate'
@@ -55,7 +54,6 @@ export function MarketShockPage() {
         nextHref="/challenge/cross-arbitrage"
         nextLabel="Открыть последнее испытание"
       />
-      <ScenarioReplay challengeType="black-swan" scenarioId={scenario.id} />
       </DuelResultShare>
     ) : (
       <MarketShockGame key={scenario.id}
