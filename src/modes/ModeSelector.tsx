@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type ComponentType, type ReactNode } from 'react'
 import { Lock, Check, ArrowUpRight } from 'lucide-react'
+import { CrossArbitrageEntryHero } from './CrossArbitrageEntryHero'
 import { MarketShockEntryHero } from './MarketShockEntryHero'
 import { MarketMakerEntryHero } from './MarketMakerEntryHero'
 import './MarketMakerEntry.css'
@@ -17,6 +18,12 @@ const descriptions: Record<GameMode, string> = {
   standard: 'Четыре испытания, которые открываются по очереди.',
   advanced: 'Те же механики. Меньше подсказок, сложнее рынок.',
   duel: 'Один рынок. Два трейдера. Сравните решения после прохождения.',
+}
+
+const entryPresentations: Partial<Record<ChallengeType, { Hero: ComponentType; className: string }>> = {
+  'market-maker': { Hero: MarketMakerEntryHero, className: 'mm-entry' },
+  'black-swan': { Hero: MarketShockEntryHero, className: 'mm-entry shock-entry' },
+  'cross-arbitrage': { Hero: CrossArbitrageEntryHero, className: 'mm-entry arb-entry' },
 }
 
 export function ModeSelector({ variant = 'default' }: { variant?: 'default' | 'market-maker' }) {
@@ -69,9 +76,10 @@ function ChallengeEntry({ challenge, children }: { challenge: ChallengeType; chi
     return mode === 'duel' ? <CreateRoom challengeType={challenge} />
       : <ChallengeGate challenge={challenge}>{children}</ChallengeGate>
   }
-  if (challenge === 'market-maker' || challenge === 'black-swan') return <div className={`mm-entry ${challenge === 'black-swan' ? 'shock-entry' : ''}`}>
+  const presentation = entryPresentations[challenge]
+  if (presentation) return <div className={presentation.className}>
     <div className="site-container mm-entry-content">
-      {challenge === 'black-swan' ? <MarketShockEntryHero /> : <MarketMakerEntryHero />}
+      <presentation.Hero />
       <ModeSelector variant="market-maker" />
       <div className="mm-entry-action">
         {mode === 'duel' ? <Button variant="primary" onClick={() => setStarted(true)}>Продолжить в дуэль <ArrowUpRight size={18} aria-hidden /></Button>

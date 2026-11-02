@@ -10,7 +10,7 @@ const descriptions: Record<ChallengeType, string> = {
 }
 
 /** All coordinates are illustrative, never derived from a game scenario. */
-export function ChallengeIllustration({ kind }: { kind: ChallengeType }) {
+export function ChallengeIllustration({ kind, chartNote }: { kind: ChallengeType; chartNote?: string }) {
   const id = useId().replace(/:/g, '')
   const figure = useRef<HTMLElement>(null)
   const [paused, setPaused] = useState(false)
@@ -28,7 +28,7 @@ export function ChallengeIllustration({ kind }: { kind: ChallengeType }) {
   return <figure ref={figure} className="challenge-illustration" data-kind={kind} data-paused={paused} data-running="false">
     <svg viewBox="0 0 640 500" role="img" aria-labelledby={`${id}-title ${id}-desc`}>
       <title id={`${id}-title`}>{kind === 'blind-market' ? 'Рынок с неизвестным продолжением' : kind === 'market-maker' ? 'Поток котировок' : kind === 'black-swan' ? 'Изменение рыночных условий' : 'Расхождение цен площадок'}</title>
-      <desc id={`${id}-desc`}>{descriptions[kind]} Это условная иллюстрация.</desc>
+      <desc id={`${id}-desc`}>{descriptions[kind]} Это условная иллюстрация.{chartNote && ` ${chartNote}.`}</desc>
       <defs>
         <pattern id={`${id}-grid`} width="52" height="52" patternUnits="userSpaceOnUse">
           <path d="M 52 0 H 0 V 52" fill="none" className="intro-grid-line" />
@@ -48,7 +48,7 @@ export function ChallengeIllustration({ kind }: { kind: ChallengeType }) {
       {kind === 'blind-market' && <BlindMarket id={id} />}
       {kind === 'market-maker' && <MarketMaker />}
       {kind === 'black-swan' && <MarketShock id={id} />}
-      {kind === 'cross-arbitrage' && <CrossArbitrage />}
+      {kind === 'cross-arbitrage' && <CrossArbitrage chartNote={chartNote} />}
     </svg>
     {kind === 'market-maker' && <div className="mm-intro-inventory" aria-label="Условная накопленная позиция">
       <span>INVENTORY / ПОЗИЦИЯ</span>
@@ -133,9 +133,9 @@ function MarketShock({ id }: { id: string }) {
   </>
 }
 
-function CrossArbitrage() {
+function CrossArbitrage({ chartNote }: { chartNote?: string }) {
   return <>
-    <text x="24" y="36" className="intro-svg-label">ЦЕНЫ ДВУХ ПЛОЩАДОК</text>
+    <text x="24" y="36" className="intro-svg-label">СРАВНЕНИЕ ПЛОЩАДОК</text>
     <path d="M24 281L62 267L100 279L138 248L176 260L214 235L252 245L290 227L328 238L366 219L404 231L442 209L480 221L518 198L556 210L608 191" className="intro-reference" />
     <g className="intro-divergence">
       <path d="M24 275L62 260L100 271L138 239L176 245L214 206L252 191L290 161L328 164L366 153L404 172L442 177L480 200L518 187L556 202L608 184L608 199L556 218L518 208L480 239L442 242L404 268L366 284L328 309L290 291L252 298L214 264L176 274L138 257L100 287L62 275L24 289Z" className="intro-opportunity-area" />
@@ -146,7 +146,14 @@ function CrossArbitrage() {
     <circle cx="328" cy="309" r="5" className="intro-point intro-arrival" />
     </g>
     <text x="328" y="116" textAnchor="middle" className="intro-svg-label">РАСХОЖДЕНИЕ</text>
-    <text x="24" y="465" className="intro-svg-label">ПЛОЩАДКА A</text>
-    <text x="604" y="465" textAnchor="end" className="intro-svg-label intro-muted">ПЛОЩАДКА B</text>
+    <g className="intro-svg-label">
+      <path d="M24 454h22" className="intro-price" />
+      <text x="55" y="458">ПЛОЩАДКА A</text>
+      <g transform="translate(200 0)" className="intro-price-secondary">
+        <path d="M24 454h22" className="intro-price" />
+        <text x="55" y="458" fill="currentColor">ПЛОЩАДКА B</text>
+      </g>
+      <text x="24" y="490" className="intro-muted" fill="currentColor">{chartNote}</text>
+    </g>
   </>
 }

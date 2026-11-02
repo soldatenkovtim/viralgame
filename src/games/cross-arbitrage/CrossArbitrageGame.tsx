@@ -148,16 +148,19 @@ export function CrossArbitrageGame({
     const seconds = scenarios.map(item => item.durationSeconds || ARB_DECISION_SECONDS)
     const venues = scenarios.map(item => item.quotes.length)
     const range = (values: number[]) => Math.min(...values) === Math.max(...values) ? String(values[0]) : `${Math.min(...values)}–${Math.max(...values)}`
+    const venueCount = range(venues)
+    const chartNote = venueCount === '3' ? 'Пример двух из трёх площадок'
+      : venueCount === '5' ? 'Пример двух из пяти площадок' : 'Пример сравнения двух площадок'
     return <ChallengeIntro number="04" title={<>Кросс-<br />арбитраж</>}
       subtitle="Один актив. Разные цены. Ограниченное время."
-      description="Найдите ценовое расхождение между площадками, оцените комиссии и глубину исполнения и примите решение. Не каждое расхождение становится выгодной сделкой."
+      description="Найдите расхождение цен между площадками. Выберите, где купить и продать актив, учитывая комиссии и доступный объём. Если сделка невыгодна — пропустите её."
       stats={[
-        { value: scenarios.length, label: 'рынков подряд' },
-        { value: timerDisabled ? 'Без лимита' : `${range(seconds)} с`, label: 'на каждый рынок' },
-        { value: range(venues), label: 'торговые площадки' },
+        { value: scenarios.length, label: 'торговых раундов' },
+        { value: timerDisabled ? 'Без лимита' : `${range(seconds)} с`, label: 'на решение' },
+        { value: venueCount, label: venueCount === '5' ? 'торговых площадок' : 'торговые площадки' },
       ]}
       note="Капитал уже размещён на площадках. Переводы между ними не учитываются. Вы можете отказаться от сделки."
-      cta="Открыть площадки" visual={<ChallengeIllustration kind="cross-arbitrage" />}
+      cta="Открыть площадки" visual={<ChallengeIllustration kind="cross-arbitrage" chartNote={chartNote} />}
       mode={context?.mode ?? session.mode ?? 'standard'} state={stage}
       onStart={() => { trackEvent('scenario_started', { challengeType: 'cross-arbitrage', scenarioId: session.id, mode: session.mode }); startRound(0) }} />
   }
